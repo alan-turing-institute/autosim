@@ -82,7 +82,7 @@ def simulate_epidemic(x: NumpyLike, N: int = 1000, I0: int = 1) -> float:
     y0 = [S0, I0, R0]
 
     def sir_model(t, y, N, beta, gamma):  # noqa: ARG001
-        S, I, R = y  # noqa: E741
+        S, I, _ = y  # noqa: E741
         dSdt = -beta * S * I / N
         dIdt = beta * S * I / N - gamma * I
         dRdt = gamma * I
@@ -93,7 +93,7 @@ def simulate_epidemic(x: NumpyLike, N: int = 1000, I0: int = 1) -> float:
     )  # Evaluate each day within the time span
     sol = solve_ivp(sir_model, t_span, y0, args=(N, beta, gamma), t_eval=t_eval)
 
-    S, I, R = sol.y  # noqa: E741
+    _, I, _ = sol.y  # noqa: E741
     I_max = np.max(I)
 
     # peak infection rate
