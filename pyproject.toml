@@ -31,12 +31,22 @@ dev = [
 requires = ["uv_build"]
 build-backend = "uv_build"
 
+[tool.coverage.run]
+relative_files = true
+source = [".", "/tmp"]
+
+[tool.pytest.ini_options]
+addopts = "--ignore=v0"
+
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+include = ["autoemulate/*", "tests/*", "benchmarks/*"]
 
 [tool.ruff]
+src = ["autoemulate/"]
 line-length = 88
+include = ["autoemulate/**/*.py", "tests/**/*.py", "benchmarks/**/*.py"]
 target-version = "py310"
 
 [tool.ruff.format]
@@ -74,10 +84,8 @@ ignore = [
     "ISC001",  # Conflicts with formatter
     # "D417",    # Missing trailing new line in docstring
     "D100",    # Missing docstring in public module
-    "D102",    # Missing docstring in public class, TODO: remove in future
     "D104",    # Missing docstring in public package
     "PLR0913", # too many arguments
-    "RET504",  # Allow assignment to variable before return
 ]
 
 unfixable = [
@@ -91,27 +99,3 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["D"]
-
-# https://docs.astral.sh/uv/guides/integration/pytorch/#using-a-pytorch-index
-# CUDA wheels (used automatically on GH if available)
-[[tool.uv.index]]
-name = "pytorch-cu126"
-url = "https://download.pytorch.org/whl/cu126"
-explicit = true
-
-[tool.uv.sources]
-autoemulate = { git = "https://github.com/alan-turing-institute/autoemulate.git" }
-torch = [
-  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-]
-torchvision = [
-  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-]
-
-[tool.pytest.ini_options]
-filterwarnings = [
-    # Ignore Lightning warnings that are expected/benign in test environment
-    "ignore:You are trying to `self.log\\(\\)` but the `self.trainer` reference is not registered:UserWarning",
-    "ignore:GPU available but not used:UserWarning",
-    "ignore:The '.*_dataloader' does not have many workers:UserWarning",
-]
