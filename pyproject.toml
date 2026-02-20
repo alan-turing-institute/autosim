@@ -7,7 +7,7 @@ license = { file = "LICENSE" }
 authors = [
     { name = "AI for Physical Systems Team at The Alan Turing Institute", email = "ai4physics@turing.ac.uk" },
 ]
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.10,<3.13"
 
 dependencies = [
     "numpy>=1.24",
