@@ -1,9 +1,9 @@
 import numpy as np
 import torch
-from autocast.simulations.base import Simulator
 from numpy.fft import fft2, ifft2
 from scipy.integrate import solve_ivp
 
+from autosim.simulations.base import Simulator
 from autosim.types import NumpyLike, TensorLike
 
 integrator_keywords = {}
