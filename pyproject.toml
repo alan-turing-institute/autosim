@@ -41,12 +41,9 @@ addopts = "--ignore=v0"
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
-include = ["autoemulate/*", "tests/*", "benchmarks/*"]
 
 [tool.ruff]
-src = ["autoemulate/"]
 line-length = 88
-include = ["autoemulate/**/*.py", "tests/**/*.py", "benchmarks/**/*.py"]
 target-version = "py310"
 
 [tool.ruff.format]
