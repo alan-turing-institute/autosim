@@ -1,10 +1,14 @@
 [project]
 name = "autosim"
-version = "0.1.0"
-description = "A collection of scientific simulations"
+version = "0.0.1"
+description = "A package to generate simulation data easily"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.10"
+authors = [
+    { name = "AI for Physical Systems Team at The Alan Turing Institute", email = "ai4physics@turing.ac.uk" },
+]
+requires-python = ">=3.11,<3.13"
+
 dependencies = [
     "numpy>=1.24",
     "scipy>=1.10",
