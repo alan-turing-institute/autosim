@@ -8,12 +8,12 @@ from tqdm import tqdm
 from autosim.device import TorchDeviceMixin
 from autosim.logging import get_configured_logger
 from autosim.types import DeviceLike, TensorLike
-from autosim.utils import set_random_seed
+from autosim.utils import ValidationMixin, set_random_seed
 
 logger = logging.getLogger("autosim")
 
 
-class Simulator(ABC):
+class Simulator(ABC, ValidationMixin):
     """
     Base class for simulations. All simulators should inherit from this class.
 
