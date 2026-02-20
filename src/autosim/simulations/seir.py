@@ -44,7 +44,7 @@ def simulate_seir_epidemic(
     y0 = [S0, E0, I0, R0]
 
     def seir_model(t, y, N, beta, gamma, sigma):  # noqa: ARG001
-        S, E, I, R = y  # noqa: E741
+        S, E, I, _ = y  # noqa: E741
         dSdt = -beta * S * I / N
         dEdt = beta * S * I / N - sigma * E
         dIdt = sigma * E - gamma * I
@@ -61,7 +61,7 @@ def simulate_seir_epidemic(
         vectorized=False,
     )
 
-    _, E, I, R = sol.y  # noqa: E741
+    _, _, I, _ = sol.y  # noqa: E741
     I_max = np.max(I)
 
     return float(I_max) / float(N)
