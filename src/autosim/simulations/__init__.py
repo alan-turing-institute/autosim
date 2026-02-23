@@ -1,6 +1,6 @@
 from .advection_diffusion import AdvectionDiffusion
 from .advection_diffusion_multichannel import AdvectionDiffusionMultichannel
-from .compressible_fluid import CompressibleFluid1D
+from .compressible_fluid import CompressibleFluid2D
 from .epidemic import Epidemic
 from .flow_problem import FlowProblem
 from .gray_scott import GrayScott
@@ -14,7 +14,7 @@ ALL_SIMULATORS = [
     ReactionDiffusion,
     AdvectionDiffusion,
     AdvectionDiffusionMultichannel,
-    CompressibleFluid1D,
+    CompressibleFluid2D,
     Hydrodynamics2D,
     LatticeBoltzmann,
     Epidemic,
@@ -28,7 +28,7 @@ ALL_SIMULATORS = [
 __all__ = [
     "AdvectionDiffusion",
     "AdvectionDiffusionMultichannel",
-    "CompressibleFluid1D",
+    "CompressibleFluid2D",
     "Epidemic",
     "FlowProblem",
     "GrayScott",
