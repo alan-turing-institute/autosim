@@ -28,6 +28,11 @@ class LatticeBoltzmann(Simulator):
         Names for output channels. Defaults to ``["u", "v", "rho", "vorticity"]``.
     return_timeseries: bool, default=False
         If True, returns full trajectory; otherwise final frame only.
+    use_cylinder: bool, default=True
+        If True, include the circular obstacle. If False, run a plain channel.
+    oscillatory_inlet: bool | None, default=None
+        If True, apply time-dependent inlet modulation (useful for rich dynamics
+        in no-cylinder channels). If None, defaults to ``not use_cylinder``.
     width: int, default=256
         Grid width (Nx).
     height: int, default=64
@@ -46,6 +51,8 @@ class LatticeBoltzmann(Simulator):
         width: int = 128,
         height: int = 64,
         T: float = 4.0,
+        use_cylinder: bool = True,
+        oscillatory_inlet: bool | None = None,
     ) -> None:
         if parameters_range is None:
             # Re ~ u_in * D / nu. D=height/5 approx.
@@ -63,6 +70,10 @@ class LatticeBoltzmann(Simulator):
         self.width = width
         self.height = height
         self.T = T
+        self.use_cylinder = use_cylinder
+        if oscillatory_inlet is None:
+            oscillatory_inlet = not use_cylinder
+        self.oscillatory_inlet = oscillatory_inlet
 
     def _forward(self, x: TensorLike) -> TensorLike:
         assert x.shape[0] == 1, "Simulator._forward expects a single input"
@@ -74,6 +85,8 @@ class LatticeBoltzmann(Simulator):
             width=self.width,
             height=self.height,
             duration=self.T,
+            use_cylinder=self.use_cylinder,
+            oscillatory_inlet=self.oscillatory_inlet,
         )
         return out.flatten().unsqueeze(0)
 
@@ -120,6 +133,8 @@ def simulate_lbm_cylinder(
     width: int,
     height: int,
     duration: float,
+    use_cylinder: bool = True,
+    oscillatory_inlet: bool = False,
 ) -> TensorLike:
     """
     Simulate flow past a cylinder using D2Q9 Lattice Boltzmann.
@@ -194,12 +209,15 @@ def simulate_lbm_cylinder(
     y_coord = torch.arange(height, device=device).view(-1, 1).repeat(1, width)
     x_coord = torch.arange(width, device=device).view(1, -1).repeat(height, 1)
 
-    # Cylinder obstacle
-    cy, cx = height / 2.0, width / 4.0
-    radius = height / 9.0
-    obstacle_mask = (
-        (x_coord.float() - cx) ** 2 + (y_coord.float() - cy) ** 2
-    ) <= radius**2
+    # Cylinder obstacle (optional)
+    if use_cylinder:
+        cy, cx = height / 2.0, width / 4.0
+        radius = height / 9.0
+        obstacle_mask = (
+            (x_coord.float() - cx) ** 2 + (y_coord.float() - cy) ** 2
+        ) <= radius**2
+    else:
+        obstacle_mask = torch.zeros((height, width), dtype=torch.bool, device=device)
 
     # 3. Initialization
     rho = torch.ones((height, width), device=device)
@@ -218,6 +236,8 @@ def simulate_lbm_cylinder(
     # Prepare inlet profile for later use
     u_inlet = torch.zeros((2, height, 1), device=device)
     u_inlet[0, :, 0] = profile
+    # Secondary profile to inject a weak cross-stream oscillation
+    lateral_profile = torch.sin(math.pi * ys / (height - 1)).view(height, 1)
 
     def compute_equilibrium(rho, u):
         # rho: (H, W) or (H, 1)
@@ -249,9 +269,10 @@ def simulate_lbm_cylinder(
     # Initialize f to equilibrium at rest (rho=1, u=0)
     f = compute_equilibrium(rho, u)
 
-    # Pre-calculate inlet equilibrium distribution
+    # Pre-calculate inlet equilibrium distribution for steady inlet
     # We assume inlet density is fixed at 1.0 (approximated incompressible)
-    f_inlet_eq = compute_equilibrium(torch.ones((height, 1), device=device), u_inlet)
+    inlet_rho = torch.ones((height, 1), device=device)
+    f_inlet_eq = compute_equilibrium(inlet_rho, u_inlet)
 
     history = []
 
@@ -296,20 +317,29 @@ def simulate_lbm_cylinder(
 
         # --- 4. Boundary Conditions ---
 
-        # A. Obstacle Bounce-Back
-        # Reflect populations at obstacle nodes
-        # Simple/Naive: overwrite f with reflected from *previous* time?
-        # In this order (Collide-Stream), f has arrived at obstacle node from neighbor.
-        # This newly arrived particle should be bounced back to where it came from.
-        # So we swap directions for obstacle nodes.
-        f_obs = f[:, obstacle_mask]
-        f[:, obstacle_mask] = f_obs[opp]
+        # A. Obstacle Bounce-Back (optional)
+        if use_cylinder:
+            f_obs = f[:, obstacle_mask]
+            f[:, obstacle_mask] = f_obs[opp]
 
         # B. Inlet (West, x=0)
-        # Fixed equilibrium profile (Dirichlet velocity)
+        # Fixed or oscillatory equilibrium profile (Dirichlet velocity)
         # Due to streaming, x=0 now contains data wrapped from x=W-1.
-        # We overwrite entirely with equilibrium distribution for the inlet velocity/density.
-        f[:, :, 0] = f_inlet_eq[:, :, 0]
+        # We overwrite entirely with equilibrium distribution for inlet velocity/density.
+        if oscillatory_inlet:
+            # Drive richer unsteady dynamics, especially useful when no cylinder is used.
+            phase = 2.0 * math.pi * (3.0 * step / max(full_duration, 1))
+            amp_u = 1.0 + 0.25 * math.sin(phase)
+            amp_v = 0.10 * math.sin(phase)
+
+            u_inlet_dynamic = torch.zeros((2, height, 1), device=device)
+            u_inlet_dynamic[0, :, 0] = torch.clamp(profile * amp_u, min=0.0, max=0.18)
+            u_inlet_dynamic[1, :, 0] = amp_v * lateral_profile[:, 0]
+
+            f_inlet_now = compute_equilibrium(inlet_rho, u_inlet_dynamic)
+            f[:, :, 0] = f_inlet_now[:, :, 0]
+        else:
+            f[:, :, 0] = f_inlet_eq[:, :, 0]
 
         # C. Outlet (East, x=W-1)
         # Open boundary (Neumann): Copy from neighbor x=W-2
