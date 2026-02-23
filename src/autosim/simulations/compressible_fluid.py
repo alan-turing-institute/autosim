@@ -221,12 +221,33 @@ def simulate_compressible_fluid_2d(
     y = torch.linspace(0.0, L, n + 1, dtype=dtype, device=device)[:-1]
     xx, yy = torch.meshgrid(x, y, indexing="ij")
 
-    rho0 = 1.0 + amp * torch.sin(2.0 * math.pi * xx / L) * torch.sin(
-        2.0 * math.pi * yy / L
+    # Richer compressible setup:
+    # - two opposite horizontal shear layers
+    # - multi-mode perturbations in rho/p
+    # - weak transverse perturbation to trigger roll-up and wave interaction
+    y1 = 0.25 * L
+    y2 = 0.75 * L
+    shear_w = 0.035 * L
+    base_u = 0.55
+
+    u0 = base_u * (
+        torch.tanh((yy - y1) / shear_w) - torch.tanh((yy - y2) / shear_w) - 1.0
     )
-    u0 = 0.35 * torch.sin(2.0 * math.pi * yy / L)
-    v0 = -0.35 * torch.sin(2.0 * math.pi * xx / L)
-    p0 = 1.0 + 0.5 * amp * torch.cos(2.0 * math.pi * xx / L)
+    v0 = (
+        0.18
+        * amp
+        * torch.sin(4.0 * math.pi * xx / L)
+        * torch.sin(2.0 * math.pi * yy / L)
+    )
+
+    mode1 = torch.sin(2.0 * math.pi * xx / L) * torch.cos(2.0 * math.pi * yy / L)
+    mode2 = torch.cos(5.0 * math.pi * xx / L) * torch.sin(3.0 * math.pi * yy / L)
+    mode3 = torch.sin(6.0 * math.pi * (xx + yy) / L)
+
+    rho0 = 1.0 + amp * (0.70 * mode1 + 0.20 * mode2 + 0.10 * mode3)
+    p0 = 1.0 + 0.60 * amp * mode1 - 0.30 * amp * mode2
+    rho0 = rho0.clamp(min=0.2)
+    p0 = p0.clamp(min=0.2)
 
     U = _prim_to_cons(rho0, u0, v0, p0, gamma)
 
