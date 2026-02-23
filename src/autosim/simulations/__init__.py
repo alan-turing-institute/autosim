@@ -5,6 +5,7 @@ from .flow_problem import FlowProblem
 from .projectile import Projectile, ProjectileMultioutput
 from .reaction_diffusion import ReactionDiffusion
 from .seir import SEIRSimulator
+from .gray_scott import GrayScott
 
 ALL_SIMULATORS = [
     ReactionDiffusion,
@@ -15,6 +16,7 @@ ALL_SIMULATORS = [
     FlowProblem,
     Projectile,
     ProjectileMultioutput,
+    GrayScott,
 ]
 
 __all__ = [
@@ -26,6 +28,7 @@ __all__ = [
     "ProjectileMultioutput",
     "ReactionDiffusion",
     "SEIRSimulator",
+    "GrayScott",
 ]
 
 SIMULATOR_REGISTRY = dict(zip(__all__, ALL_SIMULATORS, strict=False))
