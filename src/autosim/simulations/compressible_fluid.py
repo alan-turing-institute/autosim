@@ -39,6 +39,10 @@ class CompressibleFluid2D(Simulator):
         - ``"shear_layers"`` (default): dual shear layers with multimode perturbations
         - ``"vortex_sheet"``: single shear sheet with sinusoidal displacement
         - ``"blast_wave"``: smooth radial over-pressure/density pulse
+    flux_scheme:
+        Numerical interface flux. One of:
+        - ``"llf"``: local Lax-Friedrichs (more diffusive, robust)
+        - ``"hll"``: HLL flux (less diffusive, sharper fronts)
     """
 
     def __init__(
@@ -53,6 +57,7 @@ class CompressibleFluid2D(Simulator):
         dt_save: float = 0.01,
         cfl: float = 0.35,
         scenario: str = "shear_layers",
+        flux_scheme: str = "llf",
     ) -> None:
         if parameters_range is None:
             parameters_range = {
@@ -70,6 +75,7 @@ class CompressibleFluid2D(Simulator):
         self.dt_save = dt_save
         self.cfl = cfl
         self.scenario = scenario
+        self.flux_scheme = flux_scheme
 
     def _forward(self, x: TensorLike) -> TensorLike:
         assert x.shape[0] == 1, "Simulator._forward expects a single input"
@@ -86,6 +92,7 @@ class CompressibleFluid2D(Simulator):
             dt_save=self.dt_save,
             cfl=self.cfl,
             scenario=self.scenario,
+            flux_scheme=self.flux_scheme,
         )
         return y.flatten().unsqueeze(0)
 
@@ -178,8 +185,55 @@ def _signal_speed(U: torch.Tensor, gamma: float) -> tuple[torch.Tensor, torch.Te
     return u.abs() + c, v.abs() + c
 
 
+def _hll_flux_x(UL: torch.Tensor, UR: torch.Tensor, gamma: float) -> torch.Tensor:
+    """HLL numerical flux in x-direction at interfaces between UL and UR."""
+    FL = _flux_x(UL, gamma)
+    FR = _flux_x(UR, gamma)
+
+    rhoL, uL, _vL, pL = _cons_to_prim(UL, gamma)
+    rhoR, uR, _vR, pR = _cons_to_prim(UR, gamma)
+    cL = (gamma * pL / rhoL).sqrt()
+    cR = (gamma * pR / rhoR).sqrt()
+
+    sL = torch.minimum(uL - cL, uR - cR)
+    sR = torch.maximum(uL + cL, uR + cR)
+
+    sLz = sL.unsqueeze(0)
+    sRz = sR.unsqueeze(0)
+    denom = (sR - sL).unsqueeze(0).clamp(min=1e-8)
+    FH = (sRz * FL - sLz * FR + sLz * sRz * (UR - UL)) / denom
+
+    return torch.where(sLz >= 0.0, FL, torch.where(sRz <= 0.0, FR, FH))
+
+
+def _hll_flux_y(UL: torch.Tensor, UR: torch.Tensor, gamma: float) -> torch.Tensor:
+    """HLL numerical flux in y-direction at interfaces between UL and UR."""
+    GL = _flux_y(UL, gamma)
+    GR = _flux_y(UR, gamma)
+
+    rhoL, _uL, vL, pL = _cons_to_prim(UL, gamma)
+    rhoR, _uR, vR, pR = _cons_to_prim(UR, gamma)
+    cL = (gamma * pL / rhoL).sqrt()
+    cR = (gamma * pR / rhoR).sqrt()
+
+    sL = torch.minimum(vL - cL, vR - cR)
+    sR = torch.maximum(vL + cL, vR + cR)
+
+    sLz = sL.unsqueeze(0)
+    sRz = sR.unsqueeze(0)
+    denom = (sR - sL).unsqueeze(0).clamp(min=1e-8)
+    GH = (sRz * GL - sLz * GR + sLz * sRz * (UR - UL)) / denom
+
+    return torch.where(sLz >= 0.0, GL, torch.where(sRz <= 0.0, GR, GH))
+
+
 def _step(
-    U: torch.Tensor, dx: float, dy: float, gamma: float, cfl: float
+    U: torch.Tensor,
+    dx: float,
+    dy: float,
+    gamma: float,
+    cfl: float,
+    flux_scheme: str,
 ) -> tuple[torch.Tensor, float]:
     sx, sy = _signal_speed(U, gamma)
     max_sx = float(sx.max().item())
@@ -187,21 +241,30 @@ def _step(
     dt = cfl * min(dx / max(max_sx, 1e-8), dy / max(max_sy, 1e-8))
 
     UxR = torch.roll(U, shifts=-1, dims=1)
-    FxL = _flux_x(U, gamma)
-    FxR = _flux_x(UxR, gamma)
-    sxL, _ = _signal_speed(U, gamma)
-    sxR, _ = _signal_speed(UxR, gamma)
-    ax = torch.maximum(sxL, sxR).unsqueeze(0)
-    F_half_x = 0.5 * (FxL + FxR) - 0.5 * ax * (UxR - U)
+    if flux_scheme == "llf":
+        FxL = _flux_x(U, gamma)
+        FxR = _flux_x(UxR, gamma)
+        sxL, _ = _signal_speed(U, gamma)
+        sxR, _ = _signal_speed(UxR, gamma)
+        ax = torch.maximum(sxL, sxR).unsqueeze(0)
+        F_half_x = 0.5 * (FxL + FxR) - 0.5 * ax * (UxR - U)
+    elif flux_scheme == "hll":
+        F_half_x = _hll_flux_x(U, UxR, gamma)
+    else:
+        msg = "flux_scheme must be one of ['llf', 'hll']"
+        raise ValueError(msg)
     div_x = (F_half_x - torch.roll(F_half_x, shifts=1, dims=1)) / dx
 
     UyR = torch.roll(U, shifts=-1, dims=2)
-    GyL = _flux_y(U, gamma)
-    GyR = _flux_y(UyR, gamma)
-    _, syL = _signal_speed(U, gamma)
-    _, syR = _signal_speed(UyR, gamma)
-    ay = torch.maximum(syL, syR).unsqueeze(0)
-    G_half_y = 0.5 * (GyL + GyR) - 0.5 * ay * (UyR - U)
+    if flux_scheme == "llf":
+        GyL = _flux_y(U, gamma)
+        GyR = _flux_y(UyR, gamma)
+        _, syL = _signal_speed(U, gamma)
+        _, syR = _signal_speed(UyR, gamma)
+        ay = torch.maximum(syL, syR).unsqueeze(0)
+        G_half_y = 0.5 * (GyL + GyR) - 0.5 * ay * (UyR - U)
+    else:
+        G_half_y = _hll_flux_y(U, UyR, gamma)
     div_y = (G_half_y - torch.roll(G_half_y, shifts=1, dims=2)) / dy
 
     U_next = U - dt * (div_x + div_y)
@@ -221,6 +284,7 @@ def simulate_compressible_fluid_2d(  # noqa: PLR0915
     dt_save: float,
     cfl: float,
     scenario: str = "shear_layers",
+    flux_scheme: str = "llf",
 ) -> torch.Tensor:
     """Run a simple 2D compressible Euler simulation with periodic boundaries."""
     dtype = torch.float32
@@ -306,7 +370,14 @@ def simulate_compressible_fluid_2d(  # noqa: PLR0915
             next_save = dt_save
 
         while t < T - 1e-12:
-            U, dt = _step(U, dx=dx, dy=dy, gamma=gamma, cfl=cfl)
+            U, dt = _step(
+                U,
+                dx=dx,
+                dy=dy,
+                gamma=gamma,
+                cfl=cfl,
+                flux_scheme=flux_scheme,
+            )
             dt = min(dt, T - t)
             t += dt
 
