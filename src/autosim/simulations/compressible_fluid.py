@@ -34,6 +34,11 @@ class CompressibleFluid2D(Simulator):
         Save interval when `return_timeseries=True`.
     cfl:
         CFL number for adaptive stepping.
+    scenario:
+        Initial-condition family. One of:
+        - ``"shear_layers"`` (default): dual shear layers with multimode perturbations
+        - ``"vortex_sheet"``: single shear sheet with sinusoidal displacement
+        - ``"blast_wave"``: smooth radial over-pressure/density pulse
     """
 
     def __init__(
@@ -47,6 +52,7 @@ class CompressibleFluid2D(Simulator):
         T: float = 0.8,
         dt_save: float = 0.01,
         cfl: float = 0.35,
+        scenario: str = "shear_layers",
     ) -> None:
         if parameters_range is None:
             parameters_range = {
@@ -63,6 +69,7 @@ class CompressibleFluid2D(Simulator):
         self.T = T
         self.dt_save = dt_save
         self.cfl = cfl
+        self.scenario = scenario
 
     def _forward(self, x: TensorLike) -> TensorLike:
         assert x.shape[0] == 1, "Simulator._forward expects a single input"
@@ -78,6 +85,7 @@ class CompressibleFluid2D(Simulator):
             T=self.T,
             dt_save=self.dt_save,
             cfl=self.cfl,
+            scenario=self.scenario,
         )
         return y.flatten().unsqueeze(0)
 
@@ -203,7 +211,7 @@ def _step(
     return U_next, dt
 
 
-def simulate_compressible_fluid_2d(
+def simulate_compressible_fluid_2d(  # noqa: PLR0915
     gamma: float,
     amp: float,
     return_timeseries: bool,
@@ -212,6 +220,7 @@ def simulate_compressible_fluid_2d(
     T: float,
     dt_save: float,
     cfl: float,
+    scenario: str = "shear_layers",
 ) -> torch.Tensor:
     """Run a simple 2D compressible Euler simulation with periodic boundaries."""
     dtype = torch.float32
@@ -221,31 +230,59 @@ def simulate_compressible_fluid_2d(
     y = torch.linspace(0.0, L, n + 1, dtype=dtype, device=device)[:-1]
     xx, yy = torch.meshgrid(x, y, indexing="ij")
 
-    # Richer compressible setup:
-    # - two opposite horizontal shear layers
-    # - multi-mode perturbations in rho/p
-    # - weak transverse perturbation to trigger roll-up and wave interaction
-    y1 = 0.25 * L
-    y2 = 0.75 * L
-    shear_w = 0.035 * L
-    base_u = 0.55
+    if scenario == "shear_layers":
+        y1 = 0.25 * L
+        y2 = 0.75 * L
+        shear_w = 0.035 * L
+        base_u = 0.55
 
-    u0 = base_u * (
-        torch.tanh((yy - y1) / shear_w) - torch.tanh((yy - y2) / shear_w) - 1.0
-    )
-    v0 = (
-        0.18
-        * amp
-        * torch.sin(4.0 * math.pi * xx / L)
-        * torch.sin(2.0 * math.pi * yy / L)
-    )
+        u0 = base_u * (
+            torch.tanh((yy - y1) / shear_w) - torch.tanh((yy - y2) / shear_w) - 1.0
+        )
+        v0 = (
+            0.18
+            * amp
+            * torch.sin(4.0 * math.pi * xx / L)
+            * torch.sin(2.0 * math.pi * yy / L)
+        )
 
-    mode1 = torch.sin(2.0 * math.pi * xx / L) * torch.cos(2.0 * math.pi * yy / L)
-    mode2 = torch.cos(5.0 * math.pi * xx / L) * torch.sin(3.0 * math.pi * yy / L)
-    mode3 = torch.sin(6.0 * math.pi * (xx + yy) / L)
+        mode1 = torch.sin(2.0 * math.pi * xx / L) * torch.cos(2.0 * math.pi * yy / L)
+        mode2 = torch.cos(5.0 * math.pi * xx / L) * torch.sin(3.0 * math.pi * yy / L)
+        mode3 = torch.sin(6.0 * math.pi * (xx + yy) / L)
 
-    rho0 = 1.0 + amp * (0.70 * mode1 + 0.20 * mode2 + 0.10 * mode3)
-    p0 = 1.0 + 0.60 * amp * mode1 - 0.30 * amp * mode2
+        rho0 = 1.0 + amp * (0.70 * mode1 + 0.20 * mode2 + 0.10 * mode3)
+        p0 = 1.0 + 0.60 * amp * mode1 - 0.30 * amp * mode2
+
+    elif scenario == "vortex_sheet":
+        y_mid = 0.5 * L
+        shear_w = 0.02 * L
+        sheet_disp = 0.06 * L * torch.sin(2.0 * math.pi * xx / L)
+
+        u0 = torch.tanh((yy - y_mid - sheet_disp) / shear_w)
+        u0 = 0.7 * u0
+        v0 = 0.12 * amp * torch.sin(2.0 * math.pi * xx / L)
+
+        rho0 = 1.0 + 0.35 * amp * torch.cos(2.0 * math.pi * yy / L)
+        p0 = 1.0 + 0.25 * amp * torch.sin(4.0 * math.pi * xx / L)
+
+    elif scenario == "blast_wave":
+        x0 = 0.5 * L
+        y0 = 0.5 * L
+        r2 = (xx - x0) ** 2 + (yy - y0) ** 2
+        sigma2 = (0.08 * L) ** 2
+        pulse = torch.exp(-r2 / sigma2)
+
+        u0 = 0.04 * amp * torch.sin(2.0 * math.pi * yy / L)
+        v0 = -0.04 * amp * torch.sin(2.0 * math.pi * xx / L)
+        rho0 = 1.0 + 0.50 * amp * pulse
+        p0 = 1.0 + 1.20 * amp * pulse
+
+    else:
+        raise ValueError(
+            f"Unknown scenario '{scenario}'. "
+            "Expected one of ['shear_layers', 'vortex_sheet', 'blast_wave']."
+        )
+
     rho0 = rho0.clamp(min=0.2)
     p0 = p0.clamp(min=0.2)
 
