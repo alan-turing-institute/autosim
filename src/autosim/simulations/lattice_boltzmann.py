@@ -3,11 +3,13 @@ Lattice Boltzmann Method (LBM) Simulator for 2D Fluid Flow.
 
 This module implements a differentiable D2Q9 LBM solver for incompressible
 Navier-Stokes equations. It supports complex boundary conditions (like obstacles)
-and inflow/outflow profiles, making it suitable for benchmarks like Flow Past a Cylinder.
+and inflow/outflow profiles, making it suitable for benchmarks like Flow Past Cylinder.
 """
 
 import math
+
 import torch
+
 from autosim.simulations.base import Simulator
 from autosim.types import TensorLike
 
@@ -127,7 +129,7 @@ def curl_2d(u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     return dv_dx - du_dy
 
 
-def simulate_lbm_cylinder(
+def simulate_lbm_cylinder(  # noqa: PLR0915
     params: TensorLike,
     return_timeseries: bool,
     width: int,
@@ -171,7 +173,7 @@ def simulate_lbm_cylinder(
     # Lattice velocities c_i = [cy, cx]  (row, col) convention
     # 0: (0,0), 1: (0,1) E, 2: (1,0) N, 3: (0,-1) W, 4: (-1,0) S
     # 5: (1,1) NE, 6: (1,-1) NW, 7: (-1,-1) SW, 8: (-1,1) SE
-    # Note: cx corresponds to 'width' dimension (dim 1), cy to 'height' dimension (dim 0)
+    # Note: cx corresponds to 'width' dim (dim 1), cy to 'height' dimension (dim 0)
 
     # Correct mapping for standard D2Q9:
     # 0: Rest
@@ -203,6 +205,9 @@ def simulate_lbm_cylinder(
     # Opposite indices for bounce-back
     # 0->0, 1->3, 2->4, 3->1, 4->2, 5->7, 6->8, 7->5, 8->6
     opp = torch.tensor([0, 3, 4, 1, 2, 7, 8, 5, 6], device=device, dtype=torch.long)
+    # Populations entering from the left (west inlet) and from the right (east outlet)
+    inlet_incoming = torch.tensor([1, 5, 8], device=device, dtype=torch.long)
+    outlet_incoming = torch.tensor([3, 6, 7], device=device, dtype=torch.long)
 
     # 2. Geometry
     # Coordinate grids: y (rows) 0..H-1, x (cols) 0..W-1
@@ -263,8 +268,7 @@ def simulate_lbm_cylinder(
         term2 = 4.5 * (cu**2)
         term3 = -1.5 * u2.unsqueeze(0)
 
-        f_eq = w.view(9, 1, 1) * rho.unsqueeze(0) * (term1 + term2 + term3)
-        return f_eq
+        return w.view(9, 1, 1) * rho.unsqueeze(0) * (term1 + term2 + term3)
 
     # Initialize f to equilibrium at rest (rho=1, u=0)
     f = compute_equilibrium(rho, u)
@@ -285,7 +289,8 @@ def simulate_lbm_cylinder(
 
     # Main Loop
     # Order: Collision -> Streaming -> Boundary
-    # Use double buffering implicitly? No, simplistic single f update with careful boundary overwritting is standard in simple codes
+    # Use double buffering implicitly? No, simplistic single f update with careful
+    # boundary overwritting is standard in simple codes
     # Actually, standard is: Stream (propagates) then Collide (locally).
     # Or Collide (locally) then Stream.
     # Let's do: Collision -> Streaming -> BCs.
@@ -323,11 +328,10 @@ def simulate_lbm_cylinder(
             f[:, obstacle_mask] = f_obs[opp]
 
         # B. Inlet (West, x=0)
-        # Fixed or oscillatory equilibrium profile (Dirichlet velocity)
-        # Due to streaming, x=0 now contains data wrapped from x=W-1.
-        # We overwrite entirely with equilibrium distribution for inlet velocity/density.
+        # Fixed or oscillatory equilibrium profile (Dirichlet velocity).
+        # To reduce reflection, prescribe only populations entering the domain.
         if oscillatory_inlet:
-            # Drive richer unsteady dynamics, especially useful when no cylinder is used.
+            # Drive richer unsteady dynamics, especially useful when no cylinder is used
             phase = 2.0 * math.pi * (3.0 * step / max(full_duration, 1))
             amp_u = 1.0 + 0.25 * math.sin(phase)
             amp_v = 0.10 * math.sin(phase)
@@ -337,14 +341,14 @@ def simulate_lbm_cylinder(
             u_inlet_dynamic[1, :, 0] = amp_v * lateral_profile[:, 0]
 
             f_inlet_now = compute_equilibrium(inlet_rho, u_inlet_dynamic)
-            f[:, :, 0] = f_inlet_now[:, :, 0]
+            f[inlet_incoming, :, 0] = f_inlet_now[inlet_incoming, :, 0]
         else:
-            f[:, :, 0] = f_inlet_eq[:, :, 0]
+            f[inlet_incoming, :, 0] = f_inlet_eq[inlet_incoming, :, 0]
 
         # C. Outlet (East, x=W-1)
-        # Open boundary (Neumann): Copy from neighbor x=W-2
-        # Zero-gradient perpendicular to boundary
-        f[:, :, -1] = f[:, :, -2]
+        # Open boundary (Neumann): copy only populations entering from outlet side.
+        # This is less reflective than overwriting all directions.
+        f[outlet_incoming, :, -1] = f[outlet_incoming, :, -2]
 
         # D. Walls (Top/Bottom, y=0, y=H-1)
         # Bounce-back (No Slip)
@@ -353,22 +357,24 @@ def simulate_lbm_cylinder(
         f[:, -1, :] = f[opp, -1, :]
 
         # --- 5. Recording ---
-        if step >= warmup_steps:
-            if return_timeseries and ((step - warmup_steps) % save_interval == 0):
-                # Recalculate macroscopic for saving (since f changed in streaming/BC)
-                rho_out = torch.sum(f, dim=0)
-                ux_out = torch.sum(f * c[:, 1].view(9, 1, 1).float(), dim=0) / (
-                    rho_out + 1e-6
-                )
-                uy_out = torch.sum(f * c[:, 0].view(9, 1, 1).float(), dim=0) / (
-                    rho_out + 1e-6
-                )
+        if (
+            step >= warmup_steps
+            and return_timeseries
+            and ((step - warmup_steps) % save_interval == 0)
+        ):
+            # Recalculate macroscopic for saving (since f changed in streaming/BC)
+            rho_out = torch.sum(f, dim=0)
+            ux_out = torch.sum(f * c[:, 1].view(9, 1, 1).float(), dim=0) / (
+                rho_out + 1e-6
+            )
+            uy_out = torch.sum(f * c[:, 0].view(9, 1, 1).float(), dim=0) / (
+                rho_out + 1e-6
+            )
 
-                history.append(get_snapshot(torch.stack([ux_out, uy_out]), rho_out))
+            history.append(get_snapshot(torch.stack([ux_out, uy_out]), rho_out))
 
     if return_timeseries:
         if not history:
             return get_snapshot(u, rho).unsqueeze(0)
         return torch.stack(history, dim=0)
-    else:
-        return get_snapshot(u, rho)
+    return get_snapshot(u, rho)
