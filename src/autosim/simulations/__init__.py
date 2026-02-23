@@ -5,6 +5,7 @@ from .epidemic import Epidemic
 from .flow_problem import FlowProblem
 from .gray_scott import GrayScott
 from .hydrodynamics_2d import Hydrodynamics2D
+from .lattice_boltzmann import LatticeBoltzmann
 from .projectile import Projectile, ProjectileMultioutput
 from .reaction_diffusion import ReactionDiffusion
 from .seir import SEIRSimulator
@@ -15,6 +16,7 @@ ALL_SIMULATORS = [
     AdvectionDiffusionMultichannel,
     CompressibleFluid1D,
     Hydrodynamics2D,
+    LatticeBoltzmann,
     Epidemic,
     SEIRSimulator,
     FlowProblem,
@@ -31,6 +33,7 @@ __all__ = [
     "FlowProblem",
     "GrayScott",
     "Hydrodynamics2D",
+    "LatticeBoltzmann",
     "Projectile",
     "ProjectileMultioutput",
     "ReactionDiffusion",
