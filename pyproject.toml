@@ -14,6 +14,9 @@ dependencies = [
     "scipy>=1.10",
     "tqdm>=4.65",
     "torch>=2.0",
+    "matplotlib",
+    "scikit-learn>=1.7.2",
+    "einops>=0.8.2",
 ]
 
 [project.optional-dependencies]
@@ -24,7 +27,6 @@ dev = [
     "ruff==0.12.11",
     "pyright==1.1.407",
     "pre-commit>=4.4.0",
-    "matplotlib"
 ]
 
 [build-system]
