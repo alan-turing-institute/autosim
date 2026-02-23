@@ -58,11 +58,12 @@ class Hydrodynamics2D(Simulator):
         L: float = 1.0,
         T: float = 1.0,
         dt: float = 0.01,
+        cfl: float = 0.35,
     ) -> None:
         if parameters_range is None:
             parameters_range = {
-                "nu": (5e-4, 5e-3),
-                "force": (0.0, 1.0),
+                "nu": (1e-3, 8e-3),
+                "force": (0.0, 0.4),
             }
         if output_names is None:
             output_names = ["u", "v", "p"]
@@ -74,6 +75,7 @@ class Hydrodynamics2D(Simulator):
         self.L = L
         self.T = T
         self.dt = dt
+        self.cfl = cfl
 
     def _forward(self, x: TensorLike) -> TensorLike:
         assert x.shape[0] == 1, (
@@ -88,6 +90,7 @@ class Hydrodynamics2D(Simulator):
             L=self.L,
             T=self.T,
             dt=self.dt,
+            cfl=self.cfl,
         )
         return out.flatten().unsqueeze(0)
 
@@ -157,6 +160,52 @@ def _poisson_solve_periodic(rhs: torch.Tensor, L: float) -> torch.Tensor:
     return torch.fft.ifft2(p_hat).real
 
 
+def _stable_timestep(
+    u: torch.Tensor,
+    v: torch.Tensor,
+    dx: float,
+    nu: float,
+    dt_max: float,
+    cfl: float,
+    t: float,
+    T: float,
+) -> float:
+    speed = torch.sqrt(u**2 + v**2)
+    umax = float(speed.max().item())
+    adv_dt = cfl * dx / max(umax, 1e-8)
+    diff_dt = 0.25 * dx * dx / max(nu, 1e-8)
+    return min(dt_max, adv_dt, diff_dt, T - t)
+
+
+def _advance_one_step(
+    u: torch.Tensor,
+    v: torch.Tensor,
+    fx: torch.Tensor,
+    fy: torch.Tensor,
+    dx: float,
+    dt_step: float,
+    nu: float,
+    L: float,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    du_dx = _grad_x(u, dx)
+    du_dy = _grad_y(u, dx)
+    dv_dx = _grad_x(v, dx)
+    dv_dy = _grad_y(v, dx)
+
+    adv_u = u * du_dx + v * du_dy
+    adv_v = u * dv_dx + v * dv_dy
+
+    u_star = u + dt_step * (-adv_u + nu * _laplacian(u, dx) + fx)
+    v_star = v + dt_step * (-adv_v + nu * _laplacian(v, dx) + fy)
+
+    div_star = _grad_x(u_star, dx) + _grad_y(v_star, dx)
+    p_next = _poisson_solve_periodic(div_star / dt_step, L)
+
+    u_next = u_star - dt_step * _grad_x(p_next, dx)
+    v_next = v_star - dt_step * _grad_y(p_next, dx)
+    return u_next, v_next, p_next
+
+
 def simulate_hydrodynamics_2d(
     params: TensorLike,
     return_timeseries: bool = False,
@@ -164,6 +213,7 @@ def simulate_hydrodynamics_2d(
     L: float = 1.0,
     T: float = 1.0,
     dt: float = 0.01,
+    cfl: float = 0.35,
 ) -> TensorLike:
     """Simulate a simplified 2D incompressible flow with forcing.
 
@@ -193,45 +243,85 @@ def simulate_hydrodynamics_2d(
     xx, yy = torch.meshgrid(x, y, indexing="ij")
     dx = L / n
 
-    u = torch.sin(2.0 * math.pi * yy / L)
-    v = -torch.sin(2.0 * math.pi * xx / L)
-    perturb = (
-        0.1 * torch.sin(4.0 * math.pi * xx / L) * torch.sin(4.0 * math.pi * yy / L)
-    )
-    u = u + 0.25 * force_amp * perturb
-    v = v - 0.25 * force_amp * perturb
+    # Random initial condition (divergence-free via projection)
+    # White noise in velocity
+    u = torch.rand((n, n), device=device, dtype=dtype) - 0.5
+    v = torch.rand((n, n), device=device, dtype=dtype) - 0.5
+
+    # Project to be divergence-free
+    # We use the same projection logic as in the stepper, but initializing p=0
+    # to begin with implies we just project (u,v).
+    # 1. Calculate div
+    div = _grad_x(u, dx) + _grad_y(v, dx)
+    # 2. Solve Poisson for 'correction potential' phi
+    phi = _poisson_solve_periodic(div, L)
+    # 3. Correct velocity
+    u = u - _grad_x(phi, dx)
+    v = v - _grad_y(phi, dx)
+
+    # Scale initial energy
+    u = u * 0.5
+    v = v * 0.5
+
     p = torch.zeros_like(u)
 
-    fx = force_amp * torch.sin(2.0 * math.pi * yy / L)
-    fy = -force_amp * torch.sin(2.0 * math.pi * xx / L)
+    # Kolmogorov Forcing: F = (sin(k*y), 0)
+    # This creates shear bands that become unstable and roll up into vortices
+    k_force = 4.0 * math.pi
+    fx = force_amp * torch.sin(k_force * yy / L)
+    fy = torch.zeros_like(xx)
 
-    n_steps = max(1, int(T / dt))
+    save_dt = max(1e-6, dt)
     history: list[torch.Tensor] = []
 
+    def _snapshot(
+        u_field: torch.Tensor,
+        v_field: torch.Tensor,
+        p_field: torch.Tensor,
+    ) -> torch.Tensor:
+        return torch.stack([u_field, v_field, p_field], dim=-1)
+
+    t = 0.0
+    next_save_t = 0.0
+
     with torch.no_grad():
-        for _ in range(n_steps):
-            du_dx = _grad_x(u, dx)
-            du_dy = _grad_y(u, dx)
-            dv_dx = _grad_x(v, dx)
-            dv_dy = _grad_y(v, dx)
+        if return_timeseries:
+            history.append(_snapshot(u, v, p))
+            next_save_t = save_dt
 
-            adv_u = u * du_dx + v * du_dy
-            adv_v = u * dv_dx + v * dv_dy
+        while t < T - 1e-12:
+            dt_step = _stable_timestep(
+                u=u,
+                v=v,
+                dx=dx,
+                nu=nu,
+                dt_max=dt,
+                cfl=cfl,
+                t=t,
+                T=T,
+            )
+            u, v, p = _advance_one_step(
+                u=u,
+                v=v,
+                fx=fx,
+                fy=fy,
+                dx=dx,
+                dt_step=dt_step,
+                nu=nu,
+                L=L,
+            )
 
-            u_star = u + dt * (-adv_u + nu * _laplacian(u, dx) + fx)
-            v_star = v + dt * (-adv_v + nu * _laplacian(v, dx) + fy)
-
-            div_star = _grad_x(u_star, dx) + _grad_y(v_star, dx)
-            p = _poisson_solve_periodic(div_star / dt, L)
-
-            u = u_star - dt * _grad_x(p, dx)
-            v = v_star - dt * _grad_y(p, dx)
+            t += dt_step
 
             if return_timeseries:
-                history.append(torch.stack([u, v, p], dim=-1))
+                while next_save_t <= t + 1e-12 and next_save_t <= T + 1e-12:
+                    history.append(_snapshot(u, v, p))
+                    next_save_t += save_dt
 
     final = torch.stack([u, v, p], dim=-1)
 
     if return_timeseries:
+        if history == []:
+            history.append(final)
         return torch.stack(history, dim=0)
     return final
