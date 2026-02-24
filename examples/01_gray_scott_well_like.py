@@ -17,7 +17,7 @@ def _expected_snapshots(total_time: float, dt: float, snapshot_dt: float) -> int
     return count
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args() -> argparse.Namespace:  # noqa: D103
     parser = argparse.ArgumentParser(
         description=(
             "Generate one WELL-like Gray-Scott trajectory and save it as a compressed "
@@ -73,7 +73,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def main() -> None:  # noqa: D103
     args = parse_args()
 
     simulator = GrayScott(
@@ -94,10 +94,7 @@ def main() -> None:
     steps = y.shape[1] // (n_channels * args.n * args.n)
     expected_steps = _expected_snapshots(args.t_max, args.dt, args.snapshot_dt)
     if steps != expected_steps:
-        msg = (
-            f"Unexpected number of snapshots: got {steps}, "
-            f"expected {expected_steps}."
-        )
+        msg = f"Unexpected number of snapshots: got {steps}, expected {expected_steps}."
         raise RuntimeError(msg)
 
     channel_time_xy = y.reshape(1, n_channels, steps, args.n, args.n)[0].cpu().numpy()
@@ -120,7 +117,10 @@ def main() -> None:
 
     print("Saved", args.output)
     print("Data shape", data.shape, "(time, x, y, channels)")
-    print("Parameters", dict(zip(simulator.param_names, x_valid[0].tolist(), strict=False)))
+    print(
+        "Parameters",
+        dict(zip(simulator.param_names, x_valid[0].tolist(), strict=False)),
+    )
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ VALID_INIT_TYPES = {"gaussians", "fourier", "mixed"}
 
 
 def _validate_gaussian_spec(
-    spec: dict[str, tuple[float, float]]
+    spec: dict[str, tuple[float, float]],
 ) -> dict[str, tuple[float, float]]:
     validated: dict[str, tuple[float, float]] = {}
     required = ("count", "amplitude", "width")
@@ -189,14 +189,20 @@ def _etdrk4_coefficients(
     LR = dt * L_flat + r
 
     Q = dt * np.mean((np.exp(LR / 2.0) - 1.0) / LR, axis=-1)
-    f1 = dt * np.mean((-4.0 - LR + np.exp(LR) * (4.0 - 3.0 * LR + LR**2)) / (LR**3), axis=-1)
+    f1 = dt * np.mean(
+        (-4.0 - LR + np.exp(LR) * (4.0 - 3.0 * LR + LR**2)) / (LR**3), axis=-1
+    )
     f2 = dt * np.mean((2.0 + LR + np.exp(LR) * (-2.0 + LR)) / (LR**3), axis=-1)
-    f3 = dt * np.mean((-4.0 - 3.0 * LR - LR**2 + np.exp(LR) * (4.0 - LR)) / (LR**3), axis=-1)
+    f3 = dt * np.mean(
+        (-4.0 - 3.0 * LR - LR**2 + np.exp(LR) * (4.0 - LR)) / (LR**3), axis=-1
+    )
 
     return E, E2, Q, f1, f2, f3
 
 
-def _nonlinear_terms(u: np.ndarray, v: np.ndarray, F: float, k: float) -> tuple[np.ndarray, np.ndarray]:
+def _nonlinear_terms(
+    u: np.ndarray, v: np.ndarray, F: float, k: float
+) -> tuple[np.ndarray, np.ndarray]:
     uv2 = u * (v**2)
     return -uv2 + F * (1.0 - u), uv2 - (F + k) * v
 
@@ -283,7 +289,7 @@ def _etdrk4_step(
     return u_hat_next, v_hat_next, u_real_next, v_real_next
 
 
-def simulate_spectral_gray_scott(
+def simulate_spectral_gray_scott(  # noqa: PLR0915
     params: dict[str, float],
     *,
     return_timeseries: bool,
@@ -304,17 +310,21 @@ def simulate_spectral_gray_scott(
     pseudospectral evaluation of nonlinear terms, and optional 2/3-rule dealiasing.
     """
     if dt <= 0:
-        raise ValueError("Time step dt must be positive.")
+        msg = "Time step dt must be positive."
+        raise ValueError(msg)
     if T <= 0:
-        raise ValueError("Total simulation time T must be positive.")
+        msg = "Total simulation time T must be positive."
+        raise ValueError(msg)
     if snapshot_dt <= 0:
-        raise ValueError("snapshot_dt must be positive.")
+        msg = "snapshot_dt must be positive."
+        raise ValueError(msg)
 
     try:
         F = float(params["F"])
         k = float(params["k"])
     except KeyError as exc:
-        raise KeyError("Spectral Gray-Scott parameters must include 'F' and 'k'.") from exc
+        msg = "Spectral Gray-Scott parameters must include 'F' and 'k'."
+        raise KeyError(msg) from exc
 
     delta_u = float(params.get("delta_u", DEFAULT_DIFFUSIONS[0]))
     delta_v = float(params.get("delta_v", DEFAULT_DIFFUSIONS[1]))
@@ -385,8 +395,8 @@ def simulate_spectral_gray_scott(
         )
 
         if return_timeseries:
-            should_store = (
-                ((step + 1) % snapshot_stride == 0) or (step == num_steps - 1)
+            should_store = ((step + 1) % snapshot_stride == 0) or (
+                step == num_steps - 1
             )
             if should_store:
                 snapshots_u.append(u_real.astype(np.float32))
@@ -455,15 +465,20 @@ class GrayScott(Simulator):
             )
 
         if n <= 0:
-            raise ValueError("Spatial resolution 'n' must be positive.")
+            msg = "Spatial resolution 'n' must be positive."
+            raise ValueError(msg)
         if L <= 0:
-            raise ValueError("Domain size L must be positive.")
+            msg = "Domain size L must be positive."
+            raise ValueError(msg)
         if T <= 0:
-            raise ValueError("Simulation horizon T must be positive.")
+            msg = "Simulation horizon T must be positive."
+            raise ValueError(msg)
         if dt <= 0:
-            raise ValueError("Time step dt must be positive.")
+            msg = "Time step dt must be positive."
+            raise ValueError(msg)
         if snapshot_dt <= 0:
-            raise ValueError("snapshot_dt must be positive.")
+            msg = "snapshot_dt must be positive."
+            raise ValueError(msg)
 
         self.return_timeseries = return_timeseries
         self.n = n
@@ -491,9 +506,8 @@ class GrayScott(Simulator):
 
     def _forward(self, x: TensorLike) -> TensorLike:
         if x.shape[0] != 1:
-            raise ValueError(
-                "Spectral Gray-Scott simulator expects a single input at a time."
-            )
+            msg = "Spectral Gray-Scott simulator expects a single input at a time."
+            raise ValueError(msg)
 
         params = dict(zip(self.param_names, x.cpu().numpy()[0].tolist(), strict=False))
         params.setdefault("delta_u", self.diffusions[0])
@@ -526,9 +540,8 @@ class GrayScott(Simulator):
     ) -> dict:
         """Run multiple trajectories and return `[batch, time, x, y, channels]` data."""
         if not self.return_timeseries:
-            raise RuntimeError(
-                "forward_samples_spatiotemporal requires return_timeseries=True."
-            )
+            msg = "forward_samples_spatiotemporal requires return_timeseries=True."
+            raise RuntimeError(msg)
         x = self.sample_inputs(n, random_seed)
         y, x = self.forward_batch(x)
 
