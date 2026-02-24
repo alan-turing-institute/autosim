@@ -87,27 +87,41 @@ def _random_gaussians_field(
     cy = np.repeat(cy, 9) + np.tile(shifts_y, m)
 
     field = np.zeros_like(X, dtype=np.float64)
-    for a, w, x0, y0 in zip(amplitudes, widths, cx, cy):
+    for a, w, x0, y0 in zip(amplitudes, widths, cx, cy, strict=True):
         field += a * np.exp(-w * ((X - x0) ** 2 + (Y - y0) ** 2))
     return _normalize_field(field)
 
 
-def _lowpass_random_field(
+def _trig_interpolate_to_grid(values: np.ndarray, target_n: int) -> np.ndarray:
+    source_n = values.shape[0]
+    if source_n == target_n:
+        return values.astype(np.float64)
+
+    if source_n > target_n:
+        msg = (
+            f"Source Fourier grid ({source_n}) cannot exceed target grid ({target_n})."
+        )
+        raise ValueError(msg)
+
+    source_hat = np.fft.fftshift(fft2(values))
+    target_hat = np.zeros((target_n, target_n), dtype=np.complex128)
+    start = (target_n - source_n) // 2
+    end = start + source_n
+    target_hat[start:end, start:end] = source_hat
+
+    upsampled = np.real(ifft2(np.fft.ifftshift(target_hat)))
+    scale = (target_n / source_n) ** 2
+    return (scale * upsampled).astype(np.float64)
+
+
+def _fourier_random_field(
     rng: np.random.Generator,
     n: int,
     n_modes: int,
 ) -> np.ndarray:
-    noise = rng.standard_normal((n, n))
-    noise_hat = fft2(noise)
-    freq_idx = np.fft.fftfreq(n) * n
-    KX, KY = np.meshgrid(freq_idx, freq_idx, indexing="ij")
-    mask = (np.sqrt(KX**2 + KY**2) <= n_modes).astype(np.float64)
-    filtered = noise_hat * mask
-    field = np.real(ifft2(filtered))
-    max_abs = float(np.max(np.abs(field)))
-    if max_abs < 1e-12:
-        return np.zeros_like(field)
-    return field / max_abs
+    m = max(2, min(int(n_modes), n))
+    coarse = rng.random((m, m)) - 0.5
+    return _trig_interpolate_to_grid(coarse, n)
 
 
 def _steady_state(F: float, k: float) -> tuple[float, float, float, float]:
@@ -149,8 +163,8 @@ def _initialize_fields(
         v0 = base_v
     elif choice == "fourier":
         mean_u, mean_v, du, dv = _steady_state(F, k)
-        perturb_u = _lowpass_random_field(rng, n, n_fourier_modes)
-        perturb_v = _lowpass_random_field(rng, n, n_fourier_modes)
+        perturb_u = _fourier_random_field(rng, n, n_fourier_modes)
+        perturb_v = _fourier_random_field(rng, n, n_fourier_modes)
         u0 = np.clip(mean_u + 0.5 * du * perturb_u, 0.0, 1.0)
         v0 = np.clip(mean_v + 0.5 * dv * perturb_v, 0.0, 1.0)
     else:
@@ -194,6 +208,81 @@ def _build_dealias_mask(n: int) -> np.ndarray:
     return ((np.abs(KX) <= cutoff) & (np.abs(KY) <= cutoff)).astype(np.float64)
 
 
+def _etdrk4_step(
+    u_hat: np.ndarray,
+    v_hat: np.ndarray,
+    u_real: np.ndarray,
+    v_real: np.ndarray,
+    F: float,
+    k: float,
+    E_u: np.ndarray,
+    E2_u: np.ndarray,
+    Q_u: np.ndarray,
+    f1_u: np.ndarray,
+    f2_u: np.ndarray,
+    f3_u: np.ndarray,
+    E_v: np.ndarray,
+    E2_v: np.ndarray,
+    Q_v: np.ndarray,
+    f1_v: np.ndarray,
+    f2_v: np.ndarray,
+    f3_v: np.ndarray,
+    dealias_mask: np.ndarray | None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    Nu_real, Nv_real = _nonlinear_terms(u_real, v_real, F, k)
+    Nv1_u = fft2(Nu_real)
+    Nv1_v = fft2(Nv_real)
+    if dealias_mask is not None:
+        Nv1_u *= dealias_mask
+        Nv1_v *= dealias_mask
+
+    a_hat_u = E2_u * u_hat + Q_u * Nv1_u
+    a_hat_v = E2_v * v_hat + Q_v * Nv1_v
+    a_u = np.real(ifft2(a_hat_u))
+    a_v = np.real(ifft2(a_hat_v))
+
+    Nu2_real, Nv2_real = _nonlinear_terms(a_u, a_v, F, k)
+    Nv2_u = fft2(Nu2_real)
+    Nv2_v = fft2(Nv2_real)
+    if dealias_mask is not None:
+        Nv2_u *= dealias_mask
+        Nv2_v *= dealias_mask
+
+    b_hat_u = E2_u * u_hat + Q_u * Nv2_u
+    b_hat_v = E2_v * v_hat + Q_v * Nv2_v
+    b_u = np.real(ifft2(b_hat_u))
+    b_v = np.real(ifft2(b_hat_v))
+
+    Nu3_real, Nv3_real = _nonlinear_terms(b_u, b_v, F, k)
+    Nv3_u = fft2(Nu3_real)
+    Nv3_v = fft2(Nv3_real)
+    if dealias_mask is not None:
+        Nv3_u *= dealias_mask
+        Nv3_v *= dealias_mask
+
+    c_hat_u = E2_u * a_hat_u + Q_u * (2.0 * Nv3_u - Nv1_u)
+    c_hat_v = E2_v * a_hat_v + Q_v * (2.0 * Nv3_v - Nv1_v)
+    c_u = np.real(ifft2(c_hat_u))
+    c_v = np.real(ifft2(c_hat_v))
+
+    Nu4_real, Nv4_real = _nonlinear_terms(c_u, c_v, F, k)
+    Nv4_u = fft2(Nu4_real)
+    Nv4_v = fft2(Nv4_real)
+    if dealias_mask is not None:
+        Nv4_u *= dealias_mask
+        Nv4_v *= dealias_mask
+
+    u_hat_next = E_u * u_hat + f1_u * Nv1_u + f2_u * (Nv2_u + Nv3_u) + f3_u * Nv4_u
+    v_hat_next = E_v * v_hat + f1_v * Nv1_v + f2_v * (Nv2_v + Nv3_v) + f3_v * Nv4_v
+    if dealias_mask is not None:
+        u_hat_next *= dealias_mask
+        v_hat_next *= dealias_mask
+
+    u_real_next = np.real(ifft2(u_hat_next))
+    v_real_next = np.real(ifft2(v_hat_next))
+    return u_hat_next, v_hat_next, u_real_next, v_real_next
+
+
 def simulate_spectral_gray_scott(
     params: dict[str, float],
     *,
@@ -209,6 +298,11 @@ def simulate_spectral_gray_scott(
     dealias: bool,
     random_seed: int | None = None,
 ) -> tuple[NumpyLike, NumpyLike]:
+    """Simulate Gray-Scott dynamics using a spectral ETDRK4 discretization.
+
+    The solver uses periodic boundary conditions on a square domain,
+    pseudospectral evaluation of nonlinear terms, and optional 2/3-rule dealiasing.
+    """
     if dt <= 0:
         raise ValueError("Time step dt must be positive.")
     if T <= 0:
@@ -264,83 +358,41 @@ def simulate_spectral_gray_scott(
     num_steps = max(1, int(np.ceil(T / dt)))
     snapshot_stride = max(1, int(np.round(snapshot_dt / dt)))
 
-    if return_timeseries:
-        snapshots_u = [u_real.astype(np.float32)]
-        snapshots_v = [v_real.astype(np.float32)]
-    else:
-        snapshots_u = None
-        snapshots_v = None
+    snapshots_u: list[np.ndarray] = [u_real.astype(np.float32)]
+    snapshots_v: list[np.ndarray] = [v_real.astype(np.float32)]
 
     for step in range(num_steps):
-        Nu_real, Nv_real = _nonlinear_terms(u_real, v_real, F, k)
-        Nv1_u = fft2(Nu_real)
-        Nv1_v = fft2(Nv_real)
-        if dealias_mask is not None:
-            Nv1_u *= dealias_mask
-            Nv1_v *= dealias_mask
-
-        a_hat_u = E2_u * u_hat + Q_u * Nv1_u
-        a_hat_v = E2_v * v_hat + Q_v * Nv1_v
-        a_u = np.real(ifft2(a_hat_u))
-        a_v = np.real(ifft2(a_hat_v))
-
-        Nu2_real, Nv2_real = _nonlinear_terms(a_u, a_v, F, k)
-        Nv2_u = fft2(Nu2_real)
-        Nv2_v = fft2(Nv2_real)
-        if dealias_mask is not None:
-            Nv2_u *= dealias_mask
-            Nv2_v *= dealias_mask
-
-        b_hat_u = E2_u * u_hat + Q_u * Nv2_u
-        b_hat_v = E2_v * v_hat + Q_v * Nv2_v
-        b_u = np.real(ifft2(b_hat_u))
-        b_v = np.real(ifft2(b_hat_v))
-
-        Nu3_real, Nv3_real = _nonlinear_terms(b_u, b_v, F, k)
-        Nv3_u = fft2(Nu3_real)
-        Nv3_v = fft2(Nv3_real)
-        if dealias_mask is not None:
-            Nv3_u *= dealias_mask
-            Nv3_v *= dealias_mask
-
-        c_hat_u = E2_u * a_hat_u + Q_u * (2.0 * Nv3_u - Nv1_u)
-        c_hat_v = E2_v * a_hat_v + Q_v * (2.0 * Nv3_v - Nv1_v)
-        c_u = np.real(ifft2(c_hat_u))
-        c_v = np.real(ifft2(c_hat_v))
-
-        Nu4_real, Nv4_real = _nonlinear_terms(c_u, c_v, F, k)
-        Nv4_u = fft2(Nu4_real)
-        Nv4_v = fft2(Nv4_real)
-        if dealias_mask is not None:
-            Nv4_u *= dealias_mask
-            Nv4_v *= dealias_mask
-
-        u_hat = (
-            E_u * u_hat
-            + f1_u * Nv1_u
-            + f2_u * (Nv2_u + Nv3_u)
-            + f3_u * Nv4_u
+        u_hat, v_hat, u_real, v_real = _etdrk4_step(
+            u_hat,
+            v_hat,
+            u_real,
+            v_real,
+            F,
+            k,
+            E_u,
+            E2_u,
+            Q_u,
+            f1_u,
+            f2_u,
+            f3_u,
+            E_v,
+            E2_v,
+            Q_v,
+            f1_v,
+            f2_v,
+            f3_v,
+            dealias_mask,
         )
-        v_hat = (
-            E_v * v_hat
-            + f1_v * Nv1_v
-            + f2_v * (Nv2_v + Nv3_v)
-            + f3_v * Nv4_v
-        )
-        if dealias_mask is not None:
-            u_hat *= dealias_mask
-            v_hat *= dealias_mask
-
-        u_real = np.real(ifft2(u_hat))
-        v_real = np.real(ifft2(v_hat))
 
         if return_timeseries:
-            should_store = ((step + 1) % snapshot_stride == 0) or (step == num_steps - 1)
+            should_store = (
+                ((step + 1) % snapshot_stride == 0) or (step == num_steps - 1)
+            )
             if should_store:
                 snapshots_u.append(u_real.astype(np.float32))
                 snapshots_v.append(v_real.astype(np.float32))
 
-    if return_timeseries and snapshots_u is not None and snapshots_v is not None:
+    if return_timeseries:
         u_output = np.stack(snapshots_u, axis=0)
         v_output = np.stack(snapshots_v, axis=0)
     else:
@@ -361,10 +413,10 @@ class GrayScott(Simulator):
         log_level: str = "progress_bar",
         n: int = 128,
         L: float = 2.0,
-        T: float = 1000.0,
+        T: float = 10000.0,
         dt: float = 1.0,
         snapshot_dt: float = 10.0,
-        initial_condition: str = "mixed",
+        initial_condition: str = "gaussians",
         initial_gaussian_spec: dict[str, tuple[float, float]] | None = None,
         n_fourier_modes: int = 32,
         dealias: bool = True,
@@ -472,6 +524,7 @@ class GrayScott(Simulator):
     def forward_samples_spatiotemporal(
         self, n: int, random_seed: int | None = None
     ) -> dict:
+        """Run multiple trajectories and return `[batch, time, x, y, channels]` data."""
         if not self.return_timeseries:
             raise RuntimeError(
                 "forward_samples_spatiotemporal requires return_timeseries=True."
