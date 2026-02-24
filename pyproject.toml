@@ -85,6 +85,7 @@ ignore = [
     "D100",    # Missing docstring in public module
     "D104",    # Missing docstring in public package
     "PLR0913", # too many arguments
+    "RET504",
 ]
 
 unfixable = [
