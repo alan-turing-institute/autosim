@@ -17,6 +17,7 @@ dependencies = [
     "matplotlib",
     "scikit-learn>=1.7.2",
     "einops>=0.8.2",
+    "jax-cfd>=0.2.1",
 ]
 
 [project.optional-dependencies]
