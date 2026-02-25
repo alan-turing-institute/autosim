@@ -5,13 +5,13 @@ from numpy.fft import fft2, ifft2
 from autosim.simulations.base import Simulator
 from autosim.types import NumpyLike, TensorLike
 
-PATTERN_PRESETS: dict[str, tuple[float, float]] = {
-    "gliders": (0.014, 0.054),
-    "bubbles": (0.098, 0.057),
-    "maze": (0.029, 0.057),
-    "worms": (0.058, 0.065),
-    "spirals": (0.018, 0.051),
-    "spots": (0.030, 0.062),
+PATTERN_RANGES: dict[str, dict[str, tuple[float, float]]] = {
+    "gliders": {"F": (0.013, 0.015), "k": (0.053, 0.055)},
+    "bubbles": {"F": (0.097, 0.099), "k": (0.056, 0.058)},
+    "maze": {"F": (0.028, 0.030), "k": (0.056, 0.058)},
+    "worms": {"F": (0.057, 0.059), "k": (0.064, 0.066)},
+    "spirals": {"F": (0.017, 0.019), "k": (0.050, 0.052)},
+    "spots": {"F": (0.029, 0.031), "k": (0.061, 0.063)},
 }
 
 DEFAULT_DIFFUSIONS = (2.0e-5, 1.0e-5)
@@ -433,7 +433,8 @@ class GrayScott(Simulator):
         random_seed: int | None = None,
         pattern: str | None = None,
     ) -> None:
-        if parameters_range is None:
+        using_default_parameters_range = parameters_range is None
+        if using_default_parameters_range:
             parameters_range = {
                 "F": (0.014, 0.1),
                 "k": (0.051, 0.065),
@@ -444,14 +445,15 @@ class GrayScott(Simulator):
             parameters_range = dict(parameters_range)
 
         if pattern is not None:
-            if pattern not in PATTERN_PRESETS:
+            if pattern not in PATTERN_RANGES:
                 raise ValueError(
                     f"Unknown Gray-Scott pattern '{pattern}'. "
-                    f"Available presets: {sorted(PATTERN_PRESETS)}."
+                    f"Available presets: {sorted(PATTERN_RANGES)}."
                 )
-            F_val, k_val = PATTERN_PRESETS[pattern]
-            parameters_range["F"] = (F_val, F_val)
-            parameters_range["k"] = (k_val, k_val)
+            if using_default_parameters_range:
+                pattern_spec = PATTERN_RANGES[pattern]
+                parameters_range["F"] = pattern_spec["F"]
+                parameters_range["k"] = pattern_spec["k"]
 
         if output_names is None:
             output_names = ["solution"]
