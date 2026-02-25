@@ -1,5 +1,5 @@
 import random
-from typing import Literal
+from typing import Literal, Protocol
 
 import numpy as np
 import torch
@@ -10,11 +10,26 @@ from matplotlib.colors import Normalize, TwoSlopeNorm
 from matplotlib.gridspec import GridSpec
 from torch import Tensor
 
-from autosim.types import (
-    OutputLike,
-    TensorLike,
-    TorchScalarDType,
-)
+from autosim.types import OutputLike, TensorLike, TorchScalarDType
+
+
+class SpatioTemporalSimulator(Protocol):  # noqa: D101
+    def forward_samples_spatiotemporal(  # noqa: D102
+        self, n: int, random_seed: int | None = None
+    ) -> dict: ...
+
+
+def generate_output_data(
+    sim: SpatioTemporalSimulator,
+    n_train: int = 200,
+    n_valid: int = 20,
+    n_test: int = 20,
+):
+    """Run simulations and save outputs in a dictionary."""
+    train = sim.forward_samples_spatiotemporal(n=n_train, random_seed=None)
+    valid = sim.forward_samples_spatiotemporal(n=n_valid, random_seed=None)
+    test = sim.forward_samples_spatiotemporal(n=n_test, random_seed=None)
+    return {"train": train, "valid": valid, "test": test}
 
 
 class ValidationMixin:
