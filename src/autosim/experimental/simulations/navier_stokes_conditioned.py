@@ -110,14 +110,15 @@ def _advect_semi_lagrangian(
     return _bilinear_sample_periodic(field, x_back, y_back)
 
 
-def _smooth_random_field(
+def _pdearena_like_smoke_initial_condition(
     n: int,
     rng: torch.Generator,
     device: torch.device,
     dtype: torch.dtype,
-    smooth_steps: int = 4,
+    smooth_steps: int = 6,
+    noise_scale: float = 11.0,
 ) -> torch.Tensor:
-    field = torch.rand((n, n), generator=rng, device=device, dtype=dtype)
+    field = noise_scale * torch.randn((n, n), generator=rng, device=device, dtype=dtype)
     for _ in range(smooth_steps):
         field = (
             field
@@ -126,9 +127,7 @@ def _smooth_random_field(
             + torch.roll(field, 1, 1)
             + torch.roll(field, -1, 1)
         ) / 5.0
-    field = field - field.min()
-    field = field / (field.max() + 1e-8)
-    return field
+    return field.abs()
 
 
 def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
@@ -143,6 +142,8 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
     nu: float = 0.03,
     smoke_diffusivity: float = 5e-4,
     cfl: float = 0.35,
+    smooth_steps: int = 6,
+    noise_scale: float = 11.0,
     random_seed: int | None = None,
 ) -> TensorLike:
     """Simulate a conditioned 2D smoke-flow Navier-Stokes system.
@@ -167,6 +168,9 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
     if snapshot_dt is not None and snapshot_dt <= 0:
         msg = "snapshot_dt must be positive when provided"
         raise ValueError(msg)
+    if smooth_steps < 0:
+        msg = "smooth_steps must be non-negative"
+        raise ValueError(msg)
 
     if snapshot_dt is None:
         snapshot_dt = dt
@@ -183,7 +187,14 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
     rng = torch.Generator(device=device)
     rng.manual_seed(seed)
 
-    smoke = _smooth_random_field(n, rng, device, dtype, smooth_steps=5)
+    smoke = _pdearena_like_smoke_initial_condition(
+        n,
+        rng,
+        device,
+        dtype,
+        smooth_steps=smooth_steps,
+        noise_scale=noise_scale,
+    )
     u = torch.zeros((n, n), device=device, dtype=dtype)
     v = torch.zeros((n, n), device=device, dtype=dtype)
 
@@ -269,6 +280,8 @@ class ConditionedNavierStokes2D(Simulator):
         nu: float = 0.03,
         smoke_diffusivity: float = 5e-4,
         cfl: float = 0.35,
+        smooth_steps: int = 6,
+        noise_scale: float = 11.0,
         random_seed: int | None = None,
     ) -> None:
         if parameters_range is None:
@@ -293,6 +306,9 @@ class ConditionedNavierStokes2D(Simulator):
         if snapshot_dt is not None and snapshot_dt <= 0:
             msg = "snapshot_dt must be positive when provided"
             raise ValueError(msg)
+        if smooth_steps < 0:
+            msg = "smooth_steps must be non-negative"
+            raise ValueError(msg)
 
         self.return_timeseries = return_timeseries
         self.n = n
@@ -303,6 +319,8 @@ class ConditionedNavierStokes2D(Simulator):
         self.nu = nu
         self.smoke_diffusivity = smoke_diffusivity
         self.cfl = cfl
+        self.smooth_steps = smooth_steps
+        self.noise_scale = noise_scale
         self.random_seed = random_seed
         self._rng = (
             torch.Generator().manual_seed(random_seed)
@@ -330,6 +348,8 @@ class ConditionedNavierStokes2D(Simulator):
             nu=self.nu,
             smoke_diffusivity=self.smoke_diffusivity,
             cfl=self.cfl,
+            smooth_steps=self.smooth_steps,
+            noise_scale=self.noise_scale,
             random_seed=seed,
         )
         return sol.flatten().unsqueeze(0)
