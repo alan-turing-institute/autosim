@@ -9,9 +9,26 @@ from autosim.types import TensorLike
 
 
 def _laplacian(field: torch.Tensor, dx: float) -> torch.Tensor:
+    """Laplacian with periodic BCs (torch.roll wrapping)."""
     return (
         (torch.roll(field, -1, dims=0) - 2.0 * field + torch.roll(field, 1, dims=0))
         + (torch.roll(field, -1, dims=1) - 2.0 * field + torch.roll(field, 1, dims=1))
+    ) / (dx**2)
+
+
+def _laplacian_neumann(field: torch.Tensor, dx: float) -> torch.Tensor:
+    """Laplacian with Neumann (zero-gradient) BCs via replicate padding."""
+    import torch.nn.functional as F  # noqa: PLC0415
+
+    f = F.pad(field.unsqueeze(0).unsqueeze(0), (1, 1, 1, 1), mode="replicate")
+    f = f.squeeze(0).squeeze(0)
+    return (
+        f[2:, 1:-1]
+        - 2.0 * field
+        + f[:-2, 1:-1]
+        + f[1:-1, 2:]
+        - 2.0 * field
+        + f[1:-1, :-2]
     ) / (dx**2)
 
 
@@ -95,6 +112,36 @@ def _bilinear_sample_periodic(
     )
 
 
+def _bilinear_sample_bounded(
+    field: torch.Tensor,
+    xq: torch.Tensor,
+    yq: torch.Tensor,
+) -> torch.Tensor:
+    """Bilinear interpolation with clamped (Neumann/no-slip) boundary sampling."""
+    n = field.shape[0]
+    xq_c = xq.clamp(0.0, n - 1.0)
+    yq_c = yq.clamp(0.0, n - 1.0)
+    x0 = torch.floor(xq_c).long().clamp(0, n - 2)
+    y0 = torch.floor(yq_c).long().clamp(0, n - 2)
+    x1 = (x0 + 1).clamp(0, n - 1)
+    y1 = (y0 + 1).clamp(0, n - 1)
+
+    wx = (xq_c - x0.float()).clamp(0.0, 1.0)
+    wy = (yq_c - y0.float()).clamp(0.0, 1.0)
+
+    f00 = field[x0, y0]
+    f10 = field[x1, y0]
+    f01 = field[x0, y1]
+    f11 = field[x1, y1]
+
+    return (
+        (1.0 - wx) * (1.0 - wy) * f00
+        + wx * (1.0 - wy) * f10
+        + (1.0 - wx) * wy * f01
+        + wx * wy * f11
+    )
+
+
 def _advect_semi_lagrangian(
     field: torch.Tensor,
     u: torch.Tensor,
@@ -103,11 +150,17 @@ def _advect_semi_lagrangian(
     dx: float,
     grid_x: torch.Tensor,
     grid_y: torch.Tensor,
+    *,
+    periodic: bool = True,
 ) -> torch.Tensor:
     n = field.shape[0]
-    x_back = torch.remainder(grid_x - (dt / dx) * u, n)
-    y_back = torch.remainder(grid_y - (dt / dx) * v, n)
-    return _bilinear_sample_periodic(field, x_back, y_back)
+    x_back = grid_x - (dt / dx) * u
+    y_back = grid_y - (dt / dx) * v
+    if periodic:
+        x_back = torch.remainder(x_back, n)
+        y_back = torch.remainder(y_back, n)
+        return _bilinear_sample_periodic(field, x_back, y_back)
+    return _bilinear_sample_bounded(field, x_back, y_back)
 
 
 def _pdearena_like_smoke_initial_condition(
@@ -144,12 +197,20 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
     cfl: float = 0.35,
     smooth_steps: int = 6,
     noise_scale: float = 11.0,
+    bc_mode: str = "periodic",
+    buoyancy_mode: str = "anomaly",
     random_seed: int | None = None,
 ) -> TensorLike:
     """Simulate a conditioned 2D smoke-flow Navier-Stokes system.
 
     State channels are `[smoke, u, v]`, where `smoke` is a passive scalar that
     drives buoyancy forcing in the vertical velocity equation.
+
+    Args:
+        bc_mode: ``"periodic"`` (default) wraps all fields; ``"neumann"`` uses
+            zero-gradient BCs for smoke and no-slip BCs for velocity.
+        buoyancy_mode: ``"anomaly"`` (default, Boussinesq) forces with
+            ``smoke - mean(smoke)``; ``"raw"`` forces with raw smoke values.
     """
     buoyancy_y = float(params[0].item())
 
@@ -170,6 +231,12 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
         raise ValueError(msg)
     if smooth_steps < 0:
         msg = "smooth_steps must be non-negative"
+        raise ValueError(msg)
+    if bc_mode not in ("periodic", "neumann"):
+        msg = "bc_mode must be 'periodic' or 'neumann'"
+        raise ValueError(msg)
+    if buoyancy_mode not in ("anomaly", "raw"):
+        msg = "buoyancy_mode must be 'anomaly' or 'raw'"
         raise ValueError(msg)
 
     if snapshot_dt is None:
@@ -206,6 +273,9 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
     def _snapshot() -> torch.Tensor:
         return torch.stack([smoke, u, v], dim=-1)
 
+    _periodic = bc_mode == "periodic"
+    _lap = _laplacian if _periodic else _laplacian_neumann
+
     with torch.no_grad():
         next_snapshot_t = float(snapshot_dt)
         last_snapshot_t = 0.0
@@ -227,24 +297,40 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
                 T=T,
             )
             smoke_adv = _advect_semi_lagrangian(
-                smoke, u, v, dt_step, dx, grid_x, grid_y
+                smoke, u, v, dt_step, dx, grid_x, grid_y, periodic=_periodic
             )
-            u_adv = _advect_semi_lagrangian(u, u, v, dt_step, dx, grid_x, grid_y)
-            v_adv = _advect_semi_lagrangian(v, u, v, dt_step, dx, grid_x, grid_y)
-            smoke_anomaly = smoke_adv - smoke_adv.mean()
+            u_adv = _advect_semi_lagrangian(
+                u, u, v, dt_step, dx, grid_x, grid_y, periodic=_periodic
+            )
+            v_adv = _advect_semi_lagrangian(
+                v, u, v, dt_step, dx, grid_x, grid_y, periodic=_periodic
+            )
 
-            u_tmp = u_adv + dt_step * nu * _laplacian(u_adv, dx)
+            if buoyancy_mode == "anomaly":
+                buoyancy_term = smoke_adv - smoke_adv.mean()
+            else:  # "raw" buoyancy forcing
+                buoyancy_term = smoke_adv
+
+            u_tmp = u_adv + dt_step * nu * _lap(u_adv, dx)
             v_tmp = (
                 v_adv
-                + dt_step * nu * _laplacian(v_adv, dx)
-                + dt_step * buoyancy_y * smoke_anomaly
+                + dt_step * nu * _lap(v_adv, dx)
+                + dt_step * buoyancy_y * buoyancy_term
             )
-            smoke_tmp = smoke_adv + dt_step * smoke_diffusivity * _laplacian(
-                smoke_adv, dx
-            )
+            smoke_tmp = smoke_adv + dt_step * smoke_diffusivity * _lap(smoke_adv, dx)
             smoke_tmp = smoke_tmp.clamp(min=0.0)
 
             u, v, _ = _project_incompressible(u_tmp, v_tmp, L)
+
+            # Bounded mode: remove mean drift and enforce no-slip walls.
+            if not _periodic:
+                u = u - u.mean()
+                v = v - v.mean()
+                u[[0, -1], :] = 0.0
+                u[:, [0, -1]] = 0.0
+                v[[0, -1], :] = 0.0
+                v[:, [0, -1]] = 0.0
+
             smoke = smoke_tmp
             t += dt_step
 
@@ -282,6 +368,8 @@ class ConditionedNavierStokes2D(Simulator):
         cfl: float = 0.35,
         smooth_steps: int = 6,
         noise_scale: float = 11.0,
+        bc_mode: str = "periodic",
+        buoyancy_mode: str = "anomaly",
         random_seed: int | None = None,
     ) -> None:
         if parameters_range is None:
@@ -309,6 +397,12 @@ class ConditionedNavierStokes2D(Simulator):
         if smooth_steps < 0:
             msg = "smooth_steps must be non-negative"
             raise ValueError(msg)
+        if bc_mode not in ("periodic", "neumann"):
+            msg = "bc_mode must be 'periodic' or 'neumann'"
+            raise ValueError(msg)
+        if buoyancy_mode not in ("anomaly", "raw"):
+            msg = "buoyancy_mode must be 'anomaly' or 'raw'"
+            raise ValueError(msg)
 
         self.return_timeseries = return_timeseries
         self.n = n
@@ -321,6 +415,8 @@ class ConditionedNavierStokes2D(Simulator):
         self.cfl = cfl
         self.smooth_steps = smooth_steps
         self.noise_scale = noise_scale
+        self.bc_mode = bc_mode
+        self.buoyancy_mode = buoyancy_mode
         self.random_seed = random_seed
         self._rng = (
             torch.Generator().manual_seed(random_seed)
@@ -350,6 +446,8 @@ class ConditionedNavierStokes2D(Simulator):
             cfl=self.cfl,
             smooth_steps=self.smooth_steps,
             noise_scale=self.noise_scale,
+            bc_mode=self.bc_mode,
+            buoyancy_mode=self.buoyancy_mode,
             random_seed=seed,
         )
         return sol.flatten().unsqueeze(0)
