@@ -234,11 +234,13 @@ def _step(
     gamma: float,
     cfl: float,
     flux_scheme: str,
+    dt_max: float = float("inf"),
 ) -> tuple[torch.Tensor, float]:
     sx, sy = _signal_speed(U, gamma)
     max_sx = float(sx.max().item())
     max_sy = float(sy.max().item())
     dt = cfl * min(dx / max(max_sx, 1e-8), dy / max(max_sy, 1e-8))
+    dt = min(dt, dt_max)
 
     UxR = torch.roll(U, shifts=-1, dims=1)
     if flux_scheme == "llf":
@@ -377,8 +379,8 @@ def simulate_compressible_fluid_2d(  # noqa: PLR0915
                 gamma=gamma,
                 cfl=cfl,
                 flux_scheme=flux_scheme,
+                dt_max=T - t,
             )
-            dt = min(dt, T - t)
             t += dt
 
             if return_timeseries and t + 1e-12 >= next_save:

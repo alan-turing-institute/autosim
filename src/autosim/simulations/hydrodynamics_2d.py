@@ -145,13 +145,25 @@ def _laplacian(field: torch.Tensor, dx: float) -> torch.Tensor:
 
 
 def _poisson_solve_periodic(rhs: torch.Tensor, L: float) -> torch.Tensor:
-    """Solve ∇²p = rhs on a periodic square grid using FFT."""
+    """Solve ∇²_h p = rhs on a periodic square grid using FFT.
+
+    Uses the modified wavenumbers of the central-difference Laplacian so
+    that the discrete projection is exactly consistent with the FD
+    gradient operators used elsewhere in the solver.
+    """
     n = rhs.shape[0]
     dx = L / n
 
+    # Wavenumber indices
     k = 2.0 * math.pi * torch.fft.fftfreq(n, d=dx, device=rhs.device, dtype=rhs.dtype)
     kx, ky = torch.meshgrid(k, k, indexing="ij")
-    k2 = kx**2 + ky**2
+
+    # Modified wavenumbers for the 5-point Laplacian: (2 - 2*cos(k*dx)) / dx²
+    # This is the exact Fourier symbol of the discrete Laplacian used in
+    # _laplacian(), ensuring ∇_h · u^{n+1} = 0 to machine precision.
+    kx_mod = 2.0 * (1.0 - torch.cos(kx * dx)) / (dx * dx)
+    ky_mod = 2.0 * (1.0 - torch.cos(ky * dx)) / (dx * dx)
+    k2 = kx_mod + ky_mod
 
     rhs_hat = torch.fft.fft2(rhs)
     p_hat = -rhs_hat / torch.where(k2 > 0, k2, torch.ones_like(k2))
@@ -313,9 +325,13 @@ def simulate_hydrodynamics_2d(
 
             t += dt_step
 
-            if return_timeseries:
-                while next_save_t <= t + 1e-12 and next_save_t <= T + 1e-12:
-                    history.append(_snapshot(u, v, p))
+            if (
+                return_timeseries
+                and next_save_t <= t + 1e-12
+                and next_save_t <= T + 1e-12
+            ):
+                history.append(_snapshot(u, v, p))
+                while next_save_t <= t + 1e-12:
                     next_save_t += save_dt
 
     final = torch.stack([u, v, p], dim=-1)
