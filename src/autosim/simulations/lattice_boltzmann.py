@@ -306,7 +306,11 @@ def simulate_lbm_cylinder(  # noqa: PLR0915
 
         # --- 2. Collision (BGK) ---
         f_eq = compute_equilibrium(rho, u)
-        f = f * (1.0 - omega) + f_eq * omega
+        f_new = f * (1.0 - omega) + f_eq * omega
+        if use_cylinder:
+            # Skip collision inside the obstacle to preserve bounce-back populations
+            f_new[:, obstacle_mask] = f[:, obstacle_mask]
+        f = f_new
 
         # --- 3. Streaming ---
         # "Pull" or "Push"?
@@ -322,10 +326,24 @@ def simulate_lbm_cylinder(  # noqa: PLR0915
 
         # --- 4. Boundary Conditions ---
 
-        # A. Obstacle Bounce-Back (optional)
-        if use_cylinder:
-            f_obs = f[:, obstacle_mask]
-            f[:, obstacle_mask] = f_obs[opp]
+        # A. Walls (Top/Bottom, y=0, y=H-1)
+        # Half-way bounce-back to prevent garbage populations from wrapping around
+        # and corrupting the macroscopic variables at the boundaries.
+        top_hit_N = f[2, 0, :].clone()
+        top_hit_NE = f[5, 0, :].clone()
+        top_hit_NW = f[6, 0, :].clone()
+
+        bot_hit_S = f[4, -1, :].clone()
+        bot_hit_SW = f[7, -1, :].clone()
+        bot_hit_SE = f[8, -1, :].clone()
+
+        f[4, -1, :] = top_hit_N
+        f[7, -1, :] = top_hit_NE
+        f[8, -1, :] = top_hit_NW
+
+        f[2, 0, :] = bot_hit_S
+        f[5, 0, :] = bot_hit_SW
+        f[6, 0, :] = bot_hit_SE
 
         # B. Inlet (West, x=0)
         # Fixed or oscillatory equilibrium profile (Dirichlet velocity).
@@ -350,11 +368,10 @@ def simulate_lbm_cylinder(  # noqa: PLR0915
         # This is less reflective than overwriting all directions.
         f[outlet_incoming, :, -1] = f[outlet_incoming, :, -2]
 
-        # D. Walls (Top/Bottom, y=0, y=H-1)
-        # Bounce-back (No Slip)
-        # Reflect populations at top/bottom rows
-        f[:, 0, :] = f[opp, 0, :]
-        f[:, -1, :] = f[opp, -1, :]
+        # D. Obstacle Bounce-Back (optional)
+        if use_cylinder:
+            f_obs = f[:, obstacle_mask]
+            f[:, obstacle_mask] = f_obs[opp]
 
         # --- 5. Recording ---
         if (
