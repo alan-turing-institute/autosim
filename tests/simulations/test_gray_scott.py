@@ -1,4 +1,4 @@
-from autosim.simulations import GrayScott
+from autosim.experimental.simulations import GrayScott
 
 
 def test_pattern_overrides_default_ranges_only() -> None:
