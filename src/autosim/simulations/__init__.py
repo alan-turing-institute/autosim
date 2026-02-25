@@ -2,7 +2,6 @@ from .advection_diffusion import AdvectionDiffusion
 from .advection_diffusion_multichannel import AdvectionDiffusionMultichannel
 from .epidemic import Epidemic
 from .flow_problem import FlowProblem
-from .navier_stokes_conditioned import ConditionedNavierStokes2D
 from .projectile import Projectile, ProjectileMultioutput
 from .reaction_diffusion import ReactionDiffusion
 from .seir import SEIRSimulator
@@ -11,7 +10,6 @@ ALL_SIMULATORS = [
     ReactionDiffusion,
     AdvectionDiffusion,
     AdvectionDiffusionMultichannel,
-    ConditionedNavierStokes2D,
     Epidemic,
     SEIRSimulator,
     FlowProblem,
@@ -22,7 +20,6 @@ ALL_SIMULATORS = [
 __all__ = [
     "AdvectionDiffusion",
     "AdvectionDiffusionMultichannel",
-    "ConditionedNavierStokes2D",
     "Epidemic",
     "FlowProblem",
     "Projectile",
