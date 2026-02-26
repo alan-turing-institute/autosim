@@ -26,6 +26,8 @@ class LatticeBoltzmann(Simulator):
         Bounds on sampled parameters:
         - ``viscosity``: Kinematic viscosity (0.01-0.05 typically).
         - ``u_in``: Maximum inflow velocity (keep < 0.15 for stability).
+                - ``oscillation_frequency``: Inlet oscillation frequency in cycles per
+                    unit simulation time.
     output_names: list[str], optional
         Names for output channels. Defaults to
         ``["vorticity", "velocity_x", "velocity_y", "rho"]``.
@@ -47,8 +49,15 @@ class LatticeBoltzmann(Simulator):
         internal step count and reduce jumpiness in returned trajectories.
     n_saved_frames: int | None, default=None
         Number of saved frames for returned timeseries. If None, save every
-        post-warmup LBM step (temporal resolution scales with ``T``).
+        post-warmup LBM step (temporal resolution scales with ``T``). If set,
+        the simulator samples exactly that many frames when possible (capped at
+        available post-warmup steps).
+    skip_nt: int, default=0
+        Number of initial saved trajectory frames to drop from returned
+        timeseries outputs.
     """
+
+    _REQUIRED_PARAMETER_NAMES = ("viscosity", "u_in", "oscillation_frequency")
 
     def __init__(
         self,
@@ -63,6 +72,7 @@ class LatticeBoltzmann(Simulator):
         use_cylinder: bool = True,
         oscillatory_inlet: bool | None = None,
         n_saved_frames: int | None = None,
+        skip_nt: int = 0,
     ) -> None:
         if parameters_range is None:
             # Re ~ u_in * D / nu. D=height/5 approx.
@@ -70,15 +80,41 @@ class LatticeBoltzmann(Simulator):
             parameters_range = {
                 "viscosity": (0.01, 0.05),
                 "u_in": (0.04, 0.10),
+                "oscillation_frequency": (0.5, 2.5),
             }
         if output_names is None:
             output_names = ["vorticity", "velocity_x", "velocity_y", "rho"]
+
+        missing_params = [
+            name
+            for name in self._REQUIRED_PARAMETER_NAMES
+            if name not in parameters_range
+        ]
+        if missing_params:
+            missing_str = ", ".join(missing_params)
+            msg = (
+                "parameters_range is missing required keys: "
+                f"{missing_str}. Required keys are: {self._REQUIRED_PARAMETER_NAMES}"
+            )
+            raise ValueError(msg)
+
+        for key in self._REQUIRED_PARAMETER_NAMES:
+            lower, upper = parameters_range[key]
+            if lower > upper:
+                msg = f"Invalid range for {key}: lower bound must be <= upper bound"
+                raise ValueError(msg)
+        if parameters_range["oscillation_frequency"][0] < 0:
+            msg = "oscillation_frequency range must be non-negative"
+            raise ValueError(msg)
 
         if n_saved_frames is not None and n_saved_frames <= 0:
             msg = "n_saved_frames must be positive when provided"
             raise ValueError(msg)
         if dt <= 0:
             msg = "dt must be positive"
+            raise ValueError(msg)
+        if skip_nt < 0:
+            msg = "skip_nt must be non-negative"
             raise ValueError(msg)
 
         super().__init__(parameters_range, output_names, log_level)
@@ -92,10 +128,22 @@ class LatticeBoltzmann(Simulator):
             oscillatory_inlet = not use_cylinder
         self.oscillatory_inlet = oscillatory_inlet
         self.n_saved_frames = n_saved_frames
+        self.skip_nt = skip_nt
 
     def _forward(self, x: TensorLike) -> TensorLike:
         assert x.shape[0] == 1, "Simulator._forward expects a single input"
-        sample = x[0]
+        values_by_name = {
+            name: float(x[0, idx].item()) for idx, name in enumerate(self.param_names)
+        }
+        sample = torch.tensor(
+            [
+                values_by_name["viscosity"],
+                values_by_name["u_in"],
+                values_by_name["oscillation_frequency"],
+            ],
+            dtype=torch.float32,
+            device=x.device,
+        )
 
         out = simulate_lbm_cylinder(
             params=sample,
@@ -130,6 +178,13 @@ class LatticeBoltzmann(Simulator):
             total_elements = y.shape[1]
             steps = total_elements // features_per_frame
             y_reshaped = y.reshape(n, steps, self.height, self.width, channels)
+
+            if self.skip_nt >= steps:
+                raise ValueError(
+                    "skip_nt is too large for the available trajectory length; "
+                    f"skip_nt={self.skip_nt}, steps={steps}."
+                )
+            y_reshaped = y_reshaped[:, self.skip_nt :, ...]
         else:
             y_reshaped = y.reshape(n, 1, self.height, self.width, channels)
 
@@ -168,6 +223,7 @@ def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
     # 1. Unpack parameters
     viscosity = float(params[0].item())
     u_max = float(params[1].item())
+    oscillation_frequency = float(params[2].item())
 
     # LBM Relaxation
     # nu = (tau - 0.5)/3  => tau = 3*nu + 0.5
@@ -177,14 +233,26 @@ def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
     if dt <= 0:
         msg = "dt must be positive"
         raise ValueError(msg)
+    if oscillation_frequency < 0:
+        msg = "oscillation_frequency must be non-negative"
+        raise ValueError(msg)
 
     total_steps = max(1, int(duration / dt))
     warmup_steps = 200
 
-    if n_saved_frames is None:
-        save_interval = 1
+    save_all_steps = n_saved_frames is None
+    if save_all_steps:
+        save_step_set: set[int] | None = None
     else:
-        save_interval = max(1, total_steps // n_saved_frames)
+        n_target = min(int(n_saved_frames), total_steps)
+        if n_target == 1:
+            save_indices = torch.tensor([total_steps - 1], dtype=torch.long)
+        elif n_target == total_steps:
+            save_indices = torch.arange(total_steps, dtype=torch.long)
+        else:
+            ratio = (total_steps - 1) / (n_target - 1)
+            save_indices = torch.round(torch.arange(n_target) * ratio).to(torch.long)
+        save_step_set = set(save_indices.tolist())
 
     # D2Q9 Constants
     # Weights for D2Q9
@@ -373,7 +441,7 @@ def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
         # To reduce reflection, prescribe only populations entering the domain.
         if oscillatory_inlet:
             # Drive richer unsteady dynamics, especially useful when no cylinder is used
-            phase = 2.0 * math.pi * (3.0 * step / max(full_duration, 1))
+            phase = 2.0 * math.pi * oscillation_frequency * (step * dt)
             amp_u = 1.0 + 0.25 * math.sin(phase)
             amp_v = 0.10 * math.sin(phase)
 
@@ -397,11 +465,13 @@ def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
             f[:, obstacle_mask] = f_obs[opp]
 
         # --- 5. Recording ---
-        if (
-            step >= warmup_steps
-            and return_timeseries
-            and ((step - warmup_steps) % save_interval == 0)
-        ):
+        if step >= warmup_steps and return_timeseries:
+            post_warmup_step = step - warmup_steps
+            if not save_all_steps:
+                if save_step_set is None:
+                    continue
+                if post_warmup_step not in save_step_set:
+                    continue
             # Recalculate macroscopic for saving (since f changed in streaming/BC)
             rho_out = torch.sum(f, dim=0)
             ux_out = torch.sum(f * c[:, 1].view(9, 1, 1).float(), dim=0) / (
