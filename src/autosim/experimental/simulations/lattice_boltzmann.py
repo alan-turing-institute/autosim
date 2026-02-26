@@ -27,7 +27,8 @@ class LatticeBoltzmann(Simulator):
         - ``viscosity``: Kinematic viscosity (0.01-0.05 typically).
         - ``u_in``: Maximum inflow velocity (keep < 0.15 for stability).
     output_names: list[str], optional
-        Names for output channels. Defaults to ``["u", "v", "rho", "vorticity"]``.
+        Names for output channels. Defaults to
+        ``["vorticity", "velocity_x", "velocity_y", "rho"]``.
     return_timeseries: bool, default=False
         If True, returns full trajectory; otherwise final frame only.
     use_cylinder: bool, default=True
@@ -41,7 +42,12 @@ class LatticeBoltzmann(Simulator):
         Grid height (Ny).
     T: float, default=4.0
         Total simulation time (in seconds, approximate).
-        Step count = T * 500.
+    dt: float, default=1/250
+        Temporal step size in simulation-time units. Smaller values increase
+        internal step count and reduce jumpiness in returned trajectories.
+    n_saved_frames: int | None, default=None
+        Number of saved frames for returned timeseries. If None, save every
+        post-warmup LBM step (temporal resolution scales with ``T``).
     """
 
     def __init__(
@@ -53,8 +59,10 @@ class LatticeBoltzmann(Simulator):
         width: int = 128,
         height: int = 64,
         T: float = 4.0,
+        dt: float = 1.0 / 250.0,
         use_cylinder: bool = True,
         oscillatory_inlet: bool | None = None,
+        n_saved_frames: int | None = None,
     ) -> None:
         if parameters_range is None:
             # Re ~ u_in * D / nu. D=height/5 approx.
@@ -64,18 +72,26 @@ class LatticeBoltzmann(Simulator):
                 "u_in": (0.04, 0.10),
             }
         if output_names is None:
-            # We will compute vorticity on the fly
-            output_names = ["u", "v", "rho", "vorticity"]
+            output_names = ["vorticity", "velocity_x", "velocity_y", "rho"]
+
+        if n_saved_frames is not None and n_saved_frames <= 0:
+            msg = "n_saved_frames must be positive when provided"
+            raise ValueError(msg)
+        if dt <= 0:
+            msg = "dt must be positive"
+            raise ValueError(msg)
 
         super().__init__(parameters_range, output_names, log_level)
         self.return_timeseries = return_timeseries
         self.width = width
         self.height = height
         self.T = T
+        self.dt = dt
         self.use_cylinder = use_cylinder
         if oscillatory_inlet is None:
             oscillatory_inlet = not use_cylinder
         self.oscillatory_inlet = oscillatory_inlet
+        self.n_saved_frames = n_saved_frames
 
     def _forward(self, x: TensorLike) -> TensorLike:
         assert x.shape[0] == 1, "Simulator._forward expects a single input"
@@ -87,8 +103,10 @@ class LatticeBoltzmann(Simulator):
             width=self.width,
             height=self.height,
             duration=self.T,
+            dt=self.dt,
             use_cylinder=self.use_cylinder,
             oscillatory_inlet=self.oscillatory_inlet,
+            n_saved_frames=self.n_saved_frames,
         )
         return out.flatten().unsqueeze(0)
 
@@ -129,14 +147,16 @@ def curl_2d(u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
     return dv_dx - du_dy
 
 
-def simulate_lbm_cylinder(  # noqa: PLR0915
+def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
     params: TensorLike,
     return_timeseries: bool,
     width: int,
     height: int,
     duration: float,
+    dt: float = 1.0 / 250.0,
     use_cylinder: bool = True,
     oscillatory_inlet: bool = False,
+    n_saved_frames: int | None = None,
 ) -> TensorLike:
     """
     Simulate flow past a cylinder using D2Q9 Lattice Boltzmann.
@@ -154,14 +174,17 @@ def simulate_lbm_cylinder(  # noqa: PLR0915
     tau = 3.0 * viscosity + 0.5
     omega = 1.0 / tau
 
-    # Determine number of steps
-    # We define 1 sec = 250 LBM steps arbitrarily to scale 'duration' roughly
-    steps_per_sec = 250
-    total_steps = int(duration * steps_per_sec)
+    if dt <= 0:
+        msg = "dt must be positive"
+        raise ValueError(msg)
+
+    total_steps = max(1, int(duration / dt))
     warmup_steps = 200
 
-    # Save interval: aim for ~50 frames total per simulation
-    save_interval = max(1, total_steps // 50)
+    if n_saved_frames is None:
+        save_interval = 1
+    else:
+        save_interval = max(1, total_steps // n_saved_frames)
 
     # D2Q9 Constants
     # Weights for D2Q9
@@ -285,7 +308,7 @@ def simulate_lbm_cylinder(  # noqa: PLR0915
         # Force u=0 on obstacle for visualization cleanly
         u_viz = u_curr.clone()
         u_viz[:, obstacle_mask] = 0
-        return torch.stack([u_viz[0], u_viz[1], rho_curr, vort], dim=-1)
+        return torch.stack([vort, u_viz[0], u_viz[1], rho_curr], dim=-1)
 
     # Main Loop
     # Order: Collision -> Streaming -> Boundary
