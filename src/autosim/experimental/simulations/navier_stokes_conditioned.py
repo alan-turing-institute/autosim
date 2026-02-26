@@ -352,6 +352,17 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
 class ConditionedNavierStokes2D(Simulator):
     """Conditioned 2D Navier-Stokes smoke simulator inspired by PDEArena."""
 
+    _DEFAULT_SMOOTH_STEPS = 6
+    _DEFAULT_NOISE_SCALE = 11.0
+    _DEFAULT_SMOKE_DIFFUSIVITY = 5e-4
+
+    _ALLOWED_PARAMETER_NAMES = (
+        "buoyancy_y",
+        "smooth_steps",
+        "noise_scale",
+        "smoke_diffusivity",
+    )
+
     def __init__(
         self,
         parameters_range: dict[str, tuple[float, float]] | None = None,
@@ -364,18 +375,34 @@ class ConditionedNavierStokes2D(Simulator):
         dt: float = 0.01,
         snapshot_dt: float | None = None,
         nu: float = 0.03,
-        smoke_diffusivity: float = 5e-4,
         cfl: float = 0.35,
-        smooth_steps: int = 6,
-        noise_scale: float = 11.0,
         bc_mode: str = "periodic",
         buoyancy_mode: str = "anomaly",
+        skip_nt: int = 0,
         random_seed: int | None = None,
     ) -> None:
         if parameters_range is None:
-            parameters_range = {"buoyancy_y": (0.2, 0.5)}
+            parameters_range = {
+                "buoyancy_y": (0.2, 0.5),
+                "smooth_steps": (8.0, 20.0),
+                "noise_scale": (8.0, 18.0),
+                "smoke_diffusivity": (0.0, 1e-3),
+            }
         if output_names is None:
             output_names = ["smoke", "u", "v"]
+
+        if "buoyancy_y" not in parameters_range:
+            msg = "parameters_range must include 'buoyancy_y'"
+            raise ValueError(msg)
+
+        unknown_parameters = set(parameters_range) - set(self._ALLOWED_PARAMETER_NAMES)
+        if unknown_parameters:
+            unknown = ", ".join(sorted(unknown_parameters))
+            msg = (
+                "Unsupported parameters in parameters_range: "
+                f"{unknown}. Allowed names are: {sorted(self._ALLOWED_PARAMETER_NAMES)}"
+            )
+            raise ValueError(msg)
 
         super().__init__(parameters_range, output_names, log_level)
 
@@ -391,11 +418,11 @@ class ConditionedNavierStokes2D(Simulator):
         if dt <= 0:
             msg = "dt must be positive"
             raise ValueError(msg)
+        if skip_nt < 0:
+            msg = "skip_nt must be non-negative"
+            raise ValueError(msg)
         if snapshot_dt is not None and snapshot_dt <= 0:
             msg = "snapshot_dt must be positive when provided"
-            raise ValueError(msg)
-        if smooth_steps < 0:
-            msg = "smooth_steps must be non-negative"
             raise ValueError(msg)
         if bc_mode not in ("periodic", "neumann"):
             msg = "bc_mode must be 'periodic' or 'neumann'"
@@ -411,12 +438,10 @@ class ConditionedNavierStokes2D(Simulator):
         self.dt = dt
         self.snapshot_dt = snapshot_dt
         self.nu = nu
-        self.smoke_diffusivity = smoke_diffusivity
         self.cfl = cfl
-        self.smooth_steps = smooth_steps
-        self.noise_scale = noise_scale
         self.bc_mode = bc_mode
         self.buoyancy_mode = buoyancy_mode
+        self.skip_nt = skip_nt
         self.random_seed = random_seed
         self._rng = (
             torch.Generator().manual_seed(random_seed)
@@ -424,17 +449,42 @@ class ConditionedNavierStokes2D(Simulator):
             else None
         )
 
+    def _extract_run_parameters(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, int, float, float]:
+        param_values = {
+            name: float(x[0, idx].item()) for idx, name in enumerate(self.param_names)
+        }
+
+        buoyancy_y = param_values["buoyancy_y"]
+        smooth_steps = round(
+            param_values.get("smooth_steps", self._DEFAULT_SMOOTH_STEPS)
+        )
+        smooth_steps = max(smooth_steps, 0)
+        noise_scale = float(param_values.get("noise_scale", self._DEFAULT_NOISE_SCALE))
+        smoke_diffusivity = float(
+            param_values.get("smoke_diffusivity", self._DEFAULT_SMOKE_DIFFUSIVITY)
+        )
+
+        buoyancy_tensor = torch.tensor([buoyancy_y], dtype=x.dtype, device=x.device)
+        return buoyancy_tensor, smooth_steps, noise_scale, smoke_diffusivity
+
     def _forward(self, x: TensorLike) -> TensorLike:
         if x.shape[0] != 1:
             msg = "ConditionedNavierStokes2D expects a single input sample"
             raise ValueError(msg)
+
+        x = torch.as_tensor(x, dtype=torch.float32)
+        buoyancy_param, smooth_steps, noise_scale, smoke_diffusivity = (
+            self._extract_run_parameters(x)
+        )
 
         seed = None
         if self._rng is not None:
             seed = int(torch.randint(0, 2**31 - 1, (1,), generator=self._rng).item())
 
         sol = simulate_conditioned_navier_stokes_2d(
-            params=x[0],
+            params=buoyancy_param,
             return_timeseries=self.return_timeseries,
             n=self.n,
             L=self.L,
@@ -442,10 +492,10 @@ class ConditionedNavierStokes2D(Simulator):
             dt=self.dt,
             snapshot_dt=self.snapshot_dt,
             nu=self.nu,
-            smoke_diffusivity=self.smoke_diffusivity,
+            smoke_diffusivity=smoke_diffusivity,
             cfl=self.cfl,
-            smooth_steps=self.smooth_steps,
-            noise_scale=self.noise_scale,
+            smooth_steps=smooth_steps,
+            noise_scale=noise_scale,
             bc_mode=self.bc_mode,
             buoyancy_mode=self.buoyancy_mode,
             random_seed=seed,
@@ -472,6 +522,14 @@ class ConditionedNavierStokes2D(Simulator):
                 )
             n_time = total_features // features_per_step
             y_reshaped = y.reshape(y.shape[0], n_time, self.n, self.n, channels)
+
+            start_idx = 1 + self.skip_nt
+            if start_idx >= n_time:
+                raise ValueError(
+                    "skip_nt is too large for the available trajectory length; "
+                    f"computed start index {start_idx} for n_time={n_time}."
+                )
+            y_reshaped = y_reshaped[:, start_idx:, ...]
         else:
             if y.shape[1] != features_per_step:
                 raise RuntimeError(
