@@ -183,8 +183,10 @@ def _pdearena_like_smoke_initial_condition(
     kx, ky = torch.meshgrid(k_idx, k_idx, indexing="ij")
 
     # phiflow scales frequencies by (resolution * scale / size)
-    k_vec_x = (kx / L) * n * noise_scale
-    k_vec_y = (ky / L) * n * noise_scale
+    # math.fftfreq(resolution, size) is equivalent to torch.fft.fftfreq(n, d=L)
+    # k_vec = math.fftfreq(resolution, size) * resolution * scale
+    k_vec_x = (kx / L) * noise_scale
+    k_vec_y = (ky / L) * noise_scale
     k2 = k_vec_x**2 + k_vec_y**2
 
     lowest_frequency = 0.1
