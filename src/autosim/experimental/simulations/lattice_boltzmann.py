@@ -18,7 +18,8 @@ class LatticeBoltzmann(Simulator):
     r"""Lattice Boltzmann (D2Q9) simulator for channel flow with obstacles.
 
     Simulates 2D flow past a cylinder using the BGK collision model.
-    The simulation domain is a rectangular channel with aspect ratio 4:1 (default).
+    The simulation domain is a rectangular channel controlled by ``width`` and
+    ``height``.
 
     Parameters
     ----------
@@ -296,9 +297,6 @@ def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
     # Opposite indices for bounce-back
     # 0->0, 1->3, 2->4, 3->1, 4->2, 5->7, 6->8, 7->5, 8->6
     opp = torch.tensor([0, 3, 4, 1, 2, 7, 8, 5, 6], device=device, dtype=torch.long)
-    # Populations entering from the left (west inlet) and from the right (east outlet)
-    inlet_incoming = torch.tensor([1, 5, 8], device=device, dtype=torch.long)
-    outlet_incoming = torch.tensor([3, 6, 7], device=device, dtype=torch.long)
 
     # 2. Geometry
     # Coordinate grids: y (rows) 0..H-1, x (cols) 0..W-1
@@ -307,8 +305,11 @@ def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
 
     # Cylinder obstacle (optional)
     if use_cylinder:
-        cy, cx = height / 2.0, width / 4.0
-        radius = height / 9.0
+        # Geometry from: https://doi.org/10.1098/rspa.2023.0655
+        # domain (0, 2.2) x (0, 0.41), cylinder at (0.2, 0.2) with r=0.05
+        cy = height * (0.2 / 0.41)
+        cx = width * (0.2 / 2.2)
+        radius = height * (0.05 / 0.41)
         obstacle_mask = (
             (x_coord.float() - cx) ** 2 + (y_coord.float() - cy) ** 2
         ) <= radius**2
@@ -418,27 +419,13 @@ def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
         # --- 4. Boundary Conditions ---
 
         # A. Walls (Top/Bottom, y=0, y=H-1)
-        # Half-way bounce-back to prevent garbage populations from wrapping around
-        # and corrupting the macroscopic variables at the boundaries.
-        top_hit_N = f[2, 0, :].clone()
-        top_hit_NE = f[5, 0, :].clone()
-        top_hit_NW = f[6, 0, :].clone()
-
-        bot_hit_S = f[4, -1, :].clone()
-        bot_hit_SW = f[7, -1, :].clone()
-        bot_hit_SE = f[8, -1, :].clone()
-
-        f[4, -1, :] = top_hit_N
-        f[7, -1, :] = top_hit_NE
-        f[8, -1, :] = top_hit_NW
-
-        f[2, 0, :] = bot_hit_S
-        f[5, 0, :] = bot_hit_SW
-        f[6, 0, :] = bot_hit_SE
+        # Bounce-back (No Slip)
+        # Reflect populations at top/bottom rows
+        f[:, 0, :] = f[opp, 0, :]
+        f[:, -1, :] = f[opp, -1, :]
 
         # B. Inlet (West, x=0)
         # Fixed or oscillatory equilibrium profile (Dirichlet velocity).
-        # To reduce reflection, prescribe only populations entering the domain.
         if oscillatory_inlet:
             # Drive richer unsteady dynamics, especially useful when no cylinder is used
             phase = 2.0 * math.pi * oscillation_frequency * (step * dt)
@@ -450,14 +437,14 @@ def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
             u_inlet_dynamic[1, :, 0] = amp_v * lateral_profile[:, 0]
 
             f_inlet_now = compute_equilibrium(inlet_rho, u_inlet_dynamic)
-            f[inlet_incoming, :, 0] = f_inlet_now[inlet_incoming, :, 0]
+            f[:, :, 0] = f_inlet_now[:, :, 0]
         else:
-            f[inlet_incoming, :, 0] = f_inlet_eq[inlet_incoming, :, 0]
+            f[:, :, 0] = f_inlet_eq[:, :, 0]
 
         # C. Outlet (East, x=W-1)
-        # Open boundary (Neumann): copy only populations entering from outlet side.
-        # This is less reflective than overwriting all directions.
-        f[outlet_incoming, :, -1] = f[outlet_incoming, :, -2]
+        # Open boundary (Neumann): Copy from neighbor x=W-2
+        # Zero-gradient perpendicular to boundary
+        f[:, :, -1] = f[:, :, -2]
 
         # D. Obstacle Bounce-Back (optional)
         if use_cylinder:
