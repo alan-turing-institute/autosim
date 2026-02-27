@@ -10,7 +10,7 @@ def test_default_parameter_ranges_include_sampled_smoke_controls() -> None:
     sim = ConditionedNavierStokes2D()
 
     assert sim.parameters_range["buoyancy_y"] == (0.2, 0.5)
-    assert sim.parameters_range["smooth_steps"] == (8.0, 20.0)
+    assert sim.parameters_range["smoothness"] == (4.0, 8.0)
     assert sim.parameters_range["noise_scale"] == (8.0, 18.0)
     assert sim.parameters_range["smoke_diffusivity"] == (0.0, 1e-3)
 
@@ -20,7 +20,7 @@ def test_forward_uses_fixed_defaults_when_ranges_not_provided(monkeypatch) -> No
 
     def _fake_simulate_conditioned_navier_stokes_2d(*, params, **kwargs):
         captured["params"] = params.clone()
-        captured["smooth_steps"] = kwargs["smooth_steps"]
+        captured["smoothness"] = kwargs["smoothness"]
         captured["noise_scale"] = kwargs["noise_scale"]
         captured["smoke_diffusivity"] = kwargs["smoke_diffusivity"]
         return torch.zeros((8, 8, 3), dtype=torch.float32)
@@ -42,7 +42,7 @@ def test_forward_uses_fixed_defaults_when_ranges_not_provided(monkeypatch) -> No
     sim.forward(x, allow_failures=False)
 
     assert torch.allclose(captured["params"], torch.tensor([0.35], dtype=torch.float32))  # type: ignore  # noqa: PGH003
-    assert captured["smooth_steps"] == 6
+    assert captured["smoothness"] == 6.0
     assert captured["noise_scale"] == 11.0
     assert captured["smoke_diffusivity"] == 5e-4
 
@@ -52,7 +52,7 @@ def test_forward_uses_sampled_smoke_controls_from_input(monkeypatch) -> None:
 
     def _fake_simulate_conditioned_navier_stokes_2d(*, params, **kwargs):
         captured["params"] = params.clone()
-        captured["smooth_steps"] = kwargs["smooth_steps"]
+        captured["smoothness"] = kwargs["smoothness"]
         captured["noise_scale"] = kwargs["noise_scale"]
         captured["smoke_diffusivity"] = kwargs["smoke_diffusivity"]
         return torch.zeros((8, 8, 3), dtype=torch.float32)
@@ -66,7 +66,7 @@ def test_forward_uses_sampled_smoke_controls_from_input(monkeypatch) -> None:
     sim = ConditionedNavierStokes2D(
         parameters_range={
             "buoyancy_y": (0.2, 0.5),
-            "smooth_steps": (8.0, 20.0),
+            "smoothness": (4.0, 8.0),
             "noise_scale": (8.0, 18.0),
             "smoke_diffusivity": (0.0, 1e-3),
         },
@@ -75,11 +75,11 @@ def test_forward_uses_sampled_smoke_controls_from_input(monkeypatch) -> None:
         dt=0.01,
     )
 
-    x = torch.tensor([[0.41, 16.0, 12.5, 7e-4]], dtype=torch.float32)
+    x = torch.tensor([[0.41, 6.5, 12.5, 7e-4]], dtype=torch.float32)
     sim.forward(x, allow_failures=False)
 
     assert torch.allclose(captured["params"], torch.tensor([0.41], dtype=torch.float32))  # type: ignore  # noqa: PGH003
-    assert captured["smooth_steps"] == 16
+    assert captured["smoothness"] == 6.5
     assert captured["noise_scale"] == 12.5
     assert captured["smoke_diffusivity"] == pytest.approx(7e-4)
 

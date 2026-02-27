@@ -165,22 +165,43 @@ def _advect_semi_lagrangian(
 
 def _pdearena_like_smoke_initial_condition(
     n: int,
+    L: float,
     rng: torch.Generator,
     device: torch.device,
     dtype: torch.dtype,
-    smooth_steps: int = 6,
+    smoothness: float = 6.0,
     noise_scale: float = 11.0,
 ) -> torch.Tensor:
-    field = noise_scale * torch.randn((n, n), generator=rng, device=device, dtype=dtype)
-    for _ in range(smooth_steps):
-        field = (
-            field
-            + torch.roll(field, 1, 0)
-            + torch.roll(field, -1, 0)
-            + torch.roll(field, 1, 1)
-            + torch.roll(field, -1, 1)
-        ) / 5.0
-    return field.abs()
+    """Replicates the noise generation from phiflow's Noise class used in PDEArena."""
+    # Complex random noise
+    rnd_real = torch.randn((n, n), dtype=dtype, generator=rng, device=device)
+    rnd_imag = torch.randn((n, n), dtype=dtype, generator=rng, device=device)
+    rndj = torch.complex(rnd_real, rnd_imag)
+
+    # Frequency grid
+    k_idx = torch.fft.fftfreq(n, d=1.0, device=device) * n
+    kx, ky = torch.meshgrid(k_idx, k_idx, indexing="ij")
+
+    # phiflow scales frequencies by (resolution * scale / size)
+    k_vec_x = (kx / L) * n * noise_scale
+    k_vec_y = (ky / L) * n * noise_scale
+    k2 = k_vec_x**2 + k_vec_y**2
+
+    lowest_frequency = 0.1
+    weight_mask = (k2 > lowest_frequency).to(dtype)
+
+    inv_k2 = torch.where(k2 > 0, 1.0 / k2, torch.zeros_like(k2))
+
+    fft = rndj * (inv_k2**smoothness) * weight_mask
+
+    array = torch.fft.ifft2(fft).real
+
+    # Normalize
+    array = array / array.std()
+    array = array - array.mean()
+
+    # PDEArena takes the absolute value of the noise for smoke
+    return array.abs()
 
 
 def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
@@ -195,7 +216,7 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
     nu: float = 0.03,
     smoke_diffusivity: float = 5e-4,
     cfl: float = 0.35,
-    smooth_steps: int = 6,
+    smoothness: float = 6.0,
     noise_scale: float = 11.0,
     bc_mode: str = "periodic",
     buoyancy_mode: str = "anomaly",
@@ -229,8 +250,8 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
     if snapshot_dt is not None and snapshot_dt <= 0:
         msg = "snapshot_dt must be positive when provided"
         raise ValueError(msg)
-    if smooth_steps < 0:
-        msg = "smooth_steps must be non-negative"
+    if smoothness < 0:
+        msg = "smoothness must be non-negative"
         raise ValueError(msg)
     if bc_mode not in ("periodic", "neumann"):
         msg = "bc_mode must be 'periodic' or 'neumann'"
@@ -256,10 +277,11 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
 
     smoke = _pdearena_like_smoke_initial_condition(
         n,
+        L,
         rng,
         device,
         dtype,
-        smooth_steps=smooth_steps,
+        smoothness=smoothness,
         noise_scale=noise_scale,
     )
     u = torch.zeros((n, n), device=device, dtype=dtype)
@@ -352,13 +374,13 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
 class ConditionedNavierStokes2D(Simulator):
     """Conditioned 2D Navier-Stokes smoke simulator inspired by PDEArena."""
 
-    _DEFAULT_SMOOTH_STEPS = 6
+    _DEFAULT_SMOOTHNESS = 6.0
     _DEFAULT_NOISE_SCALE = 11.0
     _DEFAULT_SMOKE_DIFFUSIVITY = 5e-4
 
     _ALLOWED_PARAMETER_NAMES = (
         "buoyancy_y",
-        "smooth_steps",
+        "smoothness",
         "noise_scale",
         "smoke_diffusivity",
     )
@@ -384,7 +406,7 @@ class ConditionedNavierStokes2D(Simulator):
         if parameters_range is None:
             parameters_range = {
                 "buoyancy_y": (0.2, 0.5),
-                "smooth_steps": (8.0, 20.0),
+                "smoothness": (4.0, 8.0),
                 "noise_scale": (8.0, 18.0),
                 "smoke_diffusivity": (0.0, 1e-3),
             }
@@ -451,23 +473,21 @@ class ConditionedNavierStokes2D(Simulator):
 
     def _extract_run_parameters(
         self, x: torch.Tensor
-    ) -> tuple[torch.Tensor, int, float, float]:
+    ) -> tuple[torch.Tensor, float, float, float]:
         param_values = {
             name: float(x[0, idx].item()) for idx, name in enumerate(self.param_names)
         }
 
         buoyancy_y = param_values["buoyancy_y"]
-        smooth_steps = round(
-            param_values.get("smooth_steps", self._DEFAULT_SMOOTH_STEPS)
-        )
-        smooth_steps = max(smooth_steps, 0)
+        smoothness = float(param_values.get("smoothness", self._DEFAULT_SMOOTHNESS))
+        smoothness = max(smoothness, 0.0)
         noise_scale = float(param_values.get("noise_scale", self._DEFAULT_NOISE_SCALE))
         smoke_diffusivity = float(
             param_values.get("smoke_diffusivity", self._DEFAULT_SMOKE_DIFFUSIVITY)
         )
 
         buoyancy_tensor = torch.tensor([buoyancy_y], dtype=x.dtype, device=x.device)
-        return buoyancy_tensor, smooth_steps, noise_scale, smoke_diffusivity
+        return buoyancy_tensor, smoothness, noise_scale, smoke_diffusivity
 
     def _forward(self, x: TensorLike) -> TensorLike:
         if x.shape[0] != 1:
@@ -475,7 +495,7 @@ class ConditionedNavierStokes2D(Simulator):
             raise ValueError(msg)
 
         x = torch.as_tensor(x, dtype=torch.float32)
-        buoyancy_param, smooth_steps, noise_scale, smoke_diffusivity = (
+        buoyancy_param, smoothness, noise_scale, smoke_diffusivity = (
             self._extract_run_parameters(x)
         )
 
@@ -494,7 +514,7 @@ class ConditionedNavierStokes2D(Simulator):
             nu=self.nu,
             smoke_diffusivity=smoke_diffusivity,
             cfl=self.cfl,
-            smooth_steps=smooth_steps,
+            smoothness=smoothness,
             noise_scale=noise_scale,
             bc_mode=self.bc_mode,
             buoyancy_mode=self.buoyancy_mode,
