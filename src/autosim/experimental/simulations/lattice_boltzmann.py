@@ -39,7 +39,7 @@ class LatticeBoltzmann(Simulator):
     oscillatory_inlet: bool | None, default=None
         If True, apply time-dependent inlet modulation (useful for rich dynamics
         in no-cylinder channels). If None, defaults to ``not use_cylinder``.
-    width: int, default=256
+    width: int, default=128
         Grid width (Nx).
     height: int, default=64
         Grid height (Ny).
@@ -56,6 +56,9 @@ class LatticeBoltzmann(Simulator):
     skip_nt: int, default=0
         Number of initial saved trajectory frames to drop from returned
         timeseries outputs.
+    warmup_steps: int, default=200
+        Number of initial LBM steps to run without recording to let the
+        inlet flow establish and the simulation stabilize.
     """
 
     _REQUIRED_PARAMETER_NAMES = ("viscosity", "u_in", "oscillation_frequency")
@@ -74,6 +77,7 @@ class LatticeBoltzmann(Simulator):
         oscillatory_inlet: bool | None = None,
         n_saved_frames: int | None = None,
         skip_nt: int = 0,
+        warmup_steps: int = 200,
     ) -> None:
         if parameters_range is None:
             # Re ~ u_in * D / nu. D=height/5 approx.
@@ -117,6 +121,9 @@ class LatticeBoltzmann(Simulator):
         if skip_nt < 0:
             msg = "skip_nt must be non-negative"
             raise ValueError(msg)
+        if warmup_steps < 0:
+            msg = "warmup_steps must be non-negative"
+            raise ValueError(msg)
 
         super().__init__(parameters_range, output_names, log_level)
         self.return_timeseries = return_timeseries
@@ -130,6 +137,7 @@ class LatticeBoltzmann(Simulator):
         self.oscillatory_inlet = oscillatory_inlet
         self.n_saved_frames = n_saved_frames
         self.skip_nt = skip_nt
+        self.warmup_steps = warmup_steps
 
     def _forward(self, x: TensorLike) -> TensorLike:
         assert x.shape[0] == 1, "Simulator._forward expects a single input"
@@ -156,6 +164,7 @@ class LatticeBoltzmann(Simulator):
             use_cylinder=self.use_cylinder,
             oscillatory_inlet=self.oscillatory_inlet,
             n_saved_frames=self.n_saved_frames,
+            warmup_steps=self.warmup_steps,
         )
         return out.flatten().unsqueeze(0)
 
@@ -213,9 +222,22 @@ def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
     use_cylinder: bool = True,
     oscillatory_inlet: bool = False,
     n_saved_frames: int | None = None,
+    warmup_steps: int = 200,
 ) -> TensorLike:
     """
     Simulate flow past a cylinder using D2Q9 Lattice Boltzmann.
+
+    Args:
+        params: Tensor-like with ``[viscosity, u_in, oscillation_frequency]``.
+        return_timeseries: Whether to return all saved frames or only the final one.
+        width: Grid width.
+        height: Grid height.
+        duration: Physical duration of the simulated trajectory.
+        dt: Simulation timestep.
+        use_cylinder: Whether to include a circular obstacle.
+        oscillatory_inlet: Whether to modulate inlet velocity over time.
+        n_saved_frames: Number of post-warmup frames to keep. If ``None``, save all.
+        warmup_steps: Number of initial steps to run without recording.
 
     Coordinate system: x (width, index 1), y (height, index 0).
     """
@@ -239,7 +261,6 @@ def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
         raise ValueError(msg)
 
     total_steps = max(1, int(duration / dt))
-    warmup_steps = 200
 
     save_all_steps = n_saved_frames is None
     if save_all_steps:
