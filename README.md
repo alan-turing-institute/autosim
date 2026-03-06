@@ -40,7 +40,7 @@ uv run pytest
 ## Generate training data (Hydra CLI)
 
 Use the tiny CLI to generate train/valid/test splits from any simulator that
-implements `forward_samples_spatiotemporal`:
+inherits `SpatioTemporalSimulator`:
 
 ```bash
 uv run autosim

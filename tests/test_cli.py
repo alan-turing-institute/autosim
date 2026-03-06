@@ -13,29 +13,20 @@ from autosim.cli import (
     generate_dataset_splits,
     save_dataset_splits,
 )
+from autosim.simulations.base import SpatioTemporalSimulator
 
 
-class DummySimulator:
+class DummySimulator(SpatioTemporalSimulator):
+    def _forward(self, x: torch.Tensor) -> torch.Tensor | None:
+        msg = "DummySimulator does not implement _forward."
+        raise NotImplementedError(msg)
+
     def forward_samples_spatiotemporal(
         self, n: int, random_seed: int | None = None
     ) -> dict:
         seed_value = -1 if random_seed is None else random_seed
         return {
             "data": torch.full((n, 1, 2, 2, 1), float(seed_value), dtype=torch.float32),
-            "constant_scalars": torch.tensor([seed_value]),
-            "constant_fields": None,
-        }
-
-
-class DummySimulatorNSamples:
-    def forward_samples_spatiotemporal(
-        self, n_samples: int, random_seed: int | None = None
-    ) -> dict:
-        seed_value = -1 if random_seed is None else random_seed
-        return {
-            "data": torch.full(
-                (n_samples, 1, 2, 2, 1), float(seed_value), dtype=torch.float32
-            ),
             "constant_scalars": torch.tensor([seed_value]),
             "constant_fields": None,
         }
@@ -58,7 +49,7 @@ def test_build_simulator_from_target_core_and_experimental() -> None:
 
 def test_generate_dataset_splits_uses_seed_offsets() -> None:
     splits = generate_dataset_splits(
-        sim=DummySimulator(),
+        sim=DummySimulator({}, []),
         n_train=3,
         n_valid=2,
         n_test=1,
@@ -73,26 +64,18 @@ def test_generate_dataset_splits_uses_seed_offsets() -> None:
     assert splits["test"]["constant_scalars"].item() == 13
 
 
-def test_generate_dataset_splits_supports_n_samples_signature() -> None:
-    splits = generate_dataset_splits(
-        sim=DummySimulatorNSamples(),
-        n_train=1,
-        n_valid=1,
-        n_test=1,
-        base_seed=7,
+def test_build_simulator_rejects_non_spatiotemporal() -> None:
+    non_spatiotemporal_cfg = OmegaConf.create(
+        {"_target_": "autosim.simulations.Projectile", "log_level": "warning"}
     )
 
-    assert splits["train"]["data"].shape[0] == 1
-    assert splits["valid"]["data"].shape[0] == 1
-    assert splits["test"]["data"].shape[0] == 1
-    assert splits["train"]["constant_scalars"].item() == 7
-    assert splits["valid"]["constant_scalars"].item() == 8
-    assert splits["test"]["constant_scalars"].item() == 9
+    with pytest.raises(TypeError, match="SpatioTemporalSimulator"):
+        build_simulator(non_spatiotemporal_cfg)
 
 
 def test_save_dataset_splits_writes_expected_structure(tmp_path: Path) -> None:
     splits = generate_dataset_splits(
-        sim=DummySimulator(),
+        sim=DummySimulator({}, []),
         n_train=1,
         n_valid=1,
         n_test=1,
@@ -111,7 +94,7 @@ def test_save_dataset_splits_writes_expected_structure(tmp_path: Path) -> None:
 
 def test_save_dataset_splits_respects_overwrite_flag(tmp_path: Path) -> None:
     splits = generate_dataset_splits(
-        sim=DummySimulator(),
+        sim=DummySimulator({}, []),
         n_train=1,
         n_valid=1,
         n_test=1,

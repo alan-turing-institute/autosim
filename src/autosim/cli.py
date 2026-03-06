@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import inspect
 import sys
 from pathlib import Path
 from typing import Any
@@ -10,55 +9,39 @@ import hydra
 import torch
 from hydra.utils import get_original_cwd, instantiate
 
+from autosim.simulations.base import SpatioTemporalSimulator
 
-def build_simulator(simulator_cfg: Any) -> Any:
-    """Instantiate a simulator from Hydra config and validate required interface."""
+
+def build_simulator(simulator_cfg: Any) -> SpatioTemporalSimulator:
+    """Instantiate and validate a spatiotemporal simulator from Hydra config."""
     simulator = instantiate(simulator_cfg)
-    forward_method = getattr(simulator, "forward_samples_spatiotemporal", None)
-    if not callable(forward_method):
-        msg = "Simulator must implement forward_samples_spatiotemporal(n, random_seed)."
+    if not isinstance(simulator, SpatioTemporalSimulator):
+        msg = (
+            "Configured simulator must inherit from SpatioTemporalSimulator for "
+            "dataset generation. For non-spatiotemporal simulators, use their "
+            "forward/forward_batch API directly."
+        )
         raise TypeError(msg)
     return simulator
 
 
 def generate_dataset_splits(
-    sim: Any,
+    sim: SpatioTemporalSimulator,
     n_train: int,
     n_valid: int,
     n_test: int,
     base_seed: int | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Generate train/valid/test splits from a simulator."""
-    if not hasattr(sim, "forward_samples_spatiotemporal"):
-        msg = (
-            "Simulator does not implement forward_samples_spatiotemporal, "
-            "which is required for training data generation."
-        )
-        raise TypeError(msg)
 
     def get_seed(offset: int) -> int | None:
         if base_seed is None:
             return None
         return base_seed + offset
 
-    def run_forward(n_value: int, seed: int | None) -> dict[str, Any]:
-        forward_fn = sim.forward_samples_spatiotemporal
-        signature = inspect.signature(forward_fn)
-        params = signature.parameters
-        if "n" in params:
-            return forward_fn(n=n_value, random_seed=seed)
-        if "n_samples" in params:
-            return forward_fn(n_samples=n_value, random_seed=seed)
-
-        msg = (
-            "forward_samples_spatiotemporal must accept either 'n' or "
-            "'n_samples' as a sample-count argument."
-        )
-        raise TypeError(msg)
-
-    train = run_forward(n_train, get_seed(0))
-    valid = run_forward(n_valid, get_seed(1))
-    test = run_forward(n_test, get_seed(2))
+    train = sim.forward_samples_spatiotemporal(n=n_train, random_seed=get_seed(0))
+    valid = sim.forward_samples_spatiotemporal(n=n_valid, random_seed=get_seed(1))
+    test = sim.forward_samples_spatiotemporal(n=n_test, random_seed=get_seed(2))
     return {"train": train, "valid": valid, "test": test}
 
 
