@@ -66,7 +66,7 @@ uv run autosim \
 	simulator.T=10.0 \
 	dataset.n_train=50 dataset.n_valid=10 dataset.n_test=10 \
 	dataset.output_dir=examples/experimental/generated_datasets/shallow_water_small \
-	run.seed=123 run.overwrite=true
+	seed=123 overwrite=true
 ```
 
 Use a faster built-in simulator config:

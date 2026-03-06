@@ -124,7 +124,7 @@ def test_cli_generates_dataset_fast_with_advection_diffusion(tmp_path: Path) -> 
         "dataset.n_train=1",
         "dataset.n_valid=1",
         "dataset.n_test=1",
-        "run.overwrite=true",
+        "overwrite=true",
         "simulator=advection_diffusion",
         "simulator.log_level=warning",
         "simulator.return_timeseries=true",

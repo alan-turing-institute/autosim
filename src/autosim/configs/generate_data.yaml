@@ -8,9 +8,8 @@ dataset:
   n_valid: 20
   n_test: 20
 
-run:
-  seed: null
-  overwrite: false
+seed: null
+overwrite: false
 
 stratify:
   enabled: false

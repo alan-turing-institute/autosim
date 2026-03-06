@@ -66,7 +66,7 @@ def save_dataset_splits(
     if not overwrite and any(path.exists() for path in expected_files):
         msg = (
             f"Refusing to overwrite existing dataset files in '{output_path}'. "
-            "Set run.overwrite=true to replace them."
+            "Set overwrite=true to replace them."
         )
         raise FileExistsError(msg)
 
@@ -236,7 +236,7 @@ def _generate_main(cfg: Any) -> None:
                 n_train=n_train_each,
                 n_valid=n_valid_each,
                 n_test=n_test_each,
-                base_seed=cfg.run.seed,
+                base_seed=cfg.seed,
             )
             per_strata_outputs.append(splits)
 
@@ -249,16 +249,14 @@ def _generate_main(cfg: Any) -> None:
             n_train=cfg.dataset.n_train,
             n_valid=cfg.dataset.n_valid,
             n_test=cfg.dataset.n_test,
-            base_seed=cfg.run.seed,
+            base_seed=cfg.seed,
         )
 
     output_dir = Path(cfg.dataset.output_dir)
     if not output_dir.is_absolute():
         output_dir = Path(get_original_cwd()) / output_dir
 
-    save_dataset_splits(
-        splits=splits, output_dir=output_dir, overwrite=cfg.run.overwrite
-    )
+    save_dataset_splits(splits=splits, output_dir=output_dir, overwrite=cfg.overwrite)
     save_example_videos(
         splits=splits,
         output_dir=output_dir,
