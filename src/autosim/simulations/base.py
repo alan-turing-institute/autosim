@@ -1,3 +1,4 @@
+import abc
 import logging
 from abc import ABC, abstractmethod
 
@@ -459,3 +460,34 @@ class TorchSimulator(Simulator, TorchDeviceMixin):
         self.results_tensor = results
         valid_inputs = valid_inputs.to(self.device)
         return results, valid_inputs
+
+
+class SpatioTemporalSimulator(Simulator, abc.ABC):
+    """
+    Base class for simulators that output spatiotemporal data.
+
+    This class extends the base Simulator with additional functionality for
+    handling spatiotemporal outputs, such as reshaping to spatiotemporal format
+    and returning constant fields.
+    """
+
+    @abstractmethod
+    def forward_samples_spatiotemporal(
+        self, n: int, random_seed: int | None = None
+    ) -> dict:
+        """
+        Generate spatiotemporal samples from the simulator.
+
+        Parameters
+        ----------
+        n: int
+            Number of samples to generate.
+        random_seed: int | None
+            Random seed for reproducibility. Defaults to None.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the reshaped spatiotemporal data, constant scalars,
+            and constant fields.
+        """
