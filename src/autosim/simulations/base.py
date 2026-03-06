@@ -9,7 +9,7 @@ from tqdm import tqdm
 from autosim.device import TorchDeviceMixin
 from autosim.logging import get_configured_logger
 from autosim.types import DeviceLike, TensorLike
-from autosim.utils import ValidationMixin, set_random_seed
+from autosim.validation import ValidationMixin, set_random_seed
 
 logger = logging.getLogger("autosim")
 
