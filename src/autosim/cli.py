@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,12 @@ from hydra.utils import get_original_cwd, instantiate
 from omegaconf import OmegaConf
 
 from autosim.simulations.base import SpatioTemporalSimulator
+
+
+if not OmegaConf.has_resolver("shortuuid"):
+    OmegaConf.register_new_resolver(
+        "shortuuid", lambda n=7: uuid.uuid4().hex[: int(n)], use_cache=False
+    )
 
 
 def build_simulator(simulator_cfg: Any) -> SpatioTemporalSimulator:

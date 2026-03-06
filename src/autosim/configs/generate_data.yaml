@@ -3,7 +3,7 @@ defaults:
   - _self_
 
 dataset:
-  output_dir: examples/experimental/generated_datasets/shallow_water
+  output_dir: outputs/${now:%Y-%m-%d}/${hydra:runtime.choices.simulator}_${shortuuid:7}
   n_train: 200
   n_valid: 20
   n_test: 20
@@ -16,3 +16,7 @@ stratify:
   enabled: false
   key: null
   values: []
+
+hydra:
+  run:
+    dir: ${dataset.output_dir}
