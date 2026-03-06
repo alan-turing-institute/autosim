@@ -1,5 +1,5 @@
 import random
-from typing import Literal, Protocol
+from typing import Literal
 
 import numpy as np
 import torch
@@ -10,13 +10,8 @@ from matplotlib.colors import Normalize, TwoSlopeNorm
 from matplotlib.gridspec import GridSpec
 from torch import Tensor
 
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import OutputLike, TensorLike, TorchScalarDType
-
-
-class SpatioTemporalSimulator(Protocol):  # noqa: D101
-    def forward_samples_spatiotemporal(  # noqa: D102
-        self, n: int, random_seed: int | None = None
-    ) -> dict: ...
 
 
 def generate_output_data(
