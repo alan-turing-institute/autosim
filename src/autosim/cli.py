@@ -16,7 +16,7 @@ from autosim.utils import plot_spatiotemporal_video
 
 if not OmegaConf.has_resolver("shortuuid"):
     OmegaConf.register_new_resolver(
-        "shortuuid", lambda n=7: uuid.uuid4().hex[: int(n)], use_cache=False
+        "shortuuid", lambda n=7: uuid.uuid4().hex[: int(n)], use_cache=True
     )
 
 
