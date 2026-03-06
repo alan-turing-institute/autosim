@@ -30,6 +30,9 @@ class AdvectionDiffusionMultichannel(SpatioTemporalSimulator):
         Bounds on the sampled viscosity (`nu`) and advection strength (`mu`).
     output_names: list[str], optional
         Human-readable names for the returned channels.
+    output_indices: list[int], optional
+        Channel indices to keep from ``[vorticity, u, v, streamfunction]``.
+        Defaults to all channels in canonical order.
     return_timeseries: bool, default=False
         Whether `forward` returns the entire trajectory instead of a single snapshot.
     log_level: str, default="progress_bar"
@@ -50,10 +53,13 @@ class AdvectionDiffusionMultichannel(SpatioTemporalSimulator):
     Each grid point emits four channels `[vorticity, u, v, streamfunction]`.
     """
 
+    _ALL_CHANNEL_NAMES = ("vorticity", "u", "v", "streamfunction")
+
     def __init__(
         self,
         parameters_range: dict[str, tuple[float, float]] | None = None,
         output_names: list[str] | None = None,
+        output_indices: list[int] | None = None,
         return_timeseries: bool = False,
         log_level: str = "progress_bar",
         n: int = 32,
@@ -64,11 +70,38 @@ class AdvectionDiffusionMultichannel(SpatioTemporalSimulator):
     ) -> None:
         if parameters_range is None:
             parameters_range = {"nu": (0.0001, 0.01), "mu": (0.5, 2.0)}
+
+        if output_indices is None:
+            output_indices = [0, 1, 2, 3]
+        if len(output_indices) == 0:
+            msg = "output_indices must contain at least one channel index."
+            raise ValueError(msg)
+        if len(set(output_indices)) != len(output_indices):
+            msg = "output_indices must not contain duplicate channel indices."
+            raise ValueError(msg)
+
+        invalid_indices = [idx for idx in output_indices if idx < 0 or idx > 3]
+        if invalid_indices:
+            msg = (
+                "output_indices entries must be in the range [0, 3] for channels "
+                "[vorticity, u, v, streamfunction]. "
+                f"Received invalid indices: {invalid_indices}."
+            )
+            raise ValueError(msg)
+
+        selected_output_names = [self._ALL_CHANNEL_NAMES[idx] for idx in output_indices]
         if output_names is None:
-            output_names = ["vorticity", "u", "v", "streamfunction"]
+            output_names = selected_output_names
+        elif len(output_names) != len(output_indices):
+            msg = (
+                "output_names length must match selected output_indices length. "
+                f"Received {len(output_names)} names for {len(output_indices)} indices."
+            )
+            raise ValueError(msg)
 
         super().__init__(parameters_range, output_names, log_level)
 
+        self.output_indices = output_indices
         self.return_timeseries = return_timeseries
         self.n = n
         self.L = L
@@ -120,7 +153,7 @@ class AdvectionDiffusionMultichannel(SpatioTemporalSimulator):
             ``data``
                 Tensor of shape ``(batch, time, n, n, channels)`` if
                 `return_timeseries` is ``True`` or ``(batch, 1, n, n, channels)``
-                otherwise. Channels follow `[vorticity, u, v, streamfunction]`.
+                otherwise. Channels follow the configured `output_indices` order.
             ``constant_scalars``
                 Sampled `[nu, mu]` parameters.
             ``constant_fields``
@@ -149,6 +182,9 @@ class AdvectionDiffusionMultichannel(SpatioTemporalSimulator):
                     f"received {y.shape[1]}, expected {features_per_step}."
                 )
             y_reshaped = y.reshape(y.shape[0], 1, self.n, self.n, channels)
+
+        # Select configured subset of channels in user-specified order.
+        y_reshaped = y_reshaped[..., self.output_indices]
 
         return {
             "data": y_reshaped,
