@@ -12,7 +12,7 @@ from hydra.utils import get_original_cwd, instantiate
 from omegaconf import OmegaConf
 
 from autosim.simulations.base import SpatioTemporalSimulator
-
+from autosim.utils import plot_spatiotemporal_video
 
 if not OmegaConf.has_resolver("shortuuid"):
     OmegaConf.register_new_resolver(
@@ -74,6 +74,71 @@ def save_dataset_splits(
         split_dir = output_path / split_name
         split_dir.mkdir(parents=True, exist_ok=True)
         torch.save(payload, split_dir / "data.pt")
+
+
+def save_example_videos(
+    splits: dict[str, dict[str, Any]],
+    output_dir: str | Path,
+    visualize_cfg: Any | None,
+) -> None:
+    """Optionally render example videos for selected batch indices.
+
+    Expected data shape is ``[batch, time, x, y, channels]``.
+    """
+    if visualize_cfg is None or not bool(visualize_cfg.get("enabled", False)):
+        return
+
+    split_name = str(visualize_cfg.get("split", "train"))
+    if split_name not in splits:
+        msg = f"visualize.split='{split_name}' not found in generated splits."
+        raise ValueError(msg)
+
+    split_payload = splits[split_name]
+    data = split_payload.get("data")
+    if not isinstance(data, torch.Tensor) or data.ndim != 5:
+        msg = (
+            "visualization expects split payload 'data' as a 5D torch.Tensor "
+            "with shape [batch,time,x,y,channels]."
+        )
+        raise ValueError(msg)
+
+    batch_indices_cfg = visualize_cfg.get("batch_indices", [])
+    batch_indices = [int(idx) for idx in batch_indices_cfg]
+    if not batch_indices:
+        return
+    for idx in batch_indices:
+        if idx < 0 or idx >= data.shape[0]:
+            msg = (
+                f"visualize batch index {idx} is out of range for split "
+                f"'{split_name}' with batch size {data.shape[0]}."
+            )
+            raise ValueError(msg)
+
+    fps = int(visualize_cfg.get("fps", 5))
+    if fps <= 0:
+        msg = "visualize.fps must be positive."
+        raise ValueError(msg)
+
+    file_ext = str(visualize_cfg.get("file_ext", "gif")).lstrip(".").lower()
+    if file_ext not in {"gif", "mp4"}:
+        msg = "visualize.file_ext must be one of ['gif', 'mp4']."
+        raise ValueError(msg)
+
+    videos_dir = Path(output_dir) / "examples" / split_name
+    videos_dir.mkdir(parents=True, exist_ok=True)
+
+    overwrite = bool(visualize_cfg.get("overwrite", True))
+
+    for idx in batch_indices:
+        save_path = videos_dir / f"batch_{idx}.{file_ext}"
+        if save_path.exists() and not overwrite:
+            continue
+        plot_spatiotemporal_video(
+            true=data,
+            batch_idx=idx,
+            fps=fps,
+            save_path=str(save_path),
+        )
 
 
 def get_per_strata_counts(
@@ -193,6 +258,11 @@ def _generate_main(cfg: Any) -> None:
 
     save_dataset_splits(
         splits=splits, output_dir=output_dir, overwrite=cfg.run.overwrite
+    )
+    save_example_videos(
+        splits=splits,
+        output_dir=output_dir,
+        visualize_cfg=cfg.get("visualize"),
     )
 
 

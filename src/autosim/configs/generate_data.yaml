@@ -17,6 +17,15 @@ stratify:
   key: null
   values: []
 
+visualize:
+  enabled: false
+  split: train
+  batch_indices: [0]
+  fps: 5
+  file_ext: mp4  # gif (no extra deps) or mp4 (requires ffmpeg)
+
+  overwrite: true
+
 hydra:
   run:
     dir: ${dataset.output_dir}

@@ -14,6 +14,7 @@ from autosim.cli import (
     generate_dataset_splits,
     get_per_strata_counts,
     save_dataset_splits,
+    save_example_videos,
 )
 from autosim.simulations.base import SpatioTemporalSimulator
 
@@ -224,3 +225,94 @@ def test_combine_stratified_splits_preserves_strata_order() -> None:
     assert combined["train"]["data"].shape[0] == 4
     assert torch.all(combined["train"]["data"][:2] == 1.0)
     assert torch.all(combined["train"]["data"][2:] == 2.0)
+
+
+@pytest.fixture
+def dummy_splits() -> dict:
+    return {
+        "train": {
+            "data": torch.zeros((3, 2, 4, 4, 2), dtype=torch.float32),
+            "constant_scalars": torch.zeros((3, 1), dtype=torch.float32),
+            "constant_fields": None,
+        },
+        "valid": {
+            "data": torch.zeros((1, 2, 4, 4, 2), dtype=torch.float32),
+            "constant_scalars": torch.zeros((1, 1), dtype=torch.float32),
+            "constant_fields": None,
+        },
+        "test": {
+            "data": torch.zeros((1, 2, 4, 4, 2), dtype=torch.float32),
+            "constant_scalars": torch.zeros((1, 1), dtype=torch.float32),
+            "constant_fields": None,
+        },
+    }
+
+
+def test_save_example_videos_disabled_is_noop(tmp_path: Path, dummy_splits) -> None:
+    cfg = OmegaConf.create({"enabled": False})
+    save_example_videos(splits=dummy_splits, output_dir=tmp_path, visualize_cfg=cfg)
+    assert not (tmp_path / "examples").exists()
+
+
+def test_save_example_videos_empty_batch_indices_is_noop(
+    tmp_path: Path, dummy_splits, monkeypatch
+) -> None:
+    import autosim.cli as cli_module  # noqa: PLC0415
+
+    calls: list = []
+    monkeypatch.setattr(
+        cli_module, "plot_spatiotemporal_video", lambda **kw: calls.append(kw)
+    )
+
+    cfg = OmegaConf.create({"enabled": True, "split": "train", "batch_indices": []})
+    save_example_videos(splits=dummy_splits, output_dir=tmp_path, visualize_cfg=cfg)
+    assert calls == []
+
+
+def test_save_example_videos_out_of_range_raises(tmp_path: Path, dummy_splits) -> None:
+    cfg = OmegaConf.create(
+        {
+            "enabled": True,
+            "split": "train",
+            "batch_indices": [99],
+            "fps": 5,
+            "file_ext": "gif",
+            "overwrite": True,
+        }
+    )
+    with pytest.raises(ValueError, match="out of range"):
+        save_example_videos(splits=dummy_splits, output_dir=tmp_path, visualize_cfg=cfg)
+
+
+def test_save_example_videos_uses_batch_indices_and_split(
+    tmp_path: Path, dummy_splits, monkeypatch
+) -> None:
+    import autosim.cli as cli_module  # noqa: PLC0415
+
+    calls: list[dict] = []
+
+    def _fake(**kwargs):
+        save_path = Path(str(kwargs["save_path"]))
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        save_path.write_text("stub")
+        calls.append(kwargs)
+
+    monkeypatch.setattr(cli_module, "plot_spatiotemporal_video", _fake)
+
+    cfg = OmegaConf.create(
+        {
+            "enabled": True,
+            "split": "train",
+            "batch_indices": [0, 2],
+            "fps": 7,
+            "file_ext": "gif",
+            "overwrite": True,
+        }
+    )
+
+    save_example_videos(splits=dummy_splits, output_dir=tmp_path, visualize_cfg=cfg)
+
+    assert len(calls) == 2
+    saved_paths = sorted(Path(str(call["save_path"])) for call in calls)
+    assert saved_paths[0] == tmp_path / "examples" / "train" / "batch_0.gif"
+    assert saved_paths[1] == tmp_path / "examples" / "train" / "batch_2.gif"
