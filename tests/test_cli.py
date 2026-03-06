@@ -157,3 +157,32 @@ def test_cli_generates_dataset_fast_with_advection_diffusion(tmp_path: Path) -> 
         assert split_path.exists()
         payload = torch.load(split_path)
         assert payload["data"].shape[0] == 1
+
+
+def test_cli_list_subcommand_outputs_simulator_names() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, "-m", "autosim.cli", "list"],
+        check=True,
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+    )
+
+    output_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    assert "advection_diffusion" in output_lines
+    assert "shallow_water2d" in output_lines
+
+
+def test_cli_help_outputs_usage() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, "-m", "autosim.cli", "--help"],
+        check=True,
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "usage:" in result.stdout.lower()
+    assert "list" in result.stdout

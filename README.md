@@ -46,6 +46,12 @@ implements `forward_samples_spatiotemporal`:
 uv run autosim
 ```
 
+List available simulator configs:
+
+```bash
+uv run autosim list
+```
+
 Simulator defaults now live in package configs under
 `src/autosim/configs/simulator` and can be selected via config groups.
 

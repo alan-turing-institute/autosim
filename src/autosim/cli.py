@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import argparse
 import inspect
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -84,7 +86,7 @@ def save_dataset_splits(
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="generate_data")
-def main(cfg: Any) -> None:
+def _generate_main(cfg: Any) -> None:
     """Generate simulation datasets from a Hydra-configured simulator."""
     sim = build_simulator(cfg.simulator)
 
@@ -103,6 +105,53 @@ def main(cfg: Any) -> None:
     save_dataset_splits(
         splits=splits, output_dir=output_dir, overwrite=cfg.run.overwrite
     )
+
+
+def list_simulators() -> list[str]:
+    """Return available simulator config names from the package config group."""
+    simulator_dir = Path(__file__).parent / "configs" / "simulator"
+    if not simulator_dir.exists():
+        return []
+    return sorted(path.stem for path in simulator_dir.glob("*.yaml"))
+
+
+def main() -> None:
+    """Dispatch tiny autosim subcommands.
+
+    - `autosim list` prints simulator config names.
+    - `autosim` (or any Hydra overrides) runs data generation.
+    """
+    argv = sys.argv[1:]
+
+    if argv and argv[0] in {"-h", "--help"}:
+        parser = argparse.ArgumentParser(
+            prog="autosim",
+            description=(
+                "Generate simulation datasets using Hydra overrides, or list "
+                "available simulator configs."
+            ),
+        )
+        parser.add_argument(
+            "command",
+            nargs="?",
+            help="Subcommand: 'list'. Omit to run data generation with Hydra.",
+        )
+        parser.print_help()
+        return
+
+    if argv and argv[0] == "list":
+        list_parser = argparse.ArgumentParser(
+            prog="autosim list",
+            description="List available simulator config names.",
+        )
+        list_parser.parse_args(argv[1:])
+        for name in list_simulators():
+            print(name)
+        return
+
+    # Preserve all original arguments for Hydra's own parser.
+    sys.argv = [sys.argv[0], *argv]
+    _generate_main()
 
 
 if __name__ == "__main__":
