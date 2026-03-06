@@ -4,11 +4,11 @@ import math
 
 import torch
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
 
-class ShallowWater2D(Simulator):
+class ShallowWater2D(SpatioTemporalSimulator):
     """Full 2D shallow-water simulator with prognostic [h, u, v]."""
 
     def __init__(

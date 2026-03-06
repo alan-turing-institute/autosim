@@ -13,11 +13,11 @@ import math
 
 import torch
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
 
-class Hydrodynamics2D(Simulator):
+class Hydrodynamics2D(SpatioTemporalSimulator):
     r"""Simplified 2D hydrodynamics simulator with no magnetic field.
 
     Parameters

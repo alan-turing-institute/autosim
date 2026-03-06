@@ -11,11 +11,11 @@ import math
 
 import torch
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
 
-class CompressibleFluid2D(Simulator):
+class CompressibleFluid2D(SpatioTemporalSimulator):
     """Minimal 2D compressible Euler simulator.
 
     Parameters
@@ -97,9 +97,9 @@ class CompressibleFluid2D(Simulator):
         return y.flatten().unsqueeze(0)
 
     def forward_samples_spatiotemporal(  # noqa: D102
-        self, n_samples: int, random_seed: int | None = None
+        self, n: int, random_seed: int | None = None
     ) -> dict:
-        x = self.sample_inputs(n_samples, random_seed)
+        x = self.sample_inputs(n, random_seed)
         y, x = self.forward_batch(x)
 
         channels = 4
@@ -113,9 +113,9 @@ class CompressibleFluid2D(Simulator):
                     f"expected multiple of {features_per_step}."
                 )
             n_time = total // features_per_step
-            y = y.reshape(n_samples, n_time, self.n, self.n, channels)
+            y = y.reshape(n, n_time, self.n, self.n, channels)
         else:
-            y = y.reshape(n_samples, 1, self.n, self.n, channels)
+            y = y.reshape(n, 1, self.n, self.n, channels)
 
         return {
             "data": y,

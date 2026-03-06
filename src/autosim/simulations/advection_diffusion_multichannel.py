@@ -14,14 +14,14 @@ import numpy as np
 import torch
 from scipy.integrate import solve_ivp
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import NumpyLike, TensorLike
 
 # Integrator settings
 integrator_keywords = {"rtol": 1e-6, "atol": 1e-8, "method": "RK45"}
 
 
-class AdvectionDiffusionMultichannel(Simulator):
+class AdvectionDiffusionMultichannel(SpatioTemporalSimulator):
     r"""Differentiable advection-diffusion simulator exposing multi-channel outputs.
 
     Parameters

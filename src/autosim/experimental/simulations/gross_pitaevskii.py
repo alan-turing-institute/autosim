@@ -5,7 +5,7 @@ from typing import Any, ClassVar
 import torch
 import torch.nn.functional as F
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
 
@@ -402,7 +402,7 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
     return _snapshot(psi)
 
 
-class GrossPitaevskiiEquation2D(Simulator):
+class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
     """Gross-Pitaevskii Equation simulator for quantum fluids."""
 
     _DEFAULT_SIM_PARAMS: ClassVar[dict[str, Any]] = {

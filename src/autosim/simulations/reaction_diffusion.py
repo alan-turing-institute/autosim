@@ -3,7 +3,7 @@ import torch
 from numpy.fft import fft2, ifft2
 from scipy.integrate import solve_ivp
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import NumpyLike, TensorLike
 
 integrator_keywords = {}
@@ -12,7 +12,7 @@ integrator_keywords["method"] = "RK45"
 integrator_keywords["atol"] = 1e-12
 
 
-class ReactionDiffusion(Simulator):
+class ReactionDiffusion(SpatioTemporalSimulator):
     """Simulate the reaction-diffusion PDE for a given set of parameters."""
 
     def __init__(
