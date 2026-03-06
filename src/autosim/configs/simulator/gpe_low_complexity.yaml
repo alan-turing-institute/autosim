@@ -3,9 +3,10 @@ return_timeseries: true
 log_level: warning
 n: 64
 L: 10.0
-T: 24.0
+T: 6.42
 dt: 0.005
-snapshot_dt: 0.1
+snapshot_dt: 0.02
+skip_nt: 0.0
 random_seed: 42
 parameters_range:
   g: [0.0, 0.0]
