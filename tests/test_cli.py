@@ -10,7 +10,9 @@ from omegaconf import OmegaConf
 
 from autosim.cli import (
     build_simulator,
+    combine_stratified_splits,
     generate_dataset_splits,
+    get_per_strata_counts,
     save_dataset_splits,
 )
 from autosim.simulations.base import SpatioTemporalSimulator
@@ -169,3 +171,56 @@ def test_cli_help_outputs_usage() -> None:
 
     assert "usage:" in result.stdout.lower()
     assert "list" in result.stdout
+
+
+def test_get_per_strata_counts_requires_exact_divisibility() -> None:
+    with pytest.raises(ValueError, match="must be divisible"):
+        get_per_strata_counts(n_train=10, n_valid=4, n_test=4, n_strata=3)
+
+    train, valid, test = get_per_strata_counts(
+        n_train=12, n_valid=6, n_test=3, n_strata=3
+    )
+    assert (train, valid, test) == (4, 2, 1)
+
+
+def test_combine_stratified_splits_preserves_strata_order() -> None:
+    group_a = {
+        "train": {
+            "data": torch.full((2, 1, 1, 1, 1), 1.0),
+            "constant_scalars": torch.full((2, 1), 1.0),
+            "constant_fields": None,
+        },
+        "valid": {
+            "data": torch.full((1, 1, 1, 1, 1), 1.0),
+            "constant_scalars": torch.full((1, 1), 1.0),
+            "constant_fields": None,
+        },
+        "test": {
+            "data": torch.full((1, 1, 1, 1, 1), 1.0),
+            "constant_scalars": torch.full((1, 1), 1.0),
+            "constant_fields": None,
+        },
+    }
+    group_b = {
+        "train": {
+            "data": torch.full((2, 1, 1, 1, 1), 2.0),
+            "constant_scalars": torch.full((2, 1), 2.0),
+            "constant_fields": None,
+        },
+        "valid": {
+            "data": torch.full((1, 1, 1, 1, 1), 2.0),
+            "constant_scalars": torch.full((1, 1), 2.0),
+            "constant_fields": None,
+        },
+        "test": {
+            "data": torch.full((1, 1, 1, 1, 1), 2.0),
+            "constant_scalars": torch.full((1, 1), 2.0),
+            "constant_fields": None,
+        },
+    }
+
+    combined = combine_stratified_splits([group_a, group_b])
+
+    assert combined["train"]["data"].shape[0] == 4
+    assert torch.all(combined["train"]["data"][:2] == 1.0)
+    assert torch.all(combined["train"]["data"][2:] == 2.0)

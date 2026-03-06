@@ -8,6 +8,7 @@ from typing import Any
 import hydra
 import torch
 from hydra.utils import get_original_cwd, instantiate
+from omegaconf import OmegaConf
 
 from autosim.simulations.base import SpatioTemporalSimulator
 
@@ -68,18 +69,116 @@ def save_dataset_splits(
         torch.save(payload, split_dir / "data.pt")
 
 
+def get_per_strata_counts(
+    n_train: int,
+    n_valid: int,
+    n_test: int,
+    n_strata: int,
+) -> tuple[int, int, int]:
+    """Get per-strata split sizes, requiring exact divisibility."""
+    if n_strata <= 0:
+        msg = "Number of strata must be positive."
+        raise ValueError(msg)
+
+    for split_name, total in (
+        ("train", n_train),
+        ("valid", n_valid),
+        ("test", n_test),
+    ):
+        if total % n_strata != 0:
+            msg = (
+                f"dataset.n_{split_name}={total} must be divisible by "
+                f"number of strata ({n_strata})."
+            )
+            raise ValueError(msg)
+
+    return n_train // n_strata, n_valid // n_strata, n_test // n_strata
+
+
+def combine_stratified_splits(
+    ordered_strata_splits: list[dict[str, dict[str, Any]]],
+) -> dict[str, dict[str, Any]]:
+    """Combine per-strata splits preserving strata order in batch dimension."""
+    if not ordered_strata_splits:
+        msg = "No strata outputs to combine."
+        raise ValueError(msg)
+
+    combined: dict[str, dict[str, Any]] = {}
+    split_names = ("train", "valid", "test")
+    for split in split_names:
+        first_payload = ordered_strata_splits[0][split]
+        merged_payload: dict[str, Any] = {}
+
+        for key in first_payload:
+            values = [group[split][key] for group in ordered_strata_splits]
+            if all(isinstance(value, torch.Tensor) for value in values):
+                merged_payload[key] = torch.cat(values, dim=0)
+            elif all(value is None for value in values):
+                merged_payload[key] = None
+            else:
+                msg = (
+                    f"Cannot combine non-tensor field '{key}' across strata. "
+                    "Expected all tensors or all None."
+                )
+                raise ValueError(msg)
+
+        combined[split] = merged_payload
+
+    return combined
+
+
 @hydra.main(version_base=None, config_path="configs", config_name="generate_data")
 def _generate_main(cfg: Any) -> None:
     """Generate simulation datasets from a Hydra-configured simulator."""
-    sim = build_simulator(cfg.simulator)
+    stratify_cfg = cfg.get("stratify")
+    if stratify_cfg is not None and bool(stratify_cfg.get("enabled", False)):
+        key = stratify_cfg.get("key")
+        values = list(stratify_cfg.get("values", []))
+        if key is None or str(key).strip() == "":
+            msg = "stratify.key must be set when stratify.enabled=true."
+            raise ValueError(msg)
+        if not values:
+            msg = "stratify.values must be a non-empty list when stratify.enabled=true."
+            raise ValueError(msg)
 
-    splits = generate_dataset_splits(
-        sim=sim,
-        n_train=cfg.dataset.n_train,
-        n_valid=cfg.dataset.n_valid,
-        n_test=cfg.dataset.n_test,
-        base_seed=cfg.run.seed,
-    )
+        n_train_each, n_valid_each, n_test_each = get_per_strata_counts(
+            n_train=cfg.dataset.n_train,
+            n_valid=cfg.dataset.n_valid,
+            n_test=cfg.dataset.n_test,
+            n_strata=len(values),
+        )
+
+        key_path = str(key)
+        if key_path.startswith("simulator."):
+            key_path = key_path[len("simulator.") :]
+
+        per_strata_outputs: list[dict[str, dict[str, Any]]] = []
+        for value in values:
+            sim_cfg = OmegaConf.create(
+                OmegaConf.to_container(cfg.simulator, resolve=True)
+            )
+            OmegaConf.update(sim_cfg, key_path, value, merge=False)
+            sim = build_simulator(sim_cfg)
+            splits = generate_dataset_splits(
+                sim=sim,
+                n_train=n_train_each,
+                n_valid=n_valid_each,
+                n_test=n_test_each,
+                base_seed=cfg.run.seed,
+            )
+            per_strata_outputs.append(splits)
+
+        splits = combine_stratified_splits(per_strata_outputs)
+    else:
+        sim = build_simulator(cfg.simulator)
+
+        splits = generate_dataset_splits(
+            sim=sim,
+            n_train=cfg.dataset.n_train,
+            n_valid=cfg.dataset.n_valid,
+            n_test=cfg.dataset.n_test,
+            base_seed=cfg.run.seed,
+        )
 
     output_dir = Path(cfg.dataset.output_dir)
     if not output_dir.is_absolute():

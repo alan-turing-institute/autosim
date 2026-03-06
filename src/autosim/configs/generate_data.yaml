@@ -11,3 +11,8 @@ dataset:
 run:
   seed: null
   overwrite: false
+
+stratify:
+  enabled: false
+  key: null
+  values: []

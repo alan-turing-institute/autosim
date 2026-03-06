@@ -84,6 +84,22 @@ uv run autosim \
 	dataset.n_train=1 dataset.n_valid=1 dataset.n_test=1
 ```
 
+	Generate one combined dataset from ordered strata values (single sweep key):
+
+	```bash
+	uv run autosim \
+		simulator=gray_scott \
+		stratify.enabled=true \
+		stratify.key=simulator.pattern \
+		stratify.values=[gliders,bubbles,maze,worms,spirals,spots] \
+		dataset.n_train=240 dataset.n_valid=24 dataset.n_test=24 \
+		dataset.output_dir=outputs/gray_scott_combined
+	```
+
+	When stratification is enabled, each split size is divided equally across strata,
+	and results are concatenated in the exact order of `stratify.values`.
+	If a split size is not divisible by the number of strata, an error is raised.
+
 Bring your own simulator subclass (no registry needed):
 
 ```bash
