@@ -1,0 +1,2 @@
+_target_: autosim.simulations.SEIRSimulator
+log_level: warning

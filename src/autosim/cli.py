@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 from typing import Any
 
@@ -38,9 +39,24 @@ def generate_dataset_splits(
             return None
         return base_seed + offset
 
-    train = sim.forward_samples_spatiotemporal(n=n_train, random_seed=get_seed(0))
-    valid = sim.forward_samples_spatiotemporal(n=n_valid, random_seed=get_seed(1))
-    test = sim.forward_samples_spatiotemporal(n=n_test, random_seed=get_seed(2))
+    def run_forward(n_value: int, seed: int | None) -> dict[str, Any]:
+        forward_fn = sim.forward_samples_spatiotemporal
+        signature = inspect.signature(forward_fn)
+        params = signature.parameters
+        if "n" in params:
+            return forward_fn(n=n_value, random_seed=seed)
+        if "n_samples" in params:
+            return forward_fn(n_samples=n_value, random_seed=seed)
+
+        msg = (
+            "forward_samples_spatiotemporal must accept either 'n' or "
+            "'n_samples' as a sample-count argument."
+        )
+        raise TypeError(msg)
+
+    train = run_forward(n_train, get_seed(0))
+    valid = run_forward(n_valid, get_seed(1))
+    test = run_forward(n_test, get_seed(2))
     return {"train": train, "valid": valid, "test": test}
 
 

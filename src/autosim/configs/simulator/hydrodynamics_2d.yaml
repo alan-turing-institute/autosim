@@ -1,0 +1,10 @@
+_target_: autosim.experimental.simulations.Hydrodynamics2D
+return_timeseries: true
+log_level: warning
+n: 64
+T: 3.0
+dt: 0.01
+cfl: 0.3
+parameters_range:
+  nu: [0.001, 0.002]
+  force: [1.0, 3.0]

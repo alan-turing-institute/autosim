@@ -49,6 +49,13 @@ uv run autosim
 Simulator defaults now live in package configs under
 `src/autosim/configs/simulator` and can be selected via config groups.
 
+Available simulator config names:
+`advection_diffusion`, `advection_diffusion_multichannel`, `compressible_fluid_2d`,
+`conditioned_navier_stokes_2d`, `epidemic`, `flow_problem`, `gray_scott`,
+`gross_pitaevskii_equation_2d`, `hydrodynamics_2d`, `lattice_boltzmann`,
+`projectile`, `projectile_multioutput`, `reaction_diffusion`, `seir_simulator`,
+`shallow_water2d`.
+
 Override simulator and dataset settings from the command line via Hydra:
 
 ```bash

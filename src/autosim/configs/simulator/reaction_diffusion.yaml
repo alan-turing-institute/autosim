@@ -1,0 +1,7 @@
+_target_: autosim.simulations.ReactionDiffusion
+return_timeseries: true
+log_level: warning
+n: 32
+L: 20
+T: 10.0
+dt: 0.1

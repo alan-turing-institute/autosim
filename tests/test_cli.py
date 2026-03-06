@@ -27,6 +27,20 @@ class DummySimulator:
         }
 
 
+class DummySimulatorNSamples:
+    def forward_samples_spatiotemporal(
+        self, n_samples: int, random_seed: int | None = None
+    ) -> dict:
+        seed_value = -1 if random_seed is None else random_seed
+        return {
+            "data": torch.full(
+                (n_samples, 1, 2, 2, 1), float(seed_value), dtype=torch.float32
+            ),
+            "constant_scalars": torch.tensor([seed_value]),
+            "constant_fields": None,
+        }
+
+
 def test_build_simulator_from_target_core_and_experimental() -> None:
     core_cfg = OmegaConf.create(
         {"_target_": "autosim.simulations.ReactionDiffusion", "log_level": "warning"}
@@ -57,6 +71,23 @@ def test_generate_dataset_splits_uses_seed_offsets() -> None:
     assert splits["train"]["constant_scalars"].item() == 11
     assert splits["valid"]["constant_scalars"].item() == 12
     assert splits["test"]["constant_scalars"].item() == 13
+
+
+def test_generate_dataset_splits_supports_n_samples_signature() -> None:
+    splits = generate_dataset_splits(
+        sim=DummySimulatorNSamples(),
+        n_train=1,
+        n_valid=1,
+        n_test=1,
+        base_seed=7,
+    )
+
+    assert splits["train"]["data"].shape[0] == 1
+    assert splits["valid"]["data"].shape[0] == 1
+    assert splits["test"]["data"].shape[0] == 1
+    assert splits["train"]["constant_scalars"].item() == 7
+    assert splits["valid"]["constant_scalars"].item() == 8
+    assert splits["test"]["constant_scalars"].item() == 9
 
 
 def test_save_dataset_splits_writes_expected_structure(tmp_path: Path) -> None:
