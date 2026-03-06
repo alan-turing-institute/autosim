@@ -6,10 +6,11 @@ from pathlib import Path
 
 import pytest
 import torch
+from omegaconf import OmegaConf
 
 from autosim.cli import (
+    build_simulator,
     generate_dataset_splits,
-    resolve_simulator_class,
     save_dataset_splits,
 )
 
@@ -26,9 +27,19 @@ class DummySimulator:
         }
 
 
-def test_resolve_simulator_class_from_core_and_experimental() -> None:
-    assert resolve_simulator_class("ReactionDiffusion").__name__ == "ReactionDiffusion"
-    assert resolve_simulator_class("ShallowWater2D").__name__ == "ShallowWater2D"
+def test_build_simulator_from_target_core_and_experimental() -> None:
+    core_cfg = OmegaConf.create(
+        {"_target_": "autosim.simulations.ReactionDiffusion", "log_level": "warning"}
+    )
+    experimental_cfg = OmegaConf.create(
+        {
+            "_target_": "autosim.experimental.simulations.ShallowWater2D",
+            "log_level": "warning",
+        }
+    )
+
+    assert build_simulator(core_cfg).__class__.__name__ == "ReactionDiffusion"
+    assert build_simulator(experimental_cfg).__class__.__name__ == "ShallowWater2D"
 
 
 def test_generate_dataset_splits_uses_seed_offsets() -> None:
@@ -97,13 +108,13 @@ def test_cli_generates_dataset_fast_with_advection_diffusion(tmp_path: Path) -> 
         "dataset.n_valid=1",
         "dataset.n_test=1",
         "run.overwrite=true",
-        "simulator.name=AdvectionDiffusion",
-        "simulator.kwargs.log_level=warning",
-        "simulator.kwargs.return_timeseries=true",
-        "simulator.kwargs.n=8",
-        "simulator.kwargs.L=4.0",
-        "simulator.kwargs.T=0.1",
-        "simulator.kwargs.dt=0.1",
+        "simulator=advection_diffusion",
+        "simulator.log_level=warning",
+        "simulator.return_timeseries=true",
+        "simulator.n=8",
+        "simulator.L=4.0",
+        "simulator.T=0.1",
+        "simulator.dt=0.1",
         f"hydra.run.dir={hydra_run_dir.as_posix()}",
         "hydra.output_subdir=null",
     ]

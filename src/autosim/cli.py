@@ -1,54 +1,21 @@
 from __future__ import annotations
 
-import importlib
-import inspect
 from pathlib import Path
 from typing import Any
 
 import hydra
 import torch
-from hydra.core.config_store import ConfigStore
-from hydra.utils import get_original_cwd
-from omegaconf import OmegaConf
-
-from autosim.simulations.base import Simulator
+from hydra.utils import get_original_cwd, instantiate
 
 
-def _build_simulator_registry() -> dict[str, type[Simulator]]:
-    registry: dict[str, type[Simulator]] = {}
-
-    modules = [
-        importlib.import_module("autosim.simulations"),
-        importlib.import_module("autosim.experimental.simulations"),
-    ]
-
-    for module in modules:
-        exported = getattr(module, "__all__", [])
-        for name in exported:
-            obj = getattr(module, name, None)
-            if inspect.isclass(obj) and issubclass(obj, Simulator):
-                registry[name] = obj
-
-    return registry
-
-
-def resolve_simulator_class(simulator_name: str) -> type[Simulator]:
-    """Resolve a simulator class by name or fully-qualified class path."""
-    registry = _build_simulator_registry()
-
-    if simulator_name in registry:
-        return registry[simulator_name]
-
-    if "." in simulator_name:
-        module_name, class_name = simulator_name.rsplit(".", 1)
-        module = importlib.import_module(module_name)
-        simulator_cls = getattr(module, class_name, None)
-        if inspect.isclass(simulator_cls) and issubclass(simulator_cls, Simulator):
-            return simulator_cls
-
-    available = ", ".join(sorted(registry))
-    msg = f"Unknown simulator '{simulator_name}'. Available simulators: {available}."
-    raise ValueError(msg)
+def build_simulator(simulator_cfg: Any) -> Any:
+    """Instantiate a simulator from Hydra config and validate required interface."""
+    simulator = instantiate(simulator_cfg)
+    forward_method = getattr(simulator, "forward_samples_spatiotemporal", None)
+    if not callable(forward_method):
+        msg = "Simulator must implement forward_samples_spatiotemporal(n, random_seed)."
+        raise TypeError(msg)
+    return simulator
 
 
 def generate_dataset_splits(
@@ -100,41 +67,10 @@ def save_dataset_splits(
         torch.save(payload, split_dir / "data.pt")
 
 
-_default_cfg = OmegaConf.create(
-    {
-        "simulator": {
-            "name": "ShallowWater2D",
-            "kwargs": {
-                "return_timeseries": True,
-                "log_level": "warning",
-            },
-        },
-        "dataset": {
-            "output_dir": "examples/experimental/generated_datasets/shallow_water",
-            "n_train": 200,
-            "n_valid": 20,
-            "n_test": 20,
-        },
-        "run": {
-            "seed": None,
-            "overwrite": False,
-        },
-    }
-)
-OmegaConf.set_struct(_default_cfg.simulator.kwargs, False)
-
-_config_store = ConfigStore.instance()
-_config_store.store(name="generate_data", node=_default_cfg)
-
-
-@hydra.main(version_base=None, config_name="generate_data")
+@hydra.main(version_base=None, config_path="configs", config_name="generate_data")
 def main(cfg: Any) -> None:
     """Generate simulation datasets from a Hydra-configured simulator."""
-    simulator_cls = resolve_simulator_class(cfg.simulator.name)
-    simulator_kwargs = {
-        key: value for key, value in cfg.simulator.kwargs.items() if value is not None
-    }
-    sim = simulator_cls(**simulator_kwargs)
+    sim = build_simulator(cfg.simulator)
 
     splits = generate_dataset_splits(
         sim=sim,

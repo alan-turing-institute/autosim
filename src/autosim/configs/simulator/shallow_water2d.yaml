@@ -1,0 +1,14 @@
+_target_: autosim.experimental.simulations.ShallowWater2D
+return_timeseries: true
+log_level: warning
+nx: 64
+ny: 128
+Lx: 64.0
+Ly: 128.0
+T: 90.0
+dt_save: 1.0
+cfl: 0.12
+g: 9.81
+H: 1.0
+nu: 0.0005
+drag: 0.002

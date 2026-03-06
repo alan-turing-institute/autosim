@@ -1,0 +1,7 @@
+_target_: autosim.simulations.AdvectionDiffusion
+return_timeseries: true
+log_level: warning
+n: 50
+L: 10.0
+T: 80.0
+dt: 0.25

@@ -46,21 +46,36 @@ implements `forward_samples_spatiotemporal`:
 uv run autosim
 ```
 
+Simulator defaults now live in package configs under
+`src/autosim/configs/simulator` and can be selected via config groups.
+
 Override simulator and dataset settings from the command line via Hydra:
 
 ```bash
 uv run autosim \
-	simulator.name=ShallowWater2D \
-	simulator.kwargs.nx=32 \
-	simulator.kwargs.ny=32 \
-	simulator.kwargs.T=10.0 \
+	simulator=shallow_water2d \
+	simulator.nx=32 \
+	simulator.ny=32 \
+	simulator.T=10.0 \
 	dataset.n_train=50 dataset.n_valid=10 dataset.n_test=10 \
 	dataset.output_dir=examples/experimental/generated_datasets/shallow_water_small \
 	run.seed=123 run.overwrite=true
 ```
 
-You can also use fully-qualified class paths:
+Use a faster built-in simulator config:
 
 ```bash
-uv run autosim simulator.name=autosim.experimental.simulations.ShallowWater2D
+uv run autosim \
+	simulator=advection_diffusion \
+	simulator.n=16 simulator.T=0.2 simulator.dt=0.1 \
+	dataset.n_train=1 dataset.n_valid=1 dataset.n_test=1
+```
+
+Bring your own simulator subclass (no registry needed):
+
+```bash
+uv run autosim \
+	simulator._target_=my_package.my_module.MySimulator \
+	++simulator.my_arg=42 \
+	simulator.log_level=warning
 ```
