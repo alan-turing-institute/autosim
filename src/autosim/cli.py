@@ -76,6 +76,15 @@ def save_dataset_splits(
         torch.save(payload, split_dir / "data.pt")
 
 
+def save_resolved_config(cfg: Any, output_dir: str | Path) -> None:
+    """Persist the fully resolved Hydra config next to generated datasets."""
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    resolved_cfg_path = output_path / "resolved_config.yaml"
+    resolved_yaml = OmegaConf.to_yaml(cfg, resolve=True)
+    resolved_cfg_path.write_text(resolved_yaml, encoding="utf-8")
+
+
 def save_example_videos(
     splits: dict[str, dict[str, Any]],
     output_dir: str | Path,
@@ -268,6 +277,8 @@ def _generate_main(cfg: Any) -> None:
     output_dir = Path(cfg.dataset.output_dir)
     if not output_dir.is_absolute():
         output_dir = Path(get_original_cwd()) / output_dir
+
+    save_resolved_config(cfg=cfg, output_dir=output_dir)
 
     save_dataset_splits(splits=splits, output_dir=output_dir, overwrite=cfg.overwrite)
     save_example_videos(
