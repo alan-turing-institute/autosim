@@ -5,7 +5,7 @@ nx: 64
 ny: 64
 Lx: 64.0
 Ly: 64.0
-T: 74.2
+T: 74.0
 dt_save: 0.2
 skip_nt: 50
 cfl: 0.12

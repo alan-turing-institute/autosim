@@ -3,7 +3,7 @@ return_timeseries: true
 log_level: warning
 n: 64
 L: 32.0
-T: 86.0
+T: 85.869
 dt: 0.26
 snapshot_dt: 0.261
 nu: 0.01
