@@ -3,7 +3,7 @@ return_timeseries: true
 log_level: warning
 n: 64
 L: 1.0
-T: 1280.0
+T: 1284.0
 dt: 1.0
 snapshot_dt: 4.0
 initial_condition: gaussians
