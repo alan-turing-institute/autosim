@@ -3,7 +3,7 @@ return_timeseries: true
 log_level: warning
 width: 128
 height: 32
-T: 12.8
+T: 12.9
 dt: 0.032
 use_cylinder: false
 oscillatory_inlet: true
