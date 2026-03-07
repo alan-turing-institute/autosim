@@ -1,5 +1,6 @@
 _target_: autosim.simulations.AdvectionDiffusionMultichannel
-output_indices: [0, 1, 2, 3]
+output_indices: [0]
+# output_indices: [0, 1, 2, 3]
 return_timeseries: true
 log_level: warning
 n: 32
