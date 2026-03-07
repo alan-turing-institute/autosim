@@ -23,6 +23,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
         Ly: float = 128.0,
         T: float = 90.0,
         dt_save: float = 0.2,
+        skip_nt: int = 0,
         cfl: float = 0.12,
         g: float = 9.81,
         H: float = 1.0,
@@ -36,6 +37,9 @@ class ShallowWater2D(SpatioTemporalSimulator):
             output_names = ["h", "u", "v"]
 
         super().__init__(parameters_range, output_names, log_level)
+        if skip_nt < 0:
+            msg = "skip_nt must be non-negative"
+            raise ValueError(msg)
         self.return_timeseries = return_timeseries
         self.nx = nx
         self.ny = ny
@@ -43,6 +47,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
         self.Ly = Ly
         self.T = T
         self.dt_save = dt_save
+        self.skip_nt = skip_nt
         self.cfl = cfl
         self.g = g
         self.H = H
@@ -63,6 +68,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
             Ly=self.Ly,
             T=self.T,
             dt_save=self.dt_save,
+            skip_nt=self.skip_nt,
             cfl=self.cfl,
             g=self.g,
             H=self.H,
@@ -96,7 +102,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
         }
 
 
-def simulate_swe_2d(  # noqa: PLR0915
+def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     amp: float,
     return_timeseries: bool,
     nx: int,
@@ -111,10 +117,14 @@ def simulate_swe_2d(  # noqa: PLR0915
     nu: float,
     drag: float,
     dtype: torch.dtype = torch.float64,
+    skip_nt: int = 0,
 ) -> torch.Tensor:
     """Integrate full shallow-water equations with PDEArena-style random2 ICs."""
     if dtype not in (torch.float32, torch.float64):
         msg = "dtype must be torch.float32 or torch.float64"
+        raise ValueError(msg)
+    if skip_nt < 0:
+        msg = "skip_nt must be non-negative"
         raise ValueError(msg)
     complex_dtype = torch.complex64 if dtype == torch.float32 else torch.complex128
 
@@ -359,9 +369,15 @@ def simulate_swe_2d(  # noqa: PLR0915
         t += dt
 
     if return_timeseries:
+        if skip_nt >= expected_frames:
+            msg = (
+                "skip_nt is too large for the available trajectory length; "
+                f"skip_nt={skip_nt}, available_frames={expected_frames}."
+            )
+            raise ValueError(msg)
         while len(history) < expected_frames:
             history.append(last_valid)
         if len(history) > expected_frames:
             history = history[:expected_frames]
-        return torch.stack(history, dim=0)
+        return torch.stack(history[skip_nt:], dim=0)
     return output(h, u, v).unsqueeze(0)
