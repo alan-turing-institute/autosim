@@ -10,7 +10,6 @@ skip_nt: 50
 random_seed: 42
 parameters_range:
   wx: [1.0, 1.0]
-  wx: [1.0, 1.0]
   wy: [1.0, 1.0]
   box_param: [0.1, 0.1]
   width: [0.4, 0.8]
