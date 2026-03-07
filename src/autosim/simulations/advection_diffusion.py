@@ -55,7 +55,7 @@ class AdvectionDiffusion(SpatioTemporalSimulator):
                 "mu": (0.5, 2.0),  # advection strength
             }
         if output_names is None:
-            output_names = ["solution"]
+            output_names = ["vorticity"]
         super().__init__(parameters_range, output_names, log_level)
         self.return_timeseries = return_timeseries
         self.n = n

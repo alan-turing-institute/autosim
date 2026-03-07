@@ -22,7 +22,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
         Lx: float = 64.0,
         Ly: float = 128.0,
         T: float = 90.0,
-        dt_save: float = 1.0,
+        dt_save: float = 0.2,
         cfl: float = 0.12,
         g: float = 9.81,
         H: float = 1.0,
@@ -31,7 +31,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
         dtype: torch.dtype = torch.float64,
     ) -> None:
         if parameters_range is None:
-            parameters_range = {"amp": (0.05, 0.2)}
+            parameters_range = {"amp": (0.05, 0.14)}
         if output_names is None:
             output_names = ["h", "u", "v"]
 

@@ -476,7 +476,7 @@ class GrayScott(SpatioTemporalSimulator):
             }
 
         if output_names is None:
-            output_names = ["solution"]
+            output_names = ["u", "v"]
 
         super().__init__(parameters_range, output_names, log_level)
 

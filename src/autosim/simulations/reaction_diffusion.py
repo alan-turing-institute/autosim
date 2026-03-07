@@ -58,7 +58,7 @@ class ReactionDiffusion(SpatioTemporalSimulator):
         if parameters_range is None:
             parameters_range = {"beta": (1.0, 2.0), "d": (0.05, 0.3)}
         if output_names is None:
-            output_names = ["solution"]
+            output_names = ["u", "v"]
         super().__init__(parameters_range, output_names, log_level)
         self.return_timeseries = return_timeseries
         self.n = n

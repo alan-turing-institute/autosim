@@ -104,6 +104,14 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
     if pred_uq_batch is not None:
         pred_uq_batch = pred_uq_batch.detach().cpu().numpy()
 
+    default_channel_names = [f"Channel {ch}" for ch in range(C)]
+    if channel_names is None:
+        resolved_channel_names = default_channel_names
+    else:
+        resolved_channel_names = default_channel_names.copy()
+        for idx, name in enumerate(channel_names[:C]):
+            resolved_channel_names[idx] = str(name)
+
     primary_rows = [true_batch]
 
     # Calculate difference
@@ -227,14 +235,11 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
                 norm = uq_norm
             else:
                 norm = diff_norm
-            im = ax.imshow(frame0, cmap=row_cmap, aspect="auto", norm=norm)
+            aspect = "equal" if preserve_aspect else "auto"
+            im = ax.imshow(frame0, cmap=row_cmap, aspect=aspect, norm=norm)
 
             if row_idx == 0:
-                (
-                    ax.set_title(f"Channel {ch}")
-                    if channel_names is None
-                    else ax.set_title(f"{channel_names[ch]}")
-                )
+                ax.set_title(resolved_channel_names[ch])
             if ch == 0:
                 ax.set_ylabel(row_label)
 

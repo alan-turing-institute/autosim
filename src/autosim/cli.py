@@ -80,6 +80,7 @@ def save_example_videos(
     splits: dict[str, dict[str, Any]],
     output_dir: str | Path,
     visualize_cfg: Any | None,
+    channel_names: list[str] | None = None,
 ) -> None:
     """Optionally render example videos for selected batch indices.
 
@@ -128,6 +129,12 @@ def save_example_videos(
     videos_dir.mkdir(parents=True, exist_ok=True)
 
     overwrite = bool(visualize_cfg.get("overwrite", True))
+    preserve_aspect = bool(visualize_cfg.get("preserve_aspect", False))
+
+    configured_channel_names = visualize_cfg.get("channel_names", None)
+    resolved_channel_names = channel_names
+    if configured_channel_names is not None:
+        resolved_channel_names = [str(name) for name in configured_channel_names]
 
     for idx in batch_indices:
         save_path = videos_dir / f"batch_{idx}.{file_ext}"
@@ -138,6 +145,8 @@ def save_example_videos(
             batch_idx=idx,
             fps=fps,
             save_path=str(save_path),
+            channel_names=resolved_channel_names,
+            preserve_aspect=preserve_aspect,
         )
 
 
@@ -202,6 +211,7 @@ def combine_stratified_splits(
 @hydra.main(version_base=None, config_path="configs", config_name="generate_data")
 def _generate_main(cfg: Any) -> None:
     """Generate simulation datasets from a Hydra-configured simulator."""
+    channel_names_for_visualization: list[str] | None = None
     stratify_cfg = cfg.get("stratify")
     if stratify_cfg is not None and bool(stratify_cfg.get("enabled", False)):
         key = stratify_cfg.get("key")
@@ -231,6 +241,8 @@ def _generate_main(cfg: Any) -> None:
             )
             OmegaConf.update(sim_cfg, key_path, value, merge=False)
             sim = build_simulator(sim_cfg)
+            if channel_names_for_visualization is None:
+                channel_names_for_visualization = list(sim.output_names)
             splits = generate_dataset_splits(
                 sim=sim,
                 n_train=n_train_each,
@@ -243,6 +255,7 @@ def _generate_main(cfg: Any) -> None:
         splits = combine_stratified_splits(per_strata_outputs)
     else:
         sim = build_simulator(cfg.simulator)
+        channel_names_for_visualization = list(sim.output_names)
 
         splits = generate_dataset_splits(
             sim=sim,
@@ -261,6 +274,7 @@ def _generate_main(cfg: Any) -> None:
         splits=splits,
         output_dir=output_dir,
         visualize_cfg=cfg.get("visualize"),
+        channel_names=channel_names_for_visualization,
     )
 
 
