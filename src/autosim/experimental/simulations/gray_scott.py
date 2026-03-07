@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from numpy.fft import fft2, ifft2
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import NumpyLike, TensorLike
 
 PATTERN_RANGES: dict[str, dict[str, tuple[float, float]]] = {
@@ -420,7 +420,7 @@ def simulate_spectral_gray_scott(  # noqa: PLR0915
     return u_output, v_output
 
 
-class GrayScott(Simulator):
+class GrayScott(SpatioTemporalSimulator):
     """Spectral Gray-Scott simulator based on danfortunato/spectral-gray-scott."""
 
     def __init__(  # noqa: PLR0912
@@ -476,7 +476,7 @@ class GrayScott(Simulator):
             }
 
         if output_names is None:
-            output_names = ["solution"]
+            output_names = ["u", "v"]
 
         super().__init__(parameters_range, output_names, log_level)
 

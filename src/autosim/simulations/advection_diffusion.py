@@ -4,7 +4,7 @@ import torch
 from scipy.fft import fft2, ifft2
 from scipy.integrate import solve_ivp
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import NumpyLike, TensorLike
 
 integrator_keywords = {}
@@ -13,7 +13,7 @@ integrator_keywords["method"] = "RK45"
 integrator_keywords["atol"] = 1e-8
 
 
-class AdvectionDiffusion(Simulator):
+class AdvectionDiffusion(SpatioTemporalSimulator):
     """Simulate the 2D vorticity equation (advection-diffusion)."""
 
     def __init__(
@@ -55,7 +55,7 @@ class AdvectionDiffusion(Simulator):
                 "mu": (0.5, 2.0),  # advection strength
             }
         if output_names is None:
-            output_names = ["solution"]
+            output_names = ["vorticity"]
         super().__init__(parameters_range, output_names, log_level)
         self.return_timeseries = return_timeseries
         self.n = n

@@ -1,0 +1,30 @@
+defaults:
+  - simulator: gray_scott
+  - _self_
+
+dataset:
+  output_dir: outputs/${now:%Y-%m-%d}/${hydra:runtime.choices.simulator}_${shortuuid:7}
+  n_train: 240
+  n_valid: 24
+  n_test: 24
+
+seed: null
+overwrite: false
+
+stratify:
+  enabled: true
+  key: simulator.pattern
+  values: [spirals, spots, worms, maze, gliders, bubbles]
+
+visualize:
+  enabled: true
+  split: train
+  batch_indices: [0, 1, 2, 3]
+  fps: 5
+  file_ext: mp4  # gif (no extra deps) or mp4 (requires ffmpeg)
+  overwrite: true
+  preserve_aspect: true
+
+hydra:
+  run:
+    dir: ${dataset.output_dir}

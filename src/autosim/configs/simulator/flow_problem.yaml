@@ -1,0 +1,4 @@
+_target_: autosim.simulations.FlowProblem
+log_level: warning
+ncycles: 10
+ncomp: 10

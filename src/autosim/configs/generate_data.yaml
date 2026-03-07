@@ -1,0 +1,30 @@
+defaults:
+  - simulator: shallow_water2d
+  - _self_
+
+dataset:
+  output_dir: outputs/${now:%Y-%m-%d}/${hydra:runtime.choices.simulator}_${shortuuid:7}
+  n_train: 200
+  n_valid: 20
+  n_test: 20
+
+seed: null
+overwrite: false
+
+stratify:
+  enabled: false
+  key: null
+  values: []
+
+visualize:
+  enabled: true
+  split: train
+  batch_indices: [0, 1, 2, 3]
+  fps: 5
+  file_ext: mp4  # gif (no extra deps) or mp4 (requires ffmpeg)
+  overwrite: true
+  preserve_aspect: true
+
+hydra:
+  run:
+    dir: ${dataset.output_dir}

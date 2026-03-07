@@ -10,11 +10,11 @@ import math
 
 import torch
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
 
-class LatticeBoltzmann(Simulator):
+class LatticeBoltzmann(SpatioTemporalSimulator):
     r"""Lattice Boltzmann (D2Q9) simulator for channel flow with obstacles.
 
     Simulates 2D flow past a cylinder using the BGK collision model.

@@ -4,7 +4,7 @@ import math
 
 import torch
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
 
@@ -373,7 +373,7 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
     return _snapshot()
 
 
-class ConditionedNavierStokes2D(Simulator):
+class ConditionedNavierStokes2D(SpatioTemporalSimulator):
     """Conditioned 2D Navier-Stokes smoke simulator inspired by PDEArena."""
 
     _DEFAULT_SMOOTHNESS = 6.0

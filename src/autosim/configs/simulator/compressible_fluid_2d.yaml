@@ -1,0 +1,11 @@
+_target_: autosim.experimental.simulations.CompressibleFluid2D
+return_timeseries: true
+log_level: warning
+n: 64
+T: 1.2
+dt_save: 0.01
+cfl: 0.32
+scenario: vortex_sheet
+parameters_range:
+  gamma: [1.4, 1.4]
+  amp: [0.14, 0.22]

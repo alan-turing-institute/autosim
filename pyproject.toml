@@ -17,7 +17,11 @@ dependencies = [
     "matplotlib",
     "scikit-learn>=1.7.2",
     "einops>=0.8.2",
+    "hydra-core>=1.3",
 ]
+
+[project.scripts]
+autosim = "autosim.cli:main"
 
 [project.optional-dependencies]
 dev = [
@@ -99,3 +103,19 @@ convention = "numpy"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["D"]
+
+# https://docs.astral.sh/uv/guides/integration/pytorch/#using-a-pytorch-index
+# CUDA wheels (used automatically on GH if available)
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+autoemulate = { git = "https://github.com/alan-turing-institute/autoemulate.git" }
+torch = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]

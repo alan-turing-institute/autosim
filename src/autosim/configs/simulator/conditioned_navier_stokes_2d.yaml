@@ -1,0 +1,18 @@
+_target_: autosim.experimental.simulations.ConditionedNavierStokes2D
+return_timeseries: true
+log_level: warning
+n: 64
+L: 32.0
+T: 85.869
+dt: 0.26
+snapshot_dt: 0.261
+nu: 0.01
+cfl: 0.35
+bc_mode: neumann
+buoyancy_mode: raw
+skip_nt: 8
+parameters_range:
+  buoyancy_y: [0.2, 0.8]
+  smoothness: [6.0, 6.0]
+  noise_scale: [8.0, 18.0]
+  smoke_diffusivity: [0.0, 0.0]
