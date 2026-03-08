@@ -7,9 +7,50 @@ import torch
 from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
+# Default parameter ranges when not overridden (amp required; H, drag, nu optional).
+DEFAULT_AMP_RANGE: tuple[float, float] = (0.05, 0.14)
+DEFAULT_H_RANGE: tuple[float, float] = (0.7, 1.5)
+DEFAULT_DRAG_RANGE: tuple[float, float] = (1e-3, 4e-3)
+DEFAULT_NU_RANGE: tuple[float, float] = (2e-4, 8e-4)
+
+# IC and solver tuning (used in simulate_swe_2d).
+U_SCALE = 0.5  # streamfunction amplitude scale for random component
+JET_AMP_FRAC = 0.8  # jet speed ~ amp * JET_AMP_FRAC
+PERT_LAT_FRAC = 0.65  # wave-6 perturbation center y/Ly
+PERT_WIDTH_FRAC = 0.10  # Gaussian width y/Ly
+WAVE_ZONAL_MODE = 6  # zonal wavenumber for mid-lat perturbation
+N_JET_MODES = 4  # Fourier modes per column for jet
+N_HYPERVISC = 4  # hyperviscosity exponent
+K_CUT_FACTOR = 6  # k_cut = k_min * min(nx,ny) // K_CUT_FACTOR
+H_MIN_CLIP = 1e-4
+H_MAX_CLIP = 100.0
+UV_ABS_CLIP = 100.0
+SATURATION_THRESHOLD = 0.01  # stop if this fraction of grid hits clip bounds
+EPS = 1e-10  # small constant for safe div/norms
+MIN_WAVE_SPEED_CFL = 1e-8  # floor for CFL dt; keep conservative to avoid instability
+
 
 class ShallowWater2D(SpatioTemporalSimulator):
-    """Full 2D shallow-water simulator with prognostic [h, u, v]."""
+    """Full 2D shallow-water simulator with prognostic [h, u, v].
+
+    Parameters
+    ----------
+    parameters_range : dict, optional
+        Input parameter (min, max) ranges. Supported keys:
+        - ``amp`` (required): initial-condition amplitude scale.
+        - ``H``: mean layer depth (default 1.0 if omitted).
+        - ``drag``: linear drag coefficient (default 2e-3).
+        - ``nu``: Laplacian viscosity (default 5e-4).
+        If None, uses ``{"amp": (0.05, 0.14)}`` only.
+    output_names, return_timeseries, log_level
+        Passed to base. Default outputs: ["h", "u", "v"].
+    nx, ny, Lx, Ly, T, dt_save, skip_nt, cfl
+        Grid, domain, time and CFL settings.
+    g, H, nu, drag
+        Physics constants (used when not in parameters_range).
+    dtype
+        torch.float32 or torch.float64.
+    """
 
     def __init__(
         self,
@@ -32,7 +73,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
         dtype: torch.dtype = torch.float64,
     ) -> None:
         if parameters_range is None:
-            parameters_range = {"amp": (0.05, 0.14)}
+            parameters_range = {"amp": DEFAULT_AMP_RANGE}
         if output_names is None:
             output_names = ["h", "u", "v"]
 
@@ -56,8 +97,32 @@ class ShallowWater2D(SpatioTemporalSimulator):
         self.dtype = dtype
 
     def _forward(self, x: TensorLike) -> TensorLike:
-        assert x.shape[0] == 1, "Simulator._forward expects a single input"
-        amp = float(x[0, 0].item())
+        if x.shape[0] != 1:
+            msg = "Simulator._forward expects a single input (batch size 1)"
+            raise ValueError(msg)
+        if x.shape[1] != self.in_dim:
+            msg = (
+                f"Input dim {x.shape[1]} does not match "
+                f"parameters_range length {self.in_dim}"
+            )
+            raise ValueError(msg)
+        # Parse by name so parameter order is irrelevant and optional params clear.
+        amp = float(x[0, self.get_parameter_idx("amp")].item())
+        H = (
+            float(x[0, self.get_parameter_idx("H")].item())
+            if "H" in self.param_names
+            else self.H
+        )
+        drag = (
+            float(x[0, self.get_parameter_idx("drag")].item())
+            if "drag" in self.param_names
+            else self.drag
+        )
+        nu = (
+            float(x[0, self.get_parameter_idx("nu")].item())
+            if "nu" in self.param_names
+            else self.nu
+        )
 
         y = simulate_swe_2d(
             amp=amp,
@@ -71,9 +136,9 @@ class ShallowWater2D(SpatioTemporalSimulator):
             skip_nt=self.skip_nt,
             cfl=self.cfl,
             g=self.g,
-            H=self.H,
-            nu=self.nu,
-            drag=self.drag,
+            H=H,
+            nu=nu,
+            drag=drag,
             dtype=self.dtype,
         )
         return y.flatten().unsqueeze(0)
@@ -157,10 +222,9 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
 
     # Hyperviscosity integrating-factor operator (same approach as barotropic solver).
     # Damps grid-scale modes in ~1 time unit; leaves large-scale vortices untouched.
-    n_hyp = 4
     k_max = math.pi * max(nx / Lx, ny / Ly)
-    nu_h = 1.0 / k_max ** (2 * n_hyp)
-    hyp_op = -nu_h * K2**n_hyp
+    nu_h = 1.0 / k_max ** (2 * N_HYPERVISC)
+    hyp_op = -nu_h * K2**N_HYPERVISC
 
     def to_spec(field: torch.Tensor) -> torch.Tensor:
         return torch.fft.rfft2(field)
@@ -187,7 +251,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     # gravity-wave transients are excited.
 
     k_min = 2.0 * math.pi / max(Lx, Ly)
-    k_cut = k_min * min(nx, ny) // 6
+    k_cut = k_min * min(nx, ny) // K_CUT_FACTOR
 
     # Component 1: random large-scale streamfunction (k^{-2} → E(k)~k^{-3})
     rand_re = torch.randn(nx, ny // 2 + 1, dtype=dtype)
@@ -200,39 +264,35 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     )
     psi_hat_rand[0, 0] = 0.0
     psi_rand_phys = to_phys(psi_hat_rand)
-    U_scale = 0.5
-    psi_norm = amp * U_scale * min(Lx, Ly) / (float(psi_rand_phys.std()) + 1e-10)
+    psi_norm = amp * U_SCALE * min(Lx, Ly) / (float(psi_rand_phys.std()) + EPS)
     psi_hat_rand = psi_hat_rand * psi_norm
     zeta_random = to_phys(-K2 * psi_hat_rand)
 
     # Component 2: per-column independent random zonal jet (PDEArena :random2 style)
     # Each longitude column i gets its own independent random Fourier coefficients
     # in y — matching PDEArena's truly per-column i.i.d. wind profiles.
-    n_modes = 4
-    coeff = torch.randn(nx, n_modes, dtype=dtype)  # [nx, n_modes], i.i.d. per column
+    coeff = torch.randn(nx, N_JET_MODES, dtype=dtype)  # i.i.d. per column
     y_frac = Y / Ly  # [nx, ny], values in [0, 1]
     u_jet_field = torch.stack(
         [
             coeff[:, m].unsqueeze(1) * torch.sin((m + 1) * math.pi * y_frac)
-            for m in range(n_modes)
+            for m in range(N_JET_MODES)
         ],
         dim=0,
     ).sum(dim=0)  # [nx, ny]
-    # Normalise so |u_jet| ~ amp * 0.8 regardless of random draw
-    jet_std = float(u_jet_field.std()) + 1e-10
-    u_jet_field = u_jet_field * (amp * 0.8 / jet_std)
+    jet_std = float(u_jet_field.std()) + EPS
+    u_jet_field = u_jet_field * (amp * JET_AMP_FRAC / jet_std)
     zeta_jet = to_phys(-1j * Ky * to_spec(u_jet_field))
 
     # Component 3: wave-6 Gaussian perturbation at mid-latitude
-    zeta_jet_scale = float(zeta_jet.std()) + 1e-10
-    A_pert = max(amp * f0 * 0.8, zeta_jet_scale * 0.25)
-    m_wave = 6
-    y_center = 0.65 * Ly
-    y_width = 0.10 * Ly
+    zeta_jet_scale = float(zeta_jet.std()) + EPS
+    A_pert = max(amp * f0 * JET_AMP_FRAC, zeta_jet_scale * 0.25)
+    y_center = PERT_LAT_FRAC * Ly
+    y_width = PERT_WIDTH_FRAC * Ly
     pert_phase = float(torch.rand(1)) * 2.0 * math.pi
     zeta_pert = (
         A_pert
-        * torch.cos(m_wave * 2.0 * math.pi * X / Lx + pert_phase)
+        * torch.cos(WAVE_ZONAL_MODE * 2.0 * math.pi * X / Lx + pert_phase)
         * torch.exp(-0.5 * ((Y - y_center) / y_width) ** 2)
     )
 
@@ -252,7 +312,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     def rhs(
         h: torch.Tensor, u: torch.Tensor, v: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        h_safe = h.clamp(min=1e-4)
+        h_safe = h.clamp(min=H_MIN_CLIP)
 
         # Reuse spectra per field to avoid repeated FFTs in each RHS evaluation.
         u_h = to_spec(u)
@@ -286,33 +346,45 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         dhdt = -div_hu
         return dhdt, dudt, dvdt
 
+    def rk4_step(
+        h: torch.Tensor, u: torch.Tensor, v: torch.Tensor, dt: float
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        k1_h, k1_u, k1_v = rhs(h, u, v)
+        k2_h, k2_u, k2_v = rhs(
+            h + 0.5 * dt * k1_h, u + 0.5 * dt * k1_u, v + 0.5 * dt * k1_v
+        )
+        k3_h, k3_u, k3_v = rhs(
+            h + 0.5 * dt * k2_h, u + 0.5 * dt * k2_u, v + 0.5 * dt * k2_v
+        )
+        k4_h, k4_u, k4_v = rhs(h + dt * k3_h, u + dt * k3_u, v + dt * k3_v)
+        return (
+            h + (dt / 6.0) * (k1_h + 2.0 * k2_h + 2.0 * k3_h + k4_h),
+            u + (dt / 6.0) * (k1_u + 2.0 * k2_u + 2.0 * k3_u + k4_u),
+            v + (dt / 6.0) * (k1_v + 2.0 * k2_v + 2.0 * k3_v + k4_v),
+        )
+
     def output(h: torch.Tensor, u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
-        h_out = torch.nan_to_num(h, nan=H, posinf=100.0, neginf=1e-4).clamp(
-            min=1e-4, max=100.0
+        h_out = torch.nan_to_num(h, nan=H, posinf=H_MAX_CLIP, neginf=H_MIN_CLIP).clamp(
+            min=H_MIN_CLIP, max=H_MAX_CLIP
         )
-        u_out = torch.nan_to_num(u, nan=0.0, posinf=100.0, neginf=-100.0).clamp(
-            min=-100.0, max=100.0
-        )
-        v_out = torch.nan_to_num(v, nan=0.0, posinf=100.0, neginf=-100.0).clamp(
-            min=-100.0, max=100.0
-        )
+        u_out = torch.nan_to_num(
+            u, nan=0.0, posinf=UV_ABS_CLIP, neginf=-UV_ABS_CLIP
+        ).clamp(min=-UV_ABS_CLIP, max=UV_ABS_CLIP)
+        v_out = torch.nan_to_num(
+            v, nan=0.0, posinf=UV_ABS_CLIP, neginf=-UV_ABS_CLIP
+        ).clamp(min=-UV_ABS_CLIP, max=UV_ABS_CLIP)
         return torch.stack([h_out.float(), u_out.float(), v_out.float()], dim=-1)
 
     h = h0
     u = u0
     v = v0
 
-    h_min_bound = 1e-4
-    h_max_bound = 100.0
-    uv_abs_bound = 100.0
-    saturation_frac_threshold = 0.01
-
     def _saturation_fraction(
         h_curr: torch.Tensor, u_curr: torch.Tensor, v_curr: torch.Tensor
     ) -> float:
-        h_sat = ((h_curr <= h_min_bound) | (h_curr >= h_max_bound)).float().mean()
-        u_sat = (u_curr.abs() >= uv_abs_bound).float().mean()
-        v_sat = (v_curr.abs() >= uv_abs_bound).float().mean()
+        h_sat = ((h_curr <= H_MIN_CLIP) | (h_curr >= H_MAX_CLIP)).float().mean()
+        u_sat = (u_curr.abs() >= UV_ABS_CLIP).float().mean()
+        v_sat = (v_curr.abs() >= UV_ABS_CLIP).float().mean()
         return float(torch.maximum(torch.maximum(h_sat, u_sat), v_sat).item())
 
     history: list[torch.Tensor] = []
@@ -330,7 +402,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         ):
             failure_reason = "non-finite state encountered"
             break
-        if _saturation_fraction(h, u, v) >= saturation_frac_threshold:
+        if _saturation_fraction(h, u, v) >= SATURATION_THRESHOLD:
             failure_reason = "state saturated at clipping bounds"
             break
 
@@ -342,10 +414,10 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         if t >= T - 1e-10:
             break
 
-        c_now = torch.sqrt(g * h.clamp(min=1e-4))
+        c_now = torch.sqrt(g * h.clamp(min=H_MIN_CLIP))
         speed_x = (u.abs() + c_now).max().item()
         speed_y = (v.abs() + c_now).max().item()
-        max_speed = max(speed_x, speed_y, 1e-8)
+        max_speed = max(speed_x, speed_y, MIN_WAVE_SPEED_CFL)
         if not math.isfinite(max_speed):
             failure_reason = "non-finite wave speed"
             break
@@ -353,28 +425,9 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         dt = cfl * min(dx, dy) / max_speed
         dt = min(dt, next_save - t, T - t)
         dt = min(dt, 0.5 * dt_save)
-        dt = max(dt, 1e-10)
+        dt = max(dt, EPS)
 
-        k1_h, k1_u, k1_v = rhs(h, u, v)
-        k2_h, k2_u, k2_v = rhs(
-            h + 0.5 * dt * k1_h,
-            u + 0.5 * dt * k1_u,
-            v + 0.5 * dt * k1_v,
-        )
-        k3_h, k3_u, k3_v = rhs(
-            h + 0.5 * dt * k2_h,
-            u + 0.5 * dt * k2_u,
-            v + 0.5 * dt * k2_v,
-        )
-        k4_h, k4_u, k4_v = rhs(
-            h + dt * k3_h,
-            u + dt * k3_u,
-            v + dt * k3_v,
-        )
-
-        h = h + (dt / 6.0) * (k1_h + 2.0 * k2_h + 2.0 * k3_h + k4_h)
-        u = u + (dt / 6.0) * (k1_u + 2.0 * k2_u + 2.0 * k3_u + k4_u)
-        v = v + (dt / 6.0) * (k1_v + 2.0 * k2_v + 2.0 * k3_v + k4_v)
+        h, u, v = rk4_step(h, u, v, dt)
 
         # Apply hyperviscosity integrating factor to all fields (spectral filter).
         hyp_factor = torch.exp(hyp_op * dt)  # real, shape [nx, ny//2+1]
@@ -383,13 +436,13 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         h_mean = h.mean()
         h_anom = h - h_mean
         h_anom = to_phys(to_spec(h_anom) * hyp_factor)
-        h = (h_mean + h_anom).clamp(min=1e-4)
+        h = (h_mean + h_anom).clamp(min=H_MIN_CLIP)
         if (
             torch.isfinite(h).all()
             and torch.isfinite(u).all()
             and torch.isfinite(v).all()
         ):
-            if _saturation_fraction(h, u, v) >= saturation_frac_threshold:
+            if _saturation_fraction(h, u, v) >= SATURATION_THRESHOLD:
                 failure_reason = "state saturated at clipping bounds after step"
                 break
             last_valid = output(h, u, v)
