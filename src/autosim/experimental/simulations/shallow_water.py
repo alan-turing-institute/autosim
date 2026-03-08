@@ -79,11 +79,17 @@ class ShallowWater2D(SpatioTemporalSimulator):
         return y.flatten().unsqueeze(0)
 
     def forward_samples_spatiotemporal(
-        self, n: int, random_seed: int | None = None
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
     ) -> dict:
         """Run sampled trajectories and return `[batch,time,x,y,channels]` data."""
-        x = self.sample_inputs(n, random_seed)
-        y, x = self.forward_batch(x)
+        y, x = self._forward_batch_with_optional_retries(
+            n=n,
+            random_seed=random_seed,
+            ensure_exact_n=ensure_exact_n,
+        )
 
         channels = 3
         features_per_step = self.nx * self.ny * channels
@@ -91,9 +97,9 @@ class ShallowWater2D(SpatioTemporalSimulator):
         if self.return_timeseries:
             total = y.shape[1]
             n_time = total // features_per_step
-            y = y.reshape(n, n_time, self.nx, self.ny, channels)
+            y = y.reshape(y.shape[0], n_time, self.nx, self.ny, channels)
         else:
-            y = y.reshape(n, 1, self.nx, self.ny, channels)
+            y = y.reshape(y.shape[0], 1, self.nx, self.ny, channels)
 
         return {
             "data": y,

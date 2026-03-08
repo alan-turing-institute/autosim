@@ -81,7 +81,10 @@ class ReactionDiffusion(SpatioTemporalSimulator):
         return torch.tensor(concat_array, dtype=torch.float32).reshape(1, -1)
 
     def forward_samples_spatiotemporal(
-        self, n: int, random_seed: int | None = None
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
     ) -> dict:
         """Reshape to spatiotemporal format.
 
@@ -98,11 +101,12 @@ class ReactionDiffusion(SpatioTemporalSimulator):
             A dictionary containing the reshaped spatiotemporal data, constant scalars,
             and constant fields.
         """
-        # Sample inputs
-        x = self.sample_inputs(n, random_seed)
-
-        # Run simulation
-        y, x = self.forward_batch(x)
+        # Run simulation and optionally resample failed trajectories
+        y, x = self._forward_batch_with_optional_retries(
+            n=n,
+            random_seed=random_seed,
+            ensure_exact_n=ensure_exact_n,
+        )
 
         # Reshape and permute output
         y_reshaped_permuted = y.reshape(

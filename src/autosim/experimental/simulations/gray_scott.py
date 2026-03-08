@@ -558,14 +558,20 @@ class GrayScott(SpatioTemporalSimulator):
         return torch.from_numpy(concat).reshape(1, -1)
 
     def forward_samples_spatiotemporal(
-        self, n: int, random_seed: int | None = None
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
     ) -> dict:
         """Run multiple trajectories and return `[batch, time, x, y, channels]` data."""
         if not self.return_timeseries:
             msg = "forward_samples_spatiotemporal requires return_timeseries=True."
             raise RuntimeError(msg)
-        x = self.sample_inputs(n, random_seed)
-        y, x = self.forward_batch(x)
+        y, x = self._forward_batch_with_optional_retries(
+            n=n,
+            random_seed=random_seed,
+            ensure_exact_n=ensure_exact_n,
+        )
 
         timesteps = _compute_snapshot_count(self.T, self.dt, self.snapshot_dt)
         y_reshaped = y.reshape(y.shape[0], 2, timesteps, self.n, self.n).permute(

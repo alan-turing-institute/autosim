@@ -25,8 +25,12 @@ class DummySimulator(SpatioTemporalSimulator):
         raise NotImplementedError(msg)
 
     def forward_samples_spatiotemporal(
-        self, n: int, random_seed: int | None = None
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
     ) -> dict:
+        del ensure_exact_n
         seed_value = -1 if random_seed is None else random_seed
         return {
             "data": torch.full((n, 1, 2, 2, 1), float(seed_value), dtype=torch.float32),
@@ -50,7 +54,7 @@ def test_build_simulator_from_target_core_and_experimental() -> None:
     assert build_simulator(experimental_cfg).__class__.__name__ == "ShallowWater2D"
 
 
-def test_generate_dataset_splits_uses_seed_offsets() -> None:
+def test_generate_dataset_splits_uses_non_overlapping_seed_namespaces() -> None:
     splits = generate_dataset_splits(
         sim=DummySimulator({}, []),
         n_train=3,
@@ -63,8 +67,8 @@ def test_generate_dataset_splits_uses_seed_offsets() -> None:
     assert splits["valid"]["data"].shape[0] == 2
     assert splits["test"]["data"].shape[0] == 1
     assert splits["train"]["constant_scalars"].item() == 11
-    assert splits["valid"]["constant_scalars"].item() == 12
-    assert splits["test"]["constant_scalars"].item() == 13
+    assert splits["valid"]["constant_scalars"].item() == 112
+    assert splits["test"]["constant_scalars"].item() == 213
 
 
 def test_build_simulator_rejects_non_spatiotemporal() -> None:

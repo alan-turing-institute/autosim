@@ -39,17 +39,35 @@ def generate_dataset_splits(
     n_valid: int,
     n_test: int,
     base_seed: int | None = None,
+    ensure_exact_n: bool = False,
 ) -> dict[str, dict[str, Any]]:
     """Generate train/valid/test splits from a simulator."""
+    # Reserve disjoint seed ranges so retries in one split cannot collide with
+    # initial or retry seeds in another.
+    split_seed_stride = (
+        SpatioTemporalSimulator._retry_budget(max(n_train, n_valid, n_test)) + 1
+    )
 
     def get_seed(offset: int) -> int | None:
         if base_seed is None:
             return None
-        return base_seed + offset
+        return base_seed + offset * split_seed_stride
 
-    train = sim.forward_samples_spatiotemporal(n=n_train, random_seed=get_seed(0))
-    valid = sim.forward_samples_spatiotemporal(n=n_valid, random_seed=get_seed(1))
-    test = sim.forward_samples_spatiotemporal(n=n_test, random_seed=get_seed(2))
+    train = sim.forward_samples_spatiotemporal(
+        n=n_train,
+        random_seed=get_seed(0),
+        ensure_exact_n=ensure_exact_n,
+    )
+    valid = sim.forward_samples_spatiotemporal(
+        n=n_valid,
+        random_seed=get_seed(1),
+        ensure_exact_n=ensure_exact_n,
+    )
+    test = sim.forward_samples_spatiotemporal(
+        n=n_test,
+        random_seed=get_seed(2),
+        ensure_exact_n=ensure_exact_n,
+    )
     return {"train": train, "valid": valid, "test": test}
 
 
@@ -258,6 +276,7 @@ def _generate_main(cfg: Any) -> None:
                 n_valid=n_valid_each,
                 n_test=n_test_each,
                 base_seed=cfg.seed,
+                ensure_exact_n=bool(cfg.dataset.get("ensure_exact_n", False)),
             )
             per_strata_outputs.append(splits)
 
@@ -272,6 +291,7 @@ def _generate_main(cfg: Any) -> None:
             n_valid=cfg.dataset.n_valid,
             n_test=cfg.dataset.n_test,
             base_seed=cfg.seed,
+            ensure_exact_n=bool(cfg.dataset.get("ensure_exact_n", False)),
         )
 
     output_dir = Path(cfg.dataset.output_dir)

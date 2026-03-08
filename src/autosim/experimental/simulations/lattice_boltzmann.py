@@ -169,16 +169,17 @@ class LatticeBoltzmann(SpatioTemporalSimulator):
         return out.flatten().unsqueeze(0)
 
     def forward_samples_spatiotemporal(
-        self, n: int, random_seed: int | None = None
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
     ) -> dict:
         """Run sampled trajectories and return spatiotemporal tensors."""
-        x = self.sample_inputs(n, random_seed)
-
-        outputs = []
-        for i in range(n):
-            outputs.append(self._forward(x[i : i + 1]))
-
-        y = torch.cat(outputs, dim=0)
+        y, x = self._forward_batch_with_optional_retries(
+            n=n,
+            random_seed=random_seed,
+            ensure_exact_n=ensure_exact_n,
+        )
 
         # LBM outputs: [B, Steps*Features] or [B, Features]
         channels = len(self.output_names)  # 4
@@ -187,7 +188,7 @@ class LatticeBoltzmann(SpatioTemporalSimulator):
         if self.return_timeseries:
             total_elements = y.shape[1]
             steps = total_elements // features_per_frame
-            y_reshaped = y.reshape(n, steps, self.height, self.width, channels)
+            y_reshaped = y.reshape(y.shape[0], steps, self.height, self.width, channels)
 
             if self.skip_nt >= steps:
                 raise ValueError(
@@ -196,7 +197,7 @@ class LatticeBoltzmann(SpatioTemporalSimulator):
                 )
             y_reshaped = y_reshaped[:, self.skip_nt :, ...]
         else:
-            y_reshaped = y.reshape(n, 1, self.height, self.width, channels)
+            y_reshaped = y.reshape(y.shape[0], 1, self.height, self.width, channels)
 
         return {
             "data": y_reshaped,

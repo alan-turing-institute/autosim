@@ -97,10 +97,16 @@ class CompressibleFluid2D(SpatioTemporalSimulator):
         return y.flatten().unsqueeze(0)
 
     def forward_samples_spatiotemporal(  # noqa: D102
-        self, n: int, random_seed: int | None = None
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
     ) -> dict:
-        x = self.sample_inputs(n, random_seed)
-        y, x = self.forward_batch(x)
+        y, x = self._forward_batch_with_optional_retries(
+            n=n,
+            random_seed=random_seed,
+            ensure_exact_n=ensure_exact_n,
+        )
 
         channels = 4
         features_per_step = self.n * self.n * channels
@@ -113,9 +119,9 @@ class CompressibleFluid2D(SpatioTemporalSimulator):
                     f"expected multiple of {features_per_step}."
                 )
             n_time = total // features_per_step
-            y = y.reshape(n, n_time, self.n, self.n, channels)
+            y = y.reshape(y.shape[0], n_time, self.n, self.n, channels)
         else:
-            y = y.reshape(n, 1, self.n, self.n, channels)
+            y = y.reshape(y.shape[0], 1, self.n, self.n, channels)
 
         return {
             "data": y,
