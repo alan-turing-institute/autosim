@@ -1,0 +1,2 @@
+_target_: autosim.simulations.Epidemic
+log_level: warning

@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from numpy.fft import fft2, ifft2
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import NumpyLike, TensorLike
 
 PATTERN_RANGES: dict[str, dict[str, tuple[float, float]]] = {
@@ -420,7 +420,7 @@ def simulate_spectral_gray_scott(  # noqa: PLR0915
     return u_output, v_output
 
 
-class GrayScott(Simulator):
+class GrayScott(SpatioTemporalSimulator):
     """Spectral Gray-Scott simulator based on danfortunato/spectral-gray-scott."""
 
     def __init__(  # noqa: PLR0912
@@ -476,7 +476,7 @@ class GrayScott(Simulator):
             }
 
         if output_names is None:
-            output_names = ["solution"]
+            output_names = ["u", "v"]
 
         super().__init__(parameters_range, output_names, log_level)
 
@@ -558,14 +558,20 @@ class GrayScott(Simulator):
         return torch.from_numpy(concat).reshape(1, -1)
 
     def forward_samples_spatiotemporal(
-        self, n: int, random_seed: int | None = None
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
     ) -> dict:
         """Run multiple trajectories and return `[batch, time, x, y, channels]` data."""
         if not self.return_timeseries:
             msg = "forward_samples_spatiotemporal requires return_timeseries=True."
             raise RuntimeError(msg)
-        x = self.sample_inputs(n, random_seed)
-        y, x = self.forward_batch(x)
+        y, x = self._forward_batch_with_optional_retries(
+            n=n,
+            random_seed=random_seed,
+            ensure_exact_n=ensure_exact_n,
+        )
 
         timesteps = _compute_snapshot_count(self.T, self.dt, self.snapshot_dt)
         y_reshaped = y.reshape(y.shape[0], 2, timesteps, self.n, self.n).permute(

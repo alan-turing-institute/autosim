@@ -13,11 +13,11 @@ import math
 
 import torch
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
 
-class Hydrodynamics2D(Simulator):
+class Hydrodynamics2D(SpatioTemporalSimulator):
     r"""Simplified 2D hydrodynamics simulator with no magnetic field.
 
     Parameters
@@ -95,11 +95,17 @@ class Hydrodynamics2D(Simulator):
         return out.flatten().unsqueeze(0)
 
     def forward_samples_spatiotemporal(
-        self, n: int, random_seed: int | None = None
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
     ) -> dict:
         """Run sampled trajectories and return spatiotemporal tensors."""
-        x = self.sample_inputs(n, random_seed)
-        y, x = self.forward_batch(x)
+        y, x = self._forward_batch_with_optional_retries(
+            n=n,
+            random_seed=random_seed,
+            ensure_exact_n=ensure_exact_n,
+        )
 
         channels = 3
         features_per_step = self.n * self.n * channels

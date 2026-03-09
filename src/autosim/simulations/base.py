@@ -1,3 +1,4 @@
+import abc
 import logging
 from abc import ABC, abstractmethod
 
@@ -8,7 +9,7 @@ from tqdm import tqdm
 from autosim.device import TorchDeviceMixin
 from autosim.logging import get_configured_logger
 from autosim.types import DeviceLike, TensorLike
-from autosim.utils import ValidationMixin, set_random_seed
+from autosim.validation import ValidationMixin, set_random_seed
 
 logger = logging.getLogger("autosim")
 
@@ -459,3 +460,95 @@ class TorchSimulator(Simulator, TorchDeviceMixin):
         self.results_tensor = results
         valid_inputs = valid_inputs.to(self.device)
         return results, valid_inputs
+
+
+class SpatioTemporalSimulator(Simulator, abc.ABC):
+    """
+    Base class for simulators that output spatiotemporal data.
+
+    This class extends the base Simulator with additional functionality for
+    handling spatiotemporal outputs, such as reshaping to spatiotemporal format
+    and returning constant fields.
+    """
+
+    @abstractmethod
+    def forward_samples_spatiotemporal(
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
+    ) -> dict:
+        """
+        Generate spatiotemporal samples from the simulator.
+
+        Parameters
+        ----------
+        n: int
+            Number of samples to generate.
+        random_seed: int | None
+            Random seed for reproducibility. Defaults to None.
+        ensure_exact_n: bool
+            When True, retry failed simulations until exactly ``n`` successful
+            samples are collected. Defaults to False.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the reshaped spatiotemporal data, constant scalars,
+            and constant fields.
+        """
+
+    @staticmethod
+    def _retry_budget(n: int) -> int:
+        """Max retry rounds when collecting ``n`` samples with ``ensure_exact_n``."""
+        return max(100, 20 * n)
+
+    def _forward_batch_with_optional_retries(
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
+    ) -> tuple[TensorLike, TensorLike]:
+        """Run a batch and optionally retry until exactly ``n`` successes.
+
+        Parameters
+        ----------
+        n: int
+            Number of successful samples requested.
+        random_seed: int | None
+            Base random seed for deterministic sampling.
+        ensure_exact_n: bool
+            Whether to keep resampling failed simulations.
+
+        Returns
+        -------
+        tuple[TensorLike, TensorLike]
+            Tuple of ``(simulation_results, valid_input_parameters)``.
+        """
+        x = self.sample_inputs(n, random_seed)
+        y, x_valid = self.forward_batch(x)
+
+        if not ensure_exact_n or y.shape[0] == n:
+            return y, x_valid
+
+        y_parts = [y] if y.shape[0] > 0 else []
+        x_parts = [x_valid] if x_valid.shape[0] > 0 else []
+        successful = y.shape[0]
+
+        for retry_round in range(1, self._retry_budget(n) + 1):
+            remaining = n - successful
+            retry_seed = None if random_seed is None else random_seed + retry_round
+            y_b, x_b = self.forward_batch(self.sample_inputs(remaining, retry_seed))
+            if y_b.shape[0] > 0:
+                y_parts.append(y_b)
+                x_parts.append(x_b)
+                successful += y_b.shape[0]
+            if successful >= n:
+                break
+        else:
+            raise RuntimeError(
+                f"Could not collect exactly n={n} successful samples after "
+                f"{self._retry_budget(n)} retry rounds. Collected {successful}."
+            )
+
+        return torch.cat(y_parts, dim=0)[:n], torch.cat(x_parts, dim=0)[:n]

@@ -1,0 +1,15 @@
+_target_: autosim.experimental.simulations.LatticeBoltzmann
+return_timeseries: true
+log_level: warning
+width: 128
+height: 32
+T: 12.9
+dt: 0.032
+use_cylinder: false
+oscillatory_inlet: true
+n_saved_frames: 321
+skip_nt: 0
+parameters_range:
+  viscosity: [0.015, 0.03]
+  u_in: [0.05, 0.11]
+  oscillation_frequency: [0.2, 1.5]

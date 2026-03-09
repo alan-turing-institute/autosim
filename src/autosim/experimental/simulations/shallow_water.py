@@ -4,11 +4,11 @@ import math
 
 import torch
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
 
-class ShallowWater2D(Simulator):
+class ShallowWater2D(SpatioTemporalSimulator):
     """Full 2D shallow-water simulator with prognostic [h, u, v]."""
 
     def __init__(
@@ -22,7 +22,8 @@ class ShallowWater2D(Simulator):
         Lx: float = 64.0,
         Ly: float = 128.0,
         T: float = 90.0,
-        dt_save: float = 1.0,
+        dt_save: float = 0.2,
+        skip_nt: int = 0,
         cfl: float = 0.12,
         g: float = 9.81,
         H: float = 1.0,
@@ -31,11 +32,14 @@ class ShallowWater2D(Simulator):
         dtype: torch.dtype = torch.float64,
     ) -> None:
         if parameters_range is None:
-            parameters_range = {"amp": (0.05, 0.2)}
+            parameters_range = {"amp": (0.05, 0.14)}
         if output_names is None:
             output_names = ["h", "u", "v"]
 
         super().__init__(parameters_range, output_names, log_level)
+        if skip_nt < 0:
+            msg = "skip_nt must be non-negative"
+            raise ValueError(msg)
         self.return_timeseries = return_timeseries
         self.nx = nx
         self.ny = ny
@@ -43,6 +47,7 @@ class ShallowWater2D(Simulator):
         self.Ly = Ly
         self.T = T
         self.dt_save = dt_save
+        self.skip_nt = skip_nt
         self.cfl = cfl
         self.g = g
         self.H = H
@@ -63,6 +68,7 @@ class ShallowWater2D(Simulator):
             Ly=self.Ly,
             T=self.T,
             dt_save=self.dt_save,
+            skip_nt=self.skip_nt,
             cfl=self.cfl,
             g=self.g,
             H=self.H,
@@ -73,11 +79,18 @@ class ShallowWater2D(Simulator):
         return y.flatten().unsqueeze(0)
 
     def forward_samples_spatiotemporal(
-        self, n: int, random_seed: int | None = None
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
     ) -> dict:
         """Run sampled trajectories and return `[batch,time,x,y,channels]` data."""
-        x = self.sample_inputs(n, random_seed)
-        y, x = self.forward_batch(x)
+        y, x = self._forward_batch_with_optional_retries(
+            n=n,
+            random_seed=random_seed,
+            ensure_exact_n=ensure_exact_n,
+        )
+        n_valid = y.shape[0]
 
         channels = 3
         features_per_step = self.nx * self.ny * channels
@@ -85,9 +98,9 @@ class ShallowWater2D(Simulator):
         if self.return_timeseries:
             total = y.shape[1]
             n_time = total // features_per_step
-            y = y.reshape(n, n_time, self.nx, self.ny, channels)
+            y = y.reshape(n_valid, n_time, self.nx, self.ny, channels)
         else:
-            y = y.reshape(n, 1, self.nx, self.ny, channels)
+            y = y.reshape(n_valid, 1, self.nx, self.ny, channels)
 
         return {
             "data": y,
@@ -96,7 +109,7 @@ class ShallowWater2D(Simulator):
         }
 
 
-def simulate_swe_2d(  # noqa: PLR0915
+def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     amp: float,
     return_timeseries: bool,
     nx: int,
@@ -111,10 +124,14 @@ def simulate_swe_2d(  # noqa: PLR0915
     nu: float,
     drag: float,
     dtype: torch.dtype = torch.float64,
+    skip_nt: int = 0,
 ) -> torch.Tensor:
     """Integrate full shallow-water equations with PDEArena-style random2 ICs."""
     if dtype not in (torch.float32, torch.float64):
         msg = "dtype must be torch.float32 or torch.float64"
+        raise ValueError(msg)
+    if skip_nt < 0:
+        msg = "skip_nt must be non-negative"
         raise ValueError(msg)
     complex_dtype = torch.complex64 if dtype == torch.float32 else torch.complex128
 
@@ -285,11 +302,25 @@ def simulate_swe_2d(  # noqa: PLR0915
     u = u0
     v = v0
 
+    h_min_bound = 1e-4
+    h_max_bound = 100.0
+    uv_abs_bound = 100.0
+    saturation_frac_threshold = 0.01
+
+    def _saturation_fraction(
+        h_curr: torch.Tensor, u_curr: torch.Tensor, v_curr: torch.Tensor
+    ) -> float:
+        h_sat = ((h_curr <= h_min_bound) | (h_curr >= h_max_bound)).float().mean()
+        u_sat = (u_curr.abs() >= uv_abs_bound).float().mean()
+        v_sat = (v_curr.abs() >= uv_abs_bound).float().mean()
+        return float(torch.maximum(torch.maximum(h_sat, u_sat), v_sat).item())
+
     history: list[torch.Tensor] = []
     expected_frames = int(T / dt_save) + 1
     t = 0.0
     next_save = 0.0
     last_valid = output(h, u, v)
+    failure_reason: str | None = None
 
     while t <= T + 1e-10:
         if not (
@@ -297,6 +328,10 @@ def simulate_swe_2d(  # noqa: PLR0915
             and torch.isfinite(u).all()
             and torch.isfinite(v).all()
         ):
+            failure_reason = "non-finite state encountered"
+            break
+        if _saturation_fraction(h, u, v) >= saturation_frac_threshold:
+            failure_reason = "state saturated at clipping bounds"
             break
 
         if return_timeseries and t >= next_save - 1e-10:
@@ -312,6 +347,7 @@ def simulate_swe_2d(  # noqa: PLR0915
         speed_y = (v.abs() + c_now).max().item()
         max_speed = max(speed_x, speed_y, 1e-8)
         if not math.isfinite(max_speed):
+            failure_reason = "non-finite wave speed"
             break
 
         dt = cfl * min(dx, dy) / max_speed
@@ -353,15 +389,31 @@ def simulate_swe_2d(  # noqa: PLR0915
             and torch.isfinite(u).all()
             and torch.isfinite(v).all()
         ):
+            if _saturation_fraction(h, u, v) >= saturation_frac_threshold:
+                failure_reason = "state saturated at clipping bounds after step"
+                break
             last_valid = output(h, u, v)
         else:
+            failure_reason = "non-finite state after step"
             break
         t += dt
 
+    if failure_reason is not None:
+        raise RuntimeError(
+            "ShallowWater2D simulation failed: "
+            f"{failure_reason} at t={t:.6f} (amp={amp:.6f})."
+        )
+
     if return_timeseries:
+        if skip_nt >= expected_frames:
+            msg = (
+                "skip_nt is too large for the available trajectory length; "
+                f"skip_nt={skip_nt}, available_frames={expected_frames}."
+            )
+            raise ValueError(msg)
         while len(history) < expected_frames:
             history.append(last_valid)
         if len(history) > expected_frames:
             history = history[:expected_frames]
-        return torch.stack(history, dim=0)
+        return torch.stack(history[skip_nt:], dim=0)
     return output(h, u, v).unsqueeze(0)

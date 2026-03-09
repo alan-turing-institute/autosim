@@ -6,10 +6,7 @@ from scipy.integrate import solve_ivp
 from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import NumpyLike, TensorLike
 
-integrator_keywords = {}
-integrator_keywords["rtol"] = 1e-12
-integrator_keywords["method"] = "RK45"
-integrator_keywords["atol"] = 1e-12
+integrator_keywords = {"rtol": 1e-6, "atol": 1e-6, "method": "RK45"}
 
 
 class ReactionDiffusion(SpatioTemporalSimulator):
@@ -138,9 +135,9 @@ def reaction_diffusion(
     t: float
         The current time step (not used).
     uvt: NumpyLike
-        Fourier transformed solution vector at current time step.
+        Fourier transformed solution vector at current time step (length 2*N, 1-D).
     K22: NumpyLike
-        The squared magnitudes of the Fourier wavevectors (kx, ky).
+        Squared Fourier wavenumbers, shape (N,).
     d1: float
         The diffusion coefficient for species 1.
     d2: float
@@ -152,22 +149,14 @@ def reaction_diffusion(
     N: int
         Total number of spatial grid points (n*n).
     """
-    ut = np.reshape(uvt[:N], (n, n))
-    vt = np.reshape(uvt[N : 2 * N], (n, n))
-    u = np.real(ifft2(ut))
-    v = np.real(ifft2(vt))
-    u3 = u**3
-    v3 = v**3
-    u2v = (u**2) * v
-    uv2 = u * (v**2)
-    utrhs = np.reshape((fft2(u - u3 - uv2 + beta * u2v + beta * v3)), (N, 1))
-    vtrhs = np.reshape((fft2(v - u2v - v3 - beta * u3 - beta * uv2)), (N, 1))
-    uvt_reshaped = np.reshape(uvt, (len(uvt), 1))
-    return np.squeeze(
-        np.vstack(
-            (-d1 * K22 * uvt_reshaped[:N] + utrhs, -d2 * K22 * uvt_reshaped[N:] + vtrhs)
-        )
-    )
+    u = np.real(ifft2(uvt[:N].reshape(n, n)))
+    v = np.real(ifft2(uvt[N:].reshape(n, n)))
+    u2v = u * u * v
+    uv2 = u * v * v
+    rhs = np.empty(2 * N, dtype=complex)
+    rhs[:N] = fft2(u - u**3 - uv2 + beta * (u2v + v**3)).ravel() - d1 * K22 * uvt[:N]
+    rhs[N:] = fft2(v - u2v - v**3 - beta * (u**3 + uv2)).ravel() - d2 * K22 * uvt[N:]
+    return rhs
 
 
 def simulate_reaction_diffusion(
@@ -213,42 +202,22 @@ def simulate_reaction_diffusion(
     N = n * n
     x_uniform = np.linspace(-L / 2, L / 2, n + 1)
     x_grid = x_uniform[:n]
-    y_grid = x_uniform[:n]
-    n2 = int(n / 2)
-    # Define Fourier wavevectors (kx, ky)
+    n2 = n // 2
     kx = (2 * np.pi / L) * np.hstack(
         (np.linspace(0, n2 - 1, n2), np.linspace(-n2, -1, n2))
     )
-    ky = kx
-    # Get 2D meshes in (x, y) and (kx, ky)
-    X_grid, Y_grid = np.meshgrid(x_grid, y_grid)
-    KX, KY = np.meshgrid(kx, ky)
+    X_grid, Y_grid = np.meshgrid(x_grid, x_grid)
+    KX, KY = np.meshgrid(kx, kx)
     K2 = KX**2 + KY**2
-    K22 = np.reshape(K2, (N, 1))
+    K22 = K2.ravel()
 
-    m = 1
+    r = np.sqrt(X_grid**2 + Y_grid**2)
+    theta = np.angle(X_grid + 1j * Y_grid)
+    u0 = np.tanh(r) * np.cos(theta - r)
+    v0 = np.tanh(r) * np.sin(theta - r)
 
-    # define our solution vectors
-    u = np.zeros((len(x_grid), len(y_grid), len(t)))
-    v = np.zeros((len(x_grid), len(y_grid), len(t)))
+    uvt0 = np.hstack([fft2(u0).ravel(), fft2(v0).ravel()])
 
-    # Initial conditions
-    u[:, :, 0] = np.tanh(np.sqrt(X_grid**2 + Y_grid**2)) * np.cos(
-        m * np.angle(X_grid + 1j * Y_grid) - (np.sqrt(X_grid**2 + Y_grid**2))
-    )
-    v[:, :, 0] = np.tanh(np.sqrt(X_grid**2 + Y_grid**2)) * np.sin(
-        m * np.angle(X_grid + 1j * Y_grid) - (np.sqrt(X_grid**2 + Y_grid**2))
-    )
-
-    # uvt is the solution vector in Fourier space, so below
-    # we are initializing the 2D FFT of the initial condition, uvt0
-    uvt0 = np.squeeze(
-        np.hstack(
-            (np.reshape(fft2(u[:, :, 0]), (1, N)), np.reshape(fft2(v[:, :, 0]), (1, N)))
-        )
-    )
-
-    # Solve the PDE in the Fourier space, where it reduces to system of ODEs
     uvsol = solve_ivp(
         reaction_diffusion,
         (t[0], t[-1]),
@@ -259,16 +228,13 @@ def simulate_reaction_diffusion(
     )
     uvsol = uvsol.y
 
-    # Reshape things and ifft back into (x, y, t) space from (kx, ky, t) space
-    for j in range(len(t)):
-        ut = np.reshape(uvsol[:N, j], (n, n))
-        vt = np.reshape(uvsol[N:, j], (n, n))
-        u[:, :, j] = np.real(ifft2(ut))
-        v[:, :, j] = np.real(ifft2(vt))
+    u_out = np.array(
+        [np.real(ifft2(uvsol[:N, j].reshape(n, n))) for j in range(len(t))]
+    )
+    v_out = np.array(
+        [np.real(ifft2(uvsol[N:, j].reshape(n, n))) for j in range(len(t))]
+    )
 
     if return_timeseries:
-        return u.transpose(2, 0, 1), v.transpose(2, 0, 1)
-    # Return the last snapshot
-    u_sol = u[:, :, -1]
-    v_sol = v[:, :, -1]
-    return u_sol, v_sol
+        return u_out, v_out
+    return u_out[-1], v_out[-1]

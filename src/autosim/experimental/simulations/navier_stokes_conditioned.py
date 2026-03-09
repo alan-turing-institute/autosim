@@ -4,7 +4,7 @@ import math
 
 import torch
 
-from autosim.simulations.base import Simulator
+from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
 
@@ -373,7 +373,7 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
     return _snapshot()
 
 
-class ConditionedNavierStokes2D(Simulator):
+class ConditionedNavierStokes2D(SpatioTemporalSimulator):
     """Conditioned 2D Navier-Stokes smoke simulator inspired by PDEArena."""
 
     _DEFAULT_SMOOTHNESS = 6.0
@@ -525,11 +525,17 @@ class ConditionedNavierStokes2D(Simulator):
         return sol.flatten().unsqueeze(0)
 
     def forward_samples_spatiotemporal(
-        self, n: int, random_seed: int | None = None
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
     ) -> dict:
         """Run sampled trajectories and return `[batch,time,x,y,channels]` data."""
-        x = self.sample_inputs(n, random_seed)
-        y, x = self.forward_batch(x)
+        y, x = self._forward_batch_with_optional_retries(
+            n=n,
+            random_seed=random_seed,
+            ensure_exact_n=ensure_exact_n,
+        )
 
         channels = 3
         features_per_step = self.n * self.n * channels

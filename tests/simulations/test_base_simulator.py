@@ -2,7 +2,7 @@ import pytest
 import torch
 from torch import Tensor
 
-from autosim.simulations.base import Simulator, TorchSimulator
+from autosim.simulations.base import Simulator, SpatioTemporalSimulator, TorchSimulator
 from autosim.types import TensorLike
 
 
@@ -404,3 +404,74 @@ def test_torch_simulator_sample_inputs_on_device(parameters_range, monkeypatch):
     )
     sim.sample_inputs(5)
     assert calls["count"] == 1
+
+
+class RetrySpatioTemporalSimulator(SpatioTemporalSimulator):
+    """Test double for retrying failed spatiotemporal simulations."""
+
+    def __init__(self, sample_batches: list[TensorLike]):
+        super().__init__(parameters_range={"param1": (0.0, 1.0)}, output_names=["out"])
+        self.sample_batches = [batch.clone() for batch in sample_batches]
+        self.sample_calls = 0
+
+    def sample_inputs(  # type: ignore[override]
+        self, n_samples: int, random_seed: int | None = None, method: str = "lhs"
+    ) -> TensorLike:
+        del random_seed, method
+        self.sample_calls += 1
+        batch = self.sample_batches.pop(0)
+        assert batch.shape[0] == n_samples
+        return batch
+
+    def _forward(self, x: TensorLike) -> TensorLike | None:
+        if x[0, 0] <= 0.5:
+            msg = "simulated failure"
+            raise RuntimeError(msg)
+        return (x[:, :1] * 2.0).reshape(1, 1)
+
+    def forward_samples_spatiotemporal(
+        self,
+        n: int,
+        random_seed: int | None = None,
+        ensure_exact_n: bool = False,
+    ) -> dict:
+        y, x = self._forward_batch_with_optional_retries(
+            n=n,
+            random_seed=random_seed,
+            ensure_exact_n=ensure_exact_n,
+        )
+        return {
+            "data": y.reshape(y.shape[0], 1, 1, 1, 1),
+            "constant_scalars": x,
+            "constant_fields": None,
+        }
+
+
+def test_spatiotemporal_sampling_can_return_fewer_without_exact_n():
+    sim = RetrySpatioTemporalSimulator(
+        sample_batches=[
+            torch.tensor([[0.1], [0.9], [0.2], [0.8]], dtype=torch.float32),
+        ]
+    )
+
+    out = sim.forward_samples_spatiotemporal(n=4, ensure_exact_n=False)
+
+    assert out["data"].shape[0] == 2
+    assert out["constant_scalars"].shape[0] == 2
+    assert sim.sample_calls == 1
+
+
+def test_spatiotemporal_sampling_retries_to_exact_n_when_enabled():
+    sim = RetrySpatioTemporalSimulator(
+        sample_batches=[
+            torch.tensor([[0.1], [0.9], [0.2], [0.8]], dtype=torch.float32),
+            torch.tensor([[0.3], [0.95]], dtype=torch.float32),
+            torch.tensor([[0.99]], dtype=torch.float32),
+        ]
+    )
+
+    out = sim.forward_samples_spatiotemporal(n=4, ensure_exact_n=True)
+
+    assert out["data"].shape[0] == 4
+    assert out["constant_scalars"].shape[0] == 4
+    assert sim.sample_calls == 3

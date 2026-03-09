@@ -6,10 +6,12 @@ These simulation families are organized from foundational pattern dynamics to in
 
 ### Pattern-formation families
 
+- [Reaction-Diffusion](experimental/00_00_reaction_diffusion.ipynb): A spectral (FFT-based) two-species reaction-diffusion generator that produces diverse spatiotemporal patterns — spirals, spots, and labyrinthine textures — across reaction and diffusion parameter regimes.
 - [Gray-Scott](experimental/00_01_gray_scott.ipynb): A spectral ETDRK4 reaction-diffusion generator that spans diverse morphologies (spots, spirals, worms, and maze-like regimes) via feed/kill parameters.
 
 ### Weather-like and transport families
 
+- [Advection-Diffusion](experimental/01_00_advection_diffusion.ipynb): A 2D incompressible vorticity–streamfunction solver with spectral Poisson inversion that generates vorticity fields across a range of viscosities and forcing strengths.
 - [Shallow-Water 2D](experimental/01_01_shallow_water_equation.ipynb): A geophysical fluid model that evolves height and horizontal velocity fields to capture wave propagation, rotation effects, and balanced flow structure.
 
 ### Classical fluid dynamics families
