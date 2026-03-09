@@ -425,7 +425,8 @@ class RetrySpatioTemporalSimulator(SpatioTemporalSimulator):
 
     def _forward(self, x: TensorLike) -> TensorLike | None:
         if x[0, 0] <= 0.5:
-            raise RuntimeError("simulated failure")
+            msg = "simulated failure"
+            raise RuntimeError(msg)
         return (x[:, :1] * 2.0).reshape(1, 1)
 
     def forward_samples_spatiotemporal(

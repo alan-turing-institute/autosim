@@ -500,7 +500,7 @@ class SpatioTemporalSimulator(Simulator, abc.ABC):
 
     @staticmethod
     def _retry_budget(n: int) -> int:
-        """Maximum retry rounds when collecting ``n`` samples with ``ensure_exact_n``."""
+        """Max retry rounds when collecting ``n`` samples with ``ensure_exact_n``."""
         return max(100, 20 * n)
 
     def _forward_batch_with_optional_retries(

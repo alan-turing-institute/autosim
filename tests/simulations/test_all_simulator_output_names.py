@@ -5,6 +5,7 @@ from autosim.experimental.simulations import (
     GrossPitaevskiiEquation2D,
     Hydrodynamics2D,
     LatticeBoltzmann,
+    ReactionDiffusion,
     ShallowWater2D,
 )
 from autosim.simulations import (
@@ -14,7 +15,6 @@ from autosim.simulations import (
     FlowProblem,
     Projectile,
     ProjectileMultioutput,
-    ReactionDiffusion,
     SEIRSimulator,
 )
 
