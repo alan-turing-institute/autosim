@@ -41,7 +41,7 @@ class DummySimulator(SpatioTemporalSimulator):
 
 def test_build_simulator_from_target_core_and_experimental() -> None:
     core_cfg = OmegaConf.create(
-        {"_target_": "autosim.simulations.ReactionDiffusion", "log_level": "warning"}
+        {"_target_": "autosim.simulations.AdvectionDiffusion", "log_level": "warning"}
     )
     experimental_cfg = OmegaConf.create(
         {
@@ -50,7 +50,7 @@ def test_build_simulator_from_target_core_and_experimental() -> None:
         }
     )
 
-    assert build_simulator(core_cfg).__class__.__name__ == "ReactionDiffusion"
+    assert build_simulator(core_cfg).__class__.__name__ == "AdvectionDiffusion"
     assert build_simulator(experimental_cfg).__class__.__name__ == "ShallowWater2D"
 
 
@@ -136,6 +136,7 @@ def test_cli_generates_dataset_fast_with_advection_diffusion(tmp_path: Path) -> 
         "simulator.L=4.0",
         "simulator.T=0.1",
         "simulator.dt=0.1",
+        "visualize.enabled=false",
         f"hydra.run.dir={hydra_run_dir.as_posix()}",
         "hydra.output_subdir=null",
     ]
