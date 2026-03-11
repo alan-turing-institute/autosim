@@ -15,3 +15,6 @@ nu: 0.0005
 drag: 0.002
 parameters_range:
   amp: [0.07, 0.14]
+  h_mean: [0.7, 1.5]
+  drag: [1e-3, 4e-3]
+  nu: [2e-4, 8e-4]

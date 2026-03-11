@@ -63,7 +63,7 @@ def test_full_swe_skip_nt_too_large_raises() -> None:
             dt_save=1.0,
             cfl=0.12,
             g=9.81,
-            H=1.0,
+            h_mean=1.0,
             nu=5e-4,
             drag=2e-3,
             skip_nt=2,
