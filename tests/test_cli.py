@@ -11,9 +11,12 @@ from omegaconf import DictConfig, OmegaConf
 from autosim.cli import (
     build_simulator,
     combine_stratified_splits,
+    compute_dataset_outlier_report,
     compute_normalization_stats,
+    compute_split_outlier_report,
     generate_dataset_splits,
     generate_normalization_stats_yaml,
+    generate_outlier_report_yaml,
     get_per_strata_counts,
     save_dataset_splits,
     save_example_videos,
@@ -273,6 +276,162 @@ def test_cli_stats_subcommand_writes_yaml(tmp_path: Path) -> None:
     assert isinstance(stats_cfg, DictConfig)
     assert stats_cfg["stats"]["mean_delta"]["U"] == pytest.approx(1.0)
     assert stats_cfg["stats"]["std_delta"]["V"] == pytest.approx(0.0)
+
+
+def test_compute_split_outlier_report_flags_extreme_run() -> None:
+    split_payload = {
+        "data": torch.tensor(
+            [
+                [[[[0.0]]], [[[0.0]]]],
+                [[[[0.1]]], [[[0.1]]]],
+                [[[[100.0]]], [[[100.0]]]],
+            ],
+            dtype=torch.float32,
+        )
+    }
+
+    report = compute_split_outlier_report(split_payload=split_payload)
+
+    assert report["n_runs"] == 3
+    assert report["robust_z"]["count"] >= 1
+    assert 2 in report["robust_z"]["indices"]
+
+
+def test_generate_outlier_report_yaml_from_existing_dataset(tmp_path: Path) -> None:
+    dataset_dir = tmp_path / "dataset"
+    for split in ("train", "valid", "test"):
+        split_dir = dataset_dir / split
+        split_dir.mkdir(parents=True, exist_ok=True)
+        torch.save(
+            {
+                "data": torch.tensor(
+                    [
+                        [[[[0.0]]], [[[0.0]]]],
+                        [[[[0.1]]], [[[0.1]]]],
+                        [[[[100.0]]], [[[100.0]]]],
+                    ],
+                    dtype=torch.float32,
+                )
+            },
+            split_dir / "data.pt",
+        )
+
+    output_path = generate_outlier_report_yaml(dataset_dir=dataset_dir)
+
+    assert output_path.exists()
+    report_cfg = OmegaConf.load(output_path)
+    assert isinstance(report_cfg, DictConfig)
+    assert report_cfg["totals"]["robust_z_count"] >= 1
+    assert report_cfg["splits"]["train"]["robust_z"]["count"] >= 1
+
+
+def test_compute_dataset_outlier_report_includes_zero_counts(tmp_path: Path) -> None:
+    dataset_dir = tmp_path / "dataset"
+    for split in ("train", "valid", "test"):
+        split_dir = dataset_dir / split
+        split_dir.mkdir(parents=True, exist_ok=True)
+        torch.save(
+            {
+                "data": torch.tensor(
+                    [
+                        [[[[0.0]]], [[[0.0]]]],
+                        [[[[0.1]]], [[[0.1]]]],
+                        [[[[0.2]]], [[[0.2]]]],
+                    ],
+                    dtype=torch.float32,
+                )
+            },
+            split_dir / "data.pt",
+        )
+
+    report = compute_dataset_outlier_report(dataset_dir=dataset_dir)
+
+    assert report["totals"]["robust_z_count"] == 0
+    assert report["totals"]["iqr_count"] == 0
+    assert report["splits"]["train"]["robust_z"]["count"] == 0
+    assert report["splits"]["valid"]["iqr"]["count"] == 0
+
+
+def test_cli_outliers_subcommand_writes_yaml(tmp_path: Path) -> None:
+    dataset_dir = tmp_path / "dataset"
+    train_dir = dataset_dir / "train"
+    train_dir.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "data": torch.tensor(
+                [
+                    [[[[0.0]]], [[[0.0]]]],
+                    [[[[0.1]]], [[[0.1]]]],
+                    [[[[100.0]]], [[[100.0]]]],
+                ],
+                dtype=torch.float32,
+            )
+        },
+        train_dir / "data.pt",
+    )
+    repo_root = Path(__file__).resolve().parents[1]
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "autosim.cli",
+            "outliers",
+            dataset_dir.as_posix(),
+            "--splits",
+            "train",
+        ],
+        check=True,
+        cwd=repo_root,
+    )
+
+    outliers_path = dataset_dir / "outliers.yml"
+    assert outliers_path.exists()
+    out_cfg = OmegaConf.load(outliers_path)
+    assert isinstance(out_cfg, DictConfig)
+    assert out_cfg["totals"]["robust_z_count"] >= 1
+
+
+def test_cli_outliers_subcommand_print_only_does_not_write_yaml(tmp_path: Path) -> None:
+    dataset_dir = tmp_path / "dataset"
+    train_dir = dataset_dir / "train"
+    train_dir.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "data": torch.tensor(
+                [
+                    [[[[0.0]]], [[[0.0]]]],
+                    [[[[0.1]]], [[[0.1]]]],
+                    [[[[0.2]]], [[[0.2]]]],
+                ],
+                dtype=torch.float32,
+            )
+        },
+        train_dir / "data.pt",
+    )
+    repo_root = Path(__file__).resolve().parents[1]
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "autosim.cli",
+            "outliers",
+            dataset_dir.as_posix(),
+            "--splits",
+            "train",
+            "--print-only",
+        ],
+        check=True,
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "totals:" in result.stdout
+    assert "train:" in result.stdout
+    assert "robust_z=0" in result.stdout
+    assert not (dataset_dir / "outliers.yml").exists()
 
 
 def test_cli_help_outputs_usage() -> None:

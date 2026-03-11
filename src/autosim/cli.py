@@ -268,6 +268,183 @@ def compute_normalization_stats(
     }
 
 
+def _robust_zscore(values: torch.Tensor) -> torch.Tensor:
+    median = values.median()
+    mad = (values - median).abs().median()
+    scale = 1.4826 * mad + 1e-12
+    return (values - median) / scale
+
+
+def _iqr_outlier_mask(values: torch.Tensor, iqr_multiplier: float) -> torch.Tensor:
+    if iqr_multiplier <= 0:
+        msg = "iqr_multiplier must be positive."
+        raise ValueError(msg)
+    q1 = torch.quantile(values, 0.25)
+    q3 = torch.quantile(values, 0.75)
+    iqr = q3 - q1
+    lower = q1 - iqr_multiplier * iqr
+    upper = q3 + iqr_multiplier * iqr
+    return (values < lower) | (values > upper)
+
+
+def compute_split_outlier_report(
+    split_payload: dict[str, Any],
+    robust_z_threshold: float = 3.5,
+    iqr_multiplier: float = 3.0,
+) -> dict[str, Any]:
+    """Compute per-run outlier report from a split payload.
+
+    Outlier signals are based on trajectory-level mean and variance across all
+    dimensions except batch.
+    """
+    if robust_z_threshold <= 0:
+        msg = "robust_z_threshold must be positive."
+        raise ValueError(msg)
+
+    data = split_payload.get("data")
+    if not isinstance(data, torch.Tensor) or data.ndim != 5:
+        msg = (
+            "Outlier report requires split payload 'data' as a 5D torch.Tensor "
+            "with shape [batch,time,x,y,channels]."
+        )
+        raise ValueError(msg)
+
+    data_float = data.float()
+    per_run_mean = data_float.mean(dim=(1, 2, 3, 4))
+    per_run_var = data_float.var(dim=(1, 2, 3, 4), unbiased=False)
+
+    z_mean = _robust_zscore(per_run_mean)
+    z_var = _robust_zscore(per_run_var)
+    robust_mask = (z_mean.abs() > robust_z_threshold) | (
+        z_var.abs() > robust_z_threshold
+    )
+
+    iqr_mask = _iqr_outlier_mask(per_run_mean, iqr_multiplier) | _iqr_outlier_mask(
+        per_run_var, iqr_multiplier
+    )
+
+    robust_indices = torch.where(robust_mask)[0].tolist()
+    iqr_indices = torch.where(iqr_mask)[0].tolist()
+
+    return {
+        "shape": list(data.shape),
+        "n_runs": int(data.shape[0]),
+        "mean_range": {
+            "min": float(per_run_mean.min().item()),
+            "max": float(per_run_mean.max().item()),
+        },
+        "var_range": {
+            "min": float(per_run_var.min().item()),
+            "max": float(per_run_var.max().item()),
+        },
+        "robust_z": {
+            "threshold": float(robust_z_threshold),
+            "count": len(robust_indices),
+            "indices": robust_indices,
+        },
+        "iqr": {
+            "multiplier": float(iqr_multiplier),
+            "count": len(iqr_indices),
+            "indices": iqr_indices,
+        },
+    }
+
+
+def compute_dataset_outlier_report(
+    dataset_dir: Path,
+    splits: list[str] | None = None,
+    robust_z_threshold: float = 3.5,
+    iqr_multiplier: float = 3.0,
+) -> dict[str, Any]:
+    """Compute a per-split outlier report for an existing dataset directory."""
+    resolved_splits = splits or ["train", "valid", "test"]
+    if not resolved_splits:
+        msg = "At least one split must be provided."
+        raise ValueError(msg)
+
+    report: dict[str, Any] = {
+        "method": "per-run mean/variance outlier detection",
+        "splits": {},
+    }
+
+    total_robust = 0
+    total_iqr = 0
+    for split in resolved_splits:
+        split_data_path = dataset_dir / split / "data.pt"
+        if not split_data_path.exists():
+            msg = f"Could not find split file '{split_data_path}'."
+            raise FileNotFoundError(msg)
+        split_payload = torch.load(split_data_path, map_location="cpu")
+        if not isinstance(split_payload, dict):
+            msg = f"Expected dict payload in '{split_data_path}'."
+            raise ValueError(msg)
+
+        split_report = compute_split_outlier_report(
+            split_payload=split_payload,
+            robust_z_threshold=robust_z_threshold,
+            iqr_multiplier=iqr_multiplier,
+        )
+        report["splits"][split] = split_report
+        total_robust += int(split_report["robust_z"]["count"])
+        total_iqr += int(split_report["iqr"]["count"])
+
+    report["totals"] = {
+        "robust_z_count": total_robust,
+        "iqr_count": total_iqr,
+    }
+    return report
+
+
+def _print_outlier_report_summary(report: dict[str, Any]) -> None:
+    """Print a concise per-split summary, including zero outlier counts."""
+    totals = report.get("totals", {})
+    robust_total = int(totals.get("robust_z_count", 0))
+    iqr_total = int(totals.get("iqr_count", 0))
+    print(f"totals: robust_z={robust_total}, iqr={iqr_total}")
+
+    splits = report.get("splits", {})
+    if isinstance(splits, dict):
+        for split_name, split_report in splits.items():
+            if not isinstance(split_report, dict):
+                continue
+            robust_info = split_report.get("robust_z", {})
+            iqr_info = split_report.get("iqr", {})
+            robust_count = int(robust_info.get("count", 0))
+            iqr_count = int(iqr_info.get("count", 0))
+            n_runs = int(split_report.get("n_runs", 0))
+            print(
+                f"{split_name}: n_runs={n_runs}, robust_z={robust_count}, "
+                f"iqr={iqr_count}"
+            )
+
+
+def generate_outlier_report_yaml(
+    dataset_dir: Path,
+    splits: list[str] | None = None,
+    output_path: Path | None = None,
+    robust_z_threshold: float = 3.5,
+    iqr_multiplier: float = 3.0,
+    sig_figs: int = 4,
+) -> Path:
+    """Generate a YAML outlier report for one or more dataset splits."""
+    report = compute_dataset_outlier_report(
+        dataset_dir=dataset_dir,
+        splits=splits,
+        robust_z_threshold=robust_z_threshold,
+        iqr_multiplier=iqr_multiplier,
+    )
+
+    resolved_output_path = (
+        output_path if output_path is not None else dataset_dir / "outliers.yml"
+    )
+    save_normalization_stats(
+        stats_payload=report,
+        output_path=resolved_output_path,
+        sig_figs=sig_figs,
+    )
+    return resolved_output_path
+
+
 def _round_sigfigs(value: float, sig_figs: int) -> float:
     """Round a float to a fixed number of significant figures."""
     if sig_figs <= 0:
@@ -526,14 +703,15 @@ def main() -> None:
             prog="autosim",
             description=(
                 "Generate simulation datasets using Hydra overrides, or list "
-                "available simulator configs, or compute normalization stats."
+                "available simulator configs, or compute posthoc dataset reports."
             ),
         )
         parser.add_argument(
             "command",
             nargs="?",
             help=(
-                "Subcommand: 'list' or 'stats'. Omit to run data generation with Hydra."
+                "Subcommand: 'list', 'stats', or 'outliers'. Omit to run data "
+                "generation with Hydra."
             ),
         )
         parser.print_help()
@@ -596,6 +774,90 @@ def main() -> None:
             sig_figs=int(args.sig_figs),
         )
         print(written_path.as_posix())
+        return
+
+    if argv and argv[0] == "outliers":
+        outliers_parser = argparse.ArgumentParser(
+            prog="autosim outliers",
+            description=(
+                "Generate per-split outlier report YAML for an existing dataset "
+                "directory."
+            ),
+        )
+        outliers_parser.add_argument(
+            "dataset_dir",
+            help="Dataset root containing split folders such as train/data.pt.",
+        )
+        outliers_parser.add_argument(
+            "--splits",
+            default="train,valid,test",
+            help="Comma-separated split names (default: train,valid,test).",
+        )
+        outliers_parser.add_argument(
+            "--output",
+            default=None,
+            help="Optional output YAML path (default: <dataset_dir>/outliers.yml).",
+        )
+        outliers_parser.add_argument(
+            "--robust-z-threshold",
+            type=float,
+            default=3.5,
+            help="Absolute robust-z threshold for outlier flagging (default: 3.5).",
+        )
+        outliers_parser.add_argument(
+            "--iqr-multiplier",
+            type=float,
+            default=3.0,
+            help="IQR fence multiplier for outlier flagging (default: 3.0).",
+        )
+        outliers_parser.add_argument(
+            "--sig-figs",
+            type=int,
+            default=4,
+            help="Significant figures for float stats in YAML (default: 4).",
+        )
+        outliers_parser.add_argument(
+            "--fail-on-outliers",
+            action="store_true",
+            help="Exit with non-zero status if any outliers are found.",
+        )
+        outliers_parser.add_argument(
+            "--print-only",
+            action="store_true",
+            help="Print outlier summary to stdout without writing a YAML file.",
+        )
+        args = outliers_parser.parse_args(argv[1:])
+
+        splits = _parse_field_names_csv(str(args.splits))
+        report = compute_dataset_outlier_report(
+            dataset_dir=Path(args.dataset_dir),
+            splits=splits,
+            robust_z_threshold=float(args.robust_z_threshold),
+            iqr_multiplier=float(args.iqr_multiplier),
+        )
+
+        _print_outlier_report_summary(report)
+
+        totals = report.get("totals")
+        robust_total = int(totals.get("robust_z_count", 0)) if totals else 0
+        iqr_total = int(totals.get("iqr_count", 0)) if totals else 0
+
+        if not args.print_only:
+            output_path = Path(args.output) if args.output is not None else None
+            written_path = (
+                output_path
+                if output_path is not None
+                else Path(args.dataset_dir) / "outliers.yml"
+            )
+            save_normalization_stats(
+                stats_payload=report,
+                output_path=written_path,
+                sig_figs=int(args.sig_figs),
+            )
+            print(written_path.as_posix())
+
+        if args.fail_on_outliers and (robust_total > 0 or iqr_total > 0):
+            raise SystemExit(2)
         return
 
     # Preserve all original arguments for Hydra's own parser.
