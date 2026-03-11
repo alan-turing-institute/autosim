@@ -4,7 +4,7 @@ import argparse
 import sys
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import hydra
 import torch
@@ -270,10 +270,55 @@ def compute_normalization_stats(
     }
 
 
-def save_normalization_stats(stats_payload: dict[str, Any], output_path: Path) -> None:
+def _round_sigfigs(value: float, sig_figs: int) -> float:
+    """Round a float to a fixed number of significant figures."""
+    if sig_figs <= 0:
+        msg = "sig_figs must be positive."
+        raise ValueError(msg)
+    if value == 0.0:
+        return 0.0
+    # General format preserves significant figures; may emit scientific notation.
+    return float(f"{value:.{sig_figs}g}")
+
+
+def _rounded_normalization_stats_payload(
+    stats_payload: dict[str, Any], sig_figs: int
+) -> dict[str, Any]:
+    """Return a copy of stats_payload with rounded float stat values."""
+    rounded = cast(
+        dict[str, Any],
+        OmegaConf.to_container(OmegaConf.create(stats_payload), resolve=True),
+    )
+
+    normalization_stats = rounded.get("normalization_stats")
+    if not isinstance(normalization_stats, dict):
+        return rounded
+    stats = normalization_stats.get("stats")
+    if not isinstance(stats, dict):
+        return rounded
+
+    for key in ("mean", "std", "mean_delta", "std_delta"):
+        bucket = stats.get(key)
+        if not isinstance(bucket, dict):
+            continue
+        for field_name, field_value in list(bucket.items()):
+            if isinstance(field_value, int | float):
+                bucket[field_name] = _round_sigfigs(float(field_value), sig_figs)
+
+    return rounded
+
+
+def save_normalization_stats(
+    stats_payload: dict[str, Any],
+    output_path: Path,
+    sig_figs: int = 4,
+) -> None:
     """Persist normalization statistics as YAML."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    yaml_payload = OmegaConf.to_yaml(OmegaConf.create(stats_payload), resolve=True)
+    rounded_payload = _rounded_normalization_stats_payload(
+        stats_payload=stats_payload, sig_figs=sig_figs
+    )
+    yaml_payload = OmegaConf.to_yaml(OmegaConf.create(rounded_payload), resolve=True)
     output_path.write_text(yaml_payload, encoding="utf-8")
 
 
@@ -282,6 +327,7 @@ def generate_normalization_stats_yaml(
     split: str = "train",
     output_path: Path | None = None,
     core_field_names: list[str] | None = None,
+    sig_figs: int = 4,
 ) -> Path:
     """Generate normalization-stats YAML from an existing dataset directory."""
     split_data_path = dataset_dir / split / "data.pt"
@@ -318,7 +364,9 @@ def generate_normalization_stats_yaml(
         else dataset_dir / "normalization_stats.yaml"
     )
     save_normalization_stats(
-        stats_payload=stats_payload, output_path=resolved_output_path
+        stats_payload=stats_payload,
+        output_path=resolved_output_path,
+        sig_figs=sig_figs,
     )
     return resolved_output_path
 
@@ -541,6 +589,12 @@ def main() -> None:
                 "when possible."
             ),
         )
+        stats_parser.add_argument(
+            "--sig-figs",
+            type=int,
+            default=4,
+            help="Significant figures for float stats in YAML (default: 4).",
+        )
         args = stats_parser.parse_args(argv[1:])
 
         output_path = Path(args.output) if args.output is not None else None
@@ -549,6 +603,7 @@ def main() -> None:
             split=str(args.split),
             output_path=output_path,
             core_field_names=_parse_field_names_csv(args.field_names),
+            sig_figs=int(args.sig_figs),
         )
         print(written_path.as_posix())
         return
