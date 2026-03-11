@@ -6,12 +6,14 @@ from pathlib import Path
 
 import pytest
 import torch
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 
 from autosim.cli import (
     build_simulator,
     combine_stratified_splits,
+    compute_normalization_stats,
     generate_dataset_splits,
+    generate_normalization_stats_yaml,
     get_per_strata_counts,
     save_dataset_splits,
     save_example_videos,
@@ -165,6 +167,114 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
     assert "shallow_water2d" in output_lines
 
 
+def test_compute_normalization_stats_includes_temporal_deltas() -> None:
+    split_payload = {
+        "data": torch.tensor(
+            [
+                [
+                    [[[1.0, 10.0]]],
+                    [[[3.0, 14.0]]],
+                    [[[5.0, 18.0]]],
+                ]
+            ],
+            dtype=torch.float32,
+        )
+    }
+    stats_payload = compute_normalization_stats(
+        split_payload=split_payload, core_field_names=["U", "V"]
+    )
+    stats = stats_payload["stats"]
+
+    assert stats["mean"]["U"] == pytest.approx(3.0)
+    assert stats["mean"]["V"] == pytest.approx(14.0)
+    assert stats["std"]["U"] == pytest.approx((8.0 / 3.0) ** 0.5)
+    assert stats["std"]["V"] == pytest.approx((32.0 / 3.0) ** 0.5)
+    assert stats["mean_delta"]["U"] == pytest.approx(2.0)
+    assert stats["mean_delta"]["V"] == pytest.approx(4.0)
+    assert stats["std_delta"]["U"] == pytest.approx(0.0)
+    assert stats["std_delta"]["V"] == pytest.approx(0.0)
+    assert stats_payload["core_field_names"] == ["U", "V"]
+    assert stats_payload["constant_field_names"] == []
+
+
+def test_generate_normalization_stats_yaml_from_existing_dataset(
+    tmp_path: Path,
+) -> None:
+    dataset_dir = tmp_path / "dataset"
+    train_dir = dataset_dir / "train"
+    train_dir.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "data": torch.tensor(
+                [
+                    [
+                        [[[1.0, 2.0]]],
+                        [[[2.0, 4.0]]],
+                    ],
+                    [
+                        [[[3.0, 6.0]]],
+                        [[[4.0, 8.0]]],
+                    ],
+                ],
+                dtype=torch.float32,
+            )
+        },
+        train_dir / "data.pt",
+    )
+    output_path = generate_normalization_stats_yaml(
+        dataset_dir=dataset_dir, core_field_names=["U", "V"]
+    )
+
+    assert output_path.exists()
+    stats_cfg = OmegaConf.load(output_path)
+    assert isinstance(stats_cfg, DictConfig)
+    assert stats_cfg["core_field_names"] == ["U", "V"]
+    assert stats_cfg["stats"]["mean"]["U"] == pytest.approx(2.5)
+    assert stats_cfg["stats"]["mean_delta"]["V"] == pytest.approx(2.0)
+
+
+def test_cli_stats_subcommand_writes_yaml(tmp_path: Path) -> None:
+    dataset_dir = tmp_path / "dataset"
+    train_dir = dataset_dir / "train"
+    train_dir.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "data": torch.tensor(
+                [
+                    [
+                        [[[1.0, 10.0]]],
+                        [[[2.0, 12.0]]],
+                    ]
+                ],
+                dtype=torch.float32,
+            )
+        },
+        train_dir / "data.pt",
+    )
+    repo_root = Path(__file__).resolve().parents[1]
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "autosim.cli",
+            "stats",
+            dataset_dir.as_posix(),
+            "--field-names",
+            "U,V",
+        ],
+        check=True,
+        cwd=repo_root,
+    )
+
+    stats_path = dataset_dir / "stats.yml"
+    assert stats_path.exists()
+    stats_cfg = OmegaConf.load(stats_path)
+    assert isinstance(stats_cfg, DictConfig)
+    assert stats_cfg["stats"]["mean_delta"]["U"] == pytest.approx(1.0)
+    assert stats_cfg["stats"]["std_delta"]["V"] == pytest.approx(0.0)
+
+
 def test_cli_help_outputs_usage() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     result = subprocess.run(
@@ -177,6 +287,7 @@ def test_cli_help_outputs_usage() -> None:
 
     assert "usage:" in result.stdout.lower()
     assert "list" in result.stdout
+    assert "stats" in result.stdout
 
 
 def test_get_per_strata_counts_requires_exact_divisibility() -> None:

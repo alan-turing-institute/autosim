@@ -4,12 +4,12 @@ import argparse
 import sys
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import hydra
 import torch
 from hydra.utils import get_original_cwd, instantiate
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 
 from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.utils import plot_spatiotemporal_video
@@ -177,6 +177,193 @@ def save_example_videos(
         )
 
 
+def _parse_field_names_csv(field_names_csv: str | None) -> list[str] | None:
+    """Parse a comma-separated field-name string into a cleaned list."""
+    if field_names_csv is None:
+        return None
+    names = [name.strip() for name in field_names_csv.split(",") if name.strip()]
+    return names if names else None
+
+
+def _infer_core_field_names_from_resolved_config(
+    dataset_dir: Path, n_channels: int
+) -> list[str] | None:
+    """Infer channel names from `resolved_config.yaml` when available."""
+    resolved_cfg_path = dataset_dir / "resolved_config.yaml"
+    if not resolved_cfg_path.exists():
+        return None
+    try:
+        cfg = OmegaConf.load(resolved_cfg_path)
+        assert isinstance(cfg, DictConfig)
+        simulator_cfg = cfg.get("simulator")
+        if simulator_cfg is None:
+            return None
+        sim = build_simulator(simulator_cfg)
+        inferred_names = [str(name) for name in sim.output_names]
+    except Exception:
+        return None
+
+    if len(inferred_names) != n_channels:
+        return None
+    return inferred_names
+
+
+def compute_normalization_stats(
+    split_payload: dict[str, Any],
+    core_field_names: list[str] | None = None,
+    constant_field_names: list[str] | None = None,
+) -> dict[str, Any]:
+    """Compute normalization statistics for one split payload."""
+    data = split_payload.get("data")
+    if not isinstance(data, torch.Tensor) or data.ndim != 5:
+        msg = (
+            "Normalization stats require split payload 'data' as a 5D torch.Tensor "
+            "with shape [batch,time,x,y,channels]."
+        )
+        raise ValueError(msg)
+
+    _, n_time, _, _, n_channels = data.shape
+    if n_time < 2:
+        msg = (
+            "Normalization delta stats require at least 2 time steps in "
+            "split payload 'data'."
+        )
+        raise ValueError(msg)
+
+    resolved_core_field_names = core_field_names
+    if resolved_core_field_names is None:
+        resolved_core_field_names = [f"field_{idx}" for idx in range(n_channels)]
+    if len(resolved_core_field_names) != n_channels:
+        msg = (
+            "Number of core field names must match data channel count. "
+            f"Received {len(resolved_core_field_names)} names "
+            f"for {n_channels} channels."
+        )
+        raise ValueError(msg)
+
+    deltas = data[:, 1:, ...] - data[:, :-1, ...]
+
+    flattened_data = data.reshape(-1, n_channels)
+    flattened_deltas = deltas.reshape(-1, n_channels)
+    mean = flattened_data.mean(dim=0)
+    std = flattened_data.std(dim=0, unbiased=False)
+    mean_delta = flattened_deltas.mean(dim=0)
+    std_delta = flattened_deltas.std(dim=0, unbiased=False)
+
+    def _stats_by_channel(values: torch.Tensor) -> dict[str, float]:
+        return {
+            name: float(values[idx].detach().cpu().item())
+            for idx, name in enumerate(resolved_core_field_names or [])
+        }
+
+    return {
+        "stats": {
+            "mean": _stats_by_channel(mean),
+            "std": _stats_by_channel(std),
+            "mean_delta": _stats_by_channel(mean_delta),
+            "std_delta": _stats_by_channel(std_delta),
+        },
+        "core_field_names": resolved_core_field_names,
+        "constant_field_names": constant_field_names or [],
+    }
+
+
+def _round_sigfigs(value: float, sig_figs: int) -> float:
+    """Round a float to a fixed number of significant figures."""
+    if sig_figs <= 0:
+        msg = "sig_figs must be positive."
+        raise ValueError(msg)
+    if value == 0.0:
+        return 0.0
+    # General format preserves significant figures; may emit scientific notation.
+    return float(f"{value:.{sig_figs}g}")
+
+
+def _rounded_normalization_stats_payload(
+    stats_payload: dict[str, Any], sig_figs: int
+) -> dict[str, Any]:
+    """Return a copy of stats_payload with rounded float stat values."""
+    rounded = cast(
+        dict[str, Any],
+        OmegaConf.to_container(OmegaConf.create(stats_payload), resolve=True),
+    )
+
+    stats = rounded.get("stats")
+    if not isinstance(stats, dict):
+        return rounded
+
+    for key in ("mean", "std", "mean_delta", "std_delta"):
+        bucket = stats.get(key)
+        if not isinstance(bucket, dict):
+            continue
+        for field_name, field_value in list(bucket.items()):
+            if isinstance(field_value, int | float):
+                bucket[field_name] = _round_sigfigs(float(field_value), sig_figs)
+
+    return rounded
+
+
+def save_normalization_stats(
+    stats_payload: dict[str, Any],
+    output_path: Path,
+    sig_figs: int = 4,
+) -> None:
+    """Persist normalization statistics as YAML."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    rounded_payload = _rounded_normalization_stats_payload(
+        stats_payload=stats_payload, sig_figs=sig_figs
+    )
+    yaml_payload = OmegaConf.to_yaml(OmegaConf.create(rounded_payload), resolve=True)
+    output_path.write_text(yaml_payload, encoding="utf-8")
+
+
+def generate_normalization_stats_yaml(
+    dataset_dir: Path,
+    split: str = "train",
+    output_path: Path | None = None,
+    core_field_names: list[str] | None = None,
+    sig_figs: int = 4,
+) -> Path:
+    """Generate normalization-stats YAML from an existing dataset directory."""
+    split_data_path = dataset_dir / split / "data.pt"
+    if not split_data_path.exists():
+        msg = f"Could not find split file '{split_data_path}'."
+        raise FileNotFoundError(msg)
+    split_payload = torch.load(split_data_path, map_location="cpu")
+    if not isinstance(split_payload, dict):
+        msg = f"Expected dict payload in '{split_data_path}'."
+        raise ValueError(msg)
+
+    payload_data = split_payload.get("data")
+    if not isinstance(payload_data, torch.Tensor) or payload_data.ndim != 5:
+        msg = (
+            "Expected split payload 'data' as a 5D torch.Tensor with shape "
+            "[batch,time,x,y,channels]."
+        )
+        raise ValueError(msg)
+
+    resolved_field_names = core_field_names
+    if resolved_field_names is None:
+        resolved_field_names = _infer_core_field_names_from_resolved_config(
+            dataset_dir=dataset_dir,
+            n_channels=payload_data.shape[-1],
+        )
+    stats_payload = compute_normalization_stats(
+        split_payload=split_payload,
+        core_field_names=resolved_field_names,
+    )
+
+    resolved_output_path = (
+        output_path if output_path is not None else dataset_dir / "stats.yml"
+    )
+    save_normalization_stats(
+        stats_payload=stats_payload,
+        output_path=resolved_output_path,
+        sig_figs=sig_figs,
+    )
+    return resolved_output_path
+
+
 def get_per_strata_counts(
     n_train: int,
     n_valid: int,
@@ -301,6 +488,14 @@ def _generate_main(cfg: Any) -> None:
     save_resolved_config(cfg=cfg, output_dir=output_dir)
 
     save_dataset_splits(splits=splits, output_dir=output_dir, overwrite=cfg.overwrite)
+    normalization_stats_payload = compute_normalization_stats(
+        split_payload=splits["train"],
+        core_field_names=channel_names_for_visualization,
+    )
+    save_normalization_stats(
+        stats_payload=normalization_stats_payload,
+        output_path=output_dir / "stats.yml",
+    )
     save_example_videos(
         splits=splits,
         output_dir=output_dir,
@@ -321,6 +516,7 @@ def main() -> None:
     """Dispatch tiny autosim subcommands.
 
     - `autosim list` prints simulator config names.
+    - `autosim stats` writes normalization stats YAML for an existing dataset.
     - `autosim` (or any Hydra overrides) runs data generation.
     """
     argv = sys.argv[1:]
@@ -330,13 +526,15 @@ def main() -> None:
             prog="autosim",
             description=(
                 "Generate simulation datasets using Hydra overrides, or list "
-                "available simulator configs."
+                "available simulator configs, or compute normalization stats."
             ),
         )
         parser.add_argument(
             "command",
             nargs="?",
-            help="Subcommand: 'list'. Omit to run data generation with Hydra.",
+            help=(
+                "Subcommand: 'list' or 'stats'. Omit to run data generation with Hydra."
+            ),
         )
         parser.print_help()
         return
@@ -349,6 +547,55 @@ def main() -> None:
         list_parser.parse_args(argv[1:])
         for name in list_simulators():
             print(name)
+        return
+
+    if argv and argv[0] == "stats":
+        stats_parser = argparse.ArgumentParser(
+            prog="autosim stats",
+            description=(
+                "Generate normalization_stats YAML for an existing dataset directory."
+            ),
+        )
+        stats_parser.add_argument(
+            "dataset_dir",
+            help="Dataset root containing split folders such as train/data.pt.",
+        )
+        stats_parser.add_argument(
+            "--split",
+            default="train",
+            help="Split to use for stats (default: train).",
+        )
+        stats_parser.add_argument(
+            "--output",
+            default=None,
+            help=("Optional output YAML path (default: <dataset_dir>/stats.yml)."),
+        )
+        stats_parser.add_argument(
+            "--field-names",
+            default=None,
+            help=(
+                "Optional comma-separated core field names, e.g. 'U,V'. "
+                "If omitted, names are inferred from resolved_config.yaml "
+                "when possible."
+            ),
+        )
+        stats_parser.add_argument(
+            "--sig-figs",
+            type=int,
+            default=4,
+            help="Significant figures for float stats in YAML (default: 4).",
+        )
+        args = stats_parser.parse_args(argv[1:])
+
+        output_path = Path(args.output) if args.output is not None else None
+        written_path = generate_normalization_stats_yaml(
+            dataset_dir=Path(args.dataset_dir),
+            split=str(args.split),
+            output_path=output_path,
+            core_field_names=_parse_field_names_csv(args.field_names),
+            sig_figs=int(args.sig_figs),
+        )
+        print(written_path.as_posix())
         return
 
     # Preserve all original arguments for Hydra's own parser.
