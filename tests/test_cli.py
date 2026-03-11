@@ -269,7 +269,7 @@ def test_cli_stats_subcommand_writes_yaml(tmp_path: Path) -> None:
         cwd=repo_root,
     )
 
-    stats_path = dataset_dir / "normalization_stats.yaml"
+    stats_path = dataset_dir / f"{dataset_dir.name}.yaml"
     assert stats_path.exists()
     stats_cfg = OmegaConf.load(stats_path)
     assert isinstance(stats_cfg, DictConfig)

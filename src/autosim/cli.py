@@ -361,7 +361,7 @@ def generate_normalization_stats_yaml(
     resolved_output_path = (
         output_path
         if output_path is not None
-        else dataset_dir / "normalization_stats.yaml"
+        else dataset_dir / f"{dataset_dir.name}.yaml"
     )
     save_normalization_stats(
         stats_payload=stats_payload,
@@ -501,7 +501,7 @@ def _generate_main(cfg: Any) -> None:
     )
     save_normalization_stats(
         stats_payload=normalization_stats_payload,
-        output_path=output_dir / "normalization_stats.yaml",
+        output_path=output_dir / f"{output_dir.name}.yaml",
     )
     save_example_videos(
         splits=splits,
@@ -577,7 +577,7 @@ def main() -> None:
             default=None,
             help=(
                 "Optional output YAML path (default: "
-                "<dataset_dir>/normalization_stats.yaml)."
+                "<dataset_dir>/<dataset_dir_name>.yaml)."
             ),
         )
         stats_parser.add_argument(
