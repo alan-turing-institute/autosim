@@ -257,16 +257,14 @@ def compute_normalization_stats(
         }
 
     return {
-        "normalization_stats": {
-            "stats": {
-                "mean": _stats_by_channel(mean),
-                "std": _stats_by_channel(std),
-                "mean_delta": _stats_by_channel(mean_delta),
-                "std_delta": _stats_by_channel(std_delta),
-            },
-            "core_field_names": resolved_core_field_names,
-            "constant_field_names": constant_field_names or [],
-        }
+        "stats": {
+            "mean": _stats_by_channel(mean),
+            "std": _stats_by_channel(std),
+            "mean_delta": _stats_by_channel(mean_delta),
+            "std_delta": _stats_by_channel(std_delta),
+        },
+        "core_field_names": resolved_core_field_names,
+        "constant_field_names": constant_field_names or [],
     }
 
 
@@ -290,10 +288,7 @@ def _rounded_normalization_stats_payload(
         OmegaConf.to_container(OmegaConf.create(stats_payload), resolve=True),
     )
 
-    normalization_stats = rounded.get("normalization_stats")
-    if not isinstance(normalization_stats, dict):
-        return rounded
-    stats = normalization_stats.get("stats")
+    stats = rounded.get("stats")
     if not isinstance(stats, dict):
         return rounded
 
@@ -359,9 +354,7 @@ def generate_normalization_stats_yaml(
     )
 
     resolved_output_path = (
-        output_path
-        if output_path is not None
-        else dataset_dir / f"{dataset_dir.name}.yaml"
+        output_path if output_path is not None else dataset_dir / "stats.yml"
     )
     save_normalization_stats(
         stats_payload=stats_payload,
@@ -501,7 +494,7 @@ def _generate_main(cfg: Any) -> None:
     )
     save_normalization_stats(
         stats_payload=normalization_stats_payload,
-        output_path=output_dir / f"{output_dir.name}.yaml",
+        output_path=output_dir / "stats.yml",
     )
     save_example_videos(
         splits=splits,
@@ -575,10 +568,7 @@ def main() -> None:
         stats_parser.add_argument(
             "--output",
             default=None,
-            help=(
-                "Optional output YAML path (default: "
-                "<dataset_dir>/<dataset_dir_name>.yaml)."
-            ),
+            help=("Optional output YAML path (default: <dataset_dir>/stats.yml)."),
         )
         stats_parser.add_argument(
             "--field-names",

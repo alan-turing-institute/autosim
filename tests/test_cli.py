@@ -183,7 +183,7 @@ def test_compute_normalization_stats_includes_temporal_deltas() -> None:
     stats_payload = compute_normalization_stats(
         split_payload=split_payload, core_field_names=["U", "V"]
     )
-    stats = stats_payload["normalization_stats"]["stats"]
+    stats = stats_payload["stats"]
 
     assert stats["mean"]["U"] == pytest.approx(3.0)
     assert stats["mean"]["V"] == pytest.approx(14.0)
@@ -193,8 +193,8 @@ def test_compute_normalization_stats_includes_temporal_deltas() -> None:
     assert stats["mean_delta"]["V"] == pytest.approx(4.0)
     assert stats["std_delta"]["U"] == pytest.approx(0.0)
     assert stats["std_delta"]["V"] == pytest.approx(0.0)
-    assert stats_payload["normalization_stats"]["core_field_names"] == ["U", "V"]
-    assert stats_payload["normalization_stats"]["constant_field_names"] == []
+    assert stats_payload["core_field_names"] == ["U", "V"]
+    assert stats_payload["constant_field_names"] == []
 
 
 def test_generate_normalization_stats_yaml_from_existing_dataset(
@@ -228,11 +228,9 @@ def test_generate_normalization_stats_yaml_from_existing_dataset(
     assert output_path.exists()
     stats_cfg = OmegaConf.load(output_path)
     assert isinstance(stats_cfg, DictConfig)
-    assert stats_cfg["normalization_stats"]["core_field_names"] == ["U", "V"]
-    assert stats_cfg["normalization_stats"]["stats"]["mean"]["U"] == pytest.approx(2.5)
-    assert stats_cfg["normalization_stats"]["stats"]["mean_delta"][
-        "V"
-    ] == pytest.approx(2.0)
+    assert stats_cfg["core_field_names"] == ["U", "V"]
+    assert stats_cfg["stats"]["mean"]["U"] == pytest.approx(2.5)
+    assert stats_cfg["stats"]["mean_delta"]["V"] == pytest.approx(2.0)
 
 
 def test_cli_stats_subcommand_writes_yaml(tmp_path: Path) -> None:
@@ -269,16 +267,12 @@ def test_cli_stats_subcommand_writes_yaml(tmp_path: Path) -> None:
         cwd=repo_root,
     )
 
-    stats_path = dataset_dir / f"{dataset_dir.name}.yaml"
+    stats_path = dataset_dir / "stats.yml"
     assert stats_path.exists()
     stats_cfg = OmegaConf.load(stats_path)
     assert isinstance(stats_cfg, DictConfig)
-    assert stats_cfg["normalization_stats"]["stats"]["mean_delta"][
-        "U"
-    ] == pytest.approx(1.0)
-    assert stats_cfg["normalization_stats"]["stats"]["std_delta"]["V"] == pytest.approx(
-        0.0
-    )
+    assert stats_cfg["stats"]["mean_delta"]["U"] == pytest.approx(1.0)
+    assert stats_cfg["stats"]["std_delta"]["V"] == pytest.approx(0.0)
 
 
 def test_cli_help_outputs_usage() -> None:
