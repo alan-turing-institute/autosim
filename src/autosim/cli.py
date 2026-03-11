@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 import uuid
 from pathlib import Path
@@ -287,6 +288,21 @@ def _iqr_outlier_mask(values: torch.Tensor, iqr_multiplier: float) -> torch.Tens
     return (values < lower) | (values > upper)
 
 
+def _expected_robust_z_count_approx(n_runs: int, robust_z_threshold: float) -> float:
+    """Approximate expected number of runs flagged by robust z under normality.
+
+    Uses two-tailed P(|Z| > threshold) and assumes mean and variance are
+    independent; result is approximate. For interpretation only.
+    """
+    if n_runs <= 0:
+        return 0.0
+    # P(|Z| > t) = erfc(t / sqrt(2))
+    p_one = math.erfc(robust_z_threshold / math.sqrt(2.0))
+    # P(either mean or var out) ≈ 2*p_one - p_one^2
+    p_either = 2.0 * p_one - p_one * p_one
+    return float(n_runs) * p_either
+
+
 def compute_split_outlier_report(
     split_payload: dict[str, Any],
     robust_z_threshold: float = 3.5,
@@ -295,7 +311,9 @@ def compute_split_outlier_report(
     """Compute per-run outlier report from a split payload.
 
     Outlier signals are based on trajectory-level mean and variance across all
-    dimensions except batch.
+    dimensions except batch. The report includes rate_robust_z, rate_iqr, and
+    expected_robust_z_approx (approximate expected count under normality; for
+    interpretation only).
     """
     if robust_z_threshold <= 0:
         msg = "robust_z_threshold must be positive."
@@ -326,9 +344,16 @@ def compute_split_outlier_report(
     robust_indices = torch.where(robust_mask)[0].tolist()
     iqr_indices = torch.where(iqr_mask)[0].tolist()
 
+    n_runs = int(data.shape[0])
+    rate_robust_z = len(robust_indices) / n_runs if n_runs else 0.0
+    rate_iqr = len(iqr_indices) / n_runs if n_runs else 0.0
+    expected_robust_z_approx = _expected_robust_z_count_approx(
+        n_runs, robust_z_threshold
+    )
+
     return {
         "shape": list(data.shape),
-        "n_runs": int(data.shape[0]),
+        "n_runs": n_runs,
         "mean_range": {
             "min": float(per_run_mean.min().item()),
             "max": float(per_run_mean.max().item()),
@@ -347,6 +372,9 @@ def compute_split_outlier_report(
             "count": len(iqr_indices),
             "indices": iqr_indices,
         },
+        "rate_robust_z": rate_robust_z,
+        "rate_iqr": rate_iqr,
+        "expected_robust_z_approx": expected_robust_z_approx,
     }
 
 
@@ -356,7 +384,12 @@ def compute_dataset_outlier_report(
     robust_z_threshold: float = 3.5,
     iqr_multiplier: float = 3.0,
 ) -> dict[str, Any]:
-    """Compute a per-split outlier report for an existing dataset directory."""
+    """Compute a per-split outlier report for an existing dataset directory.
+
+    With large N, some runs are expected to be flagged by chance. This command
+    is report-only; downstream (CI, scripts) should decide whether to fail
+    based on the report (e.g. on rate or count thresholds).
+    """
     resolved_splits = splits or ["train", "valid", "test"]
     if not resolved_splits:
         msg = "At least one split must be provided."
@@ -369,6 +402,8 @@ def compute_dataset_outlier_report(
 
     total_robust = 0
     total_iqr = 0
+    total_n_runs = 0
+    total_expected_robust_z_approx = 0.0
     for split in resolved_splits:
         split_data_path = dataset_dir / split / "data.pt"
         if not split_data_path.exists():
@@ -387,20 +422,38 @@ def compute_dataset_outlier_report(
         report["splits"][split] = split_report
         total_robust += int(split_report["robust_z"]["count"])
         total_iqr += int(split_report["iqr"]["count"])
+        total_n_runs += int(split_report["n_runs"])
+        total_expected_robust_z_approx += float(
+            split_report.get("expected_robust_z_approx", 0.0)
+        )
+
+    rate_robust_z = total_robust / total_n_runs if total_n_runs else 0.0
+    rate_iqr = total_iqr / total_n_runs if total_n_runs else 0.0
 
     report["totals"] = {
         "robust_z_count": total_robust,
         "iqr_count": total_iqr,
+        "n_runs": total_n_runs,
+        "rate_robust_z": rate_robust_z,
+        "rate_iqr": rate_iqr,
+        "expected_robust_z_approx": total_expected_robust_z_approx,
     }
     return report
 
 
 def _print_outlier_report_summary(report: dict[str, Any]) -> None:
-    """Print a concise per-split summary, including zero outlier counts."""
+    """Print a concise per-split summary, including zero outlier counts and rates."""
     totals = report.get("totals", {})
     robust_total = int(totals.get("robust_z_count", 0))
     iqr_total = int(totals.get("iqr_count", 0))
-    print(f"totals: robust_z={robust_total}, iqr={iqr_total}")
+    rate_robust = totals.get("rate_robust_z", 0.0)
+    rate_iqr = totals.get("rate_iqr", 0.0)
+    n_runs_total = int(totals.get("n_runs", 0))
+    print(
+        f"totals: robust_z={robust_total}, iqr={iqr_total}, "
+        f"n_runs={n_runs_total}, rate_robust_z={rate_robust:.4g}, "
+        f"rate_iqr={rate_iqr:.4g}"
+    )
 
     splits = report.get("splits", {})
     if isinstance(splits, dict):
@@ -412,9 +465,11 @@ def _print_outlier_report_summary(report: dict[str, Any]) -> None:
             robust_count = int(robust_info.get("count", 0))
             iqr_count = int(iqr_info.get("count", 0))
             n_runs = int(split_report.get("n_runs", 0))
+            rate_r = split_report.get("rate_robust_z", 0.0)
+            rate_i = split_report.get("rate_iqr", 0.0)
             print(
                 f"{split_name}: n_runs={n_runs}, robust_z={robust_count}, "
-                f"iqr={iqr_count}"
+                f"iqr={iqr_count}, rate_robust_z={rate_r:.4g}, rate_iqr={rate_i:.4g}"
             )
 
 
@@ -781,7 +836,9 @@ def main() -> None:
             prog="autosim outliers",
             description=(
                 "Generate per-split outlier report YAML for an existing dataset "
-                "directory."
+                "directory. Report-only; with large N some flags are expected by "
+                "chance. Downstream (CI, scripts) should decide whether to fail "
+                "based on the report."
             ),
         )
         outliers_parser.add_argument(
@@ -817,11 +874,6 @@ def main() -> None:
             help="Significant figures for float stats in YAML (default: 4).",
         )
         outliers_parser.add_argument(
-            "--fail-on-outliers",
-            action="store_true",
-            help="Exit with non-zero status if any outliers are found.",
-        )
-        outliers_parser.add_argument(
             "--print-only",
             action="store_true",
             help="Print outlier summary to stdout without writing a YAML file.",
@@ -838,10 +890,6 @@ def main() -> None:
 
         _print_outlier_report_summary(report)
 
-        totals = report.get("totals")
-        robust_total = int(totals.get("robust_z_count", 0)) if totals else 0
-        iqr_total = int(totals.get("iqr_count", 0)) if totals else 0
-
         if not args.print_only:
             output_path = Path(args.output) if args.output is not None else None
             written_path = (
@@ -856,8 +904,6 @@ def main() -> None:
             )
             print(written_path.as_posix())
 
-        if args.fail_on_outliers and (robust_total > 0 or iqr_total > 0):
-            raise SystemExit(2)
         return
 
     # Preserve all original arguments for Hydra's own parser.

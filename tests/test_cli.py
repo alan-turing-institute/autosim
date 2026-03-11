@@ -295,6 +295,11 @@ def test_compute_split_outlier_report_flags_extreme_run() -> None:
     assert report["n_runs"] == 3
     assert report["robust_z"]["count"] >= 1
     assert 2 in report["robust_z"]["indices"]
+    assert "rate_robust_z" in report
+    assert "rate_iqr" in report
+    assert "expected_robust_z_approx" in report
+    assert report["rate_robust_z"] >= 1 / 3
+    assert 0 <= report["expected_robust_z_approx"] <= 3
 
 
 def test_generate_outlier_report_yaml_from_existing_dataset(tmp_path: Path) -> None:
@@ -323,6 +328,9 @@ def test_generate_outlier_report_yaml_from_existing_dataset(tmp_path: Path) -> N
     assert isinstance(report_cfg, DictConfig)
     assert report_cfg["totals"]["robust_z_count"] >= 1
     assert report_cfg["splits"]["train"]["robust_z"]["count"] >= 1
+    assert "rate_robust_z" in report_cfg["totals"]
+    assert "expected_robust_z_approx" in report_cfg["totals"]
+    assert "rate_robust_z" in report_cfg["splits"]["train"]
 
 
 def test_compute_dataset_outlier_report_includes_zero_counts(tmp_path: Path) -> None:
@@ -350,6 +358,11 @@ def test_compute_dataset_outlier_report_includes_zero_counts(tmp_path: Path) -> 
     assert report["totals"]["iqr_count"] == 0
     assert report["splits"]["train"]["robust_z"]["count"] == 0
     assert report["splits"]["valid"]["iqr"]["count"] == 0
+    assert report["totals"]["n_runs"] == 9
+    assert report["totals"]["rate_robust_z"] == 0.0
+    assert report["totals"]["rate_iqr"] == 0.0
+    assert "expected_robust_z_approx" in report["totals"]
+    assert report["totals"]["expected_robust_z_approx"] >= 0
 
 
 def test_cli_outliers_subcommand_writes_yaml(tmp_path: Path) -> None:
