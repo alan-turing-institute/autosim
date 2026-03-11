@@ -7,9 +7,9 @@ import torch
 from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
-# Default parameter ranges when not overridden (amp required; H, drag, nu optional).
+# Default param ranges when not overridden (amp required; h_mean, drag, nu optional).
 DEFAULT_AMP_RANGE: tuple[float, float] = (0.05, 0.14)
-DEFAULT_H_RANGE: tuple[float, float] = (0.7, 1.5)
+DEFAULT_H_MEAN_RANGE: tuple[float, float] = (0.7, 1.5)
 DEFAULT_DRAG_RANGE: tuple[float, float] = (1e-3, 4e-3)
 DEFAULT_NU_RANGE: tuple[float, float] = (2e-4, 8e-4)
 
@@ -38,7 +38,8 @@ class ShallowWater2D(SpatioTemporalSimulator):
     parameters_range : dict, optional
         Input parameter (min, max) ranges. Supported keys:
         - ``amp`` (required): initial-condition amplitude scale.
-        - ``H``: mean layer depth (default 1.0 if omitted).
+                - ``h_mean``: mean layer depth (scalar) around which spatial
+          variations are generated (default 1.0 if omitted).
         - ``drag``: linear drag coefficient (default 2e-3).
         - ``nu``: Laplacian viscosity (default 5e-4).
         If None, uses ``{"amp": (0.05, 0.14)}`` only.
@@ -46,7 +47,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
         Passed to base. Default outputs: ["h", "u", "v"].
     nx, ny, Lx, Ly, T, dt_save, skip_nt, cfl
         Grid, domain, time and CFL settings.
-    g, H, nu, drag
+    g, h_mean, nu, drag
         Physics constants (used when not in parameters_range).
     dtype
         torch.float32 or torch.float64.
@@ -67,7 +68,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
         skip_nt: int = 0,
         cfl: float = 0.12,
         g: float = 9.81,
-        H: float = 1.0,
+        h_mean: float = 1.0,
         nu: float = 5e-4,
         drag: float = 2e-3,
         dtype: torch.dtype = torch.float64,
@@ -91,7 +92,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
         self.skip_nt = skip_nt
         self.cfl = cfl
         self.g = g
-        self.H = H
+        self.h_mean = h_mean
         self.nu = nu
         self.drag = drag
         self.dtype = dtype
@@ -108,10 +109,10 @@ class ShallowWater2D(SpatioTemporalSimulator):
             raise ValueError(msg)
         # Parse by name so parameter order is irrelevant and optional params clear.
         amp = float(x[0, self.get_parameter_idx("amp")].item())
-        H = (
-            float(x[0, self.get_parameter_idx("H")].item())
-            if "H" in self.param_names
-            else self.H
+        h_mean = (
+            float(x[0, self.get_parameter_idx("h_mean")].item())
+            if "h_mean" in self.param_names
+            else self.h_mean
         )
         drag = (
             float(x[0, self.get_parameter_idx("drag")].item())
@@ -136,7 +137,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
             skip_nt=self.skip_nt,
             cfl=self.cfl,
             g=self.g,
-            H=H,
+            h_mean=h_mean,
             nu=nu,
             drag=drag,
             dtype=self.dtype,
@@ -185,7 +186,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     dt_save: float,
     cfl: float,
     g: float,
-    H: float,
+    h_mean: float,
     nu: float,
     drag: float,
     dtype: torch.dtype = torch.float64,
@@ -207,7 +208,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     dx = Lx / nx
     dy = Ly / ny
 
-    c = math.sqrt(g * H)
+    c = math.sqrt(g * h_mean)
     f0 = c / 8.0
     beta = 0.5 * f0 / Ly
     f_grid = f0 + beta * (Y - 0.5 * Ly)
@@ -246,7 +247,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     # ------------------------------------------------------------------ #
     # Strategy: specify vorticity ζ (random large-scale + jet shear +
     # wave-6 perturbation), solve ∇²ψ = ζ spectrally, then derive
-    #   u = -∂ψ/∂y,  v = ∂ψ/∂x,  h = H + (f0/g)·ψ
+    #   u = -∂ψ/∂y,  v = ∂ψ/∂x,  h = h_mean + (f0/g)·ψ
     # This guarantees exact geostrophic balance at t=0 so no spurious
     # gravity-wave transients are excited.
 
@@ -307,7 +308,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
 
     u0 = to_phys(-1j * Ky * psi_h)  # u = -∂ψ/∂y
     v0 = to_phys(1j * Kx * psi_h)  # v =  ∂ψ/∂x
-    h0 = (H + (f0 / g) * psi0).clamp(min=0.5 * H)  # geostrophic balance
+    h0 = (h_mean + (f0 / g) * psi0).clamp(min=0.5 * h_mean)  # geostrophic balance
 
     def rhs(
         h: torch.Tensor, u: torch.Tensor, v: torch.Tensor
@@ -364,9 +365,12 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         )
 
     def output(h: torch.Tensor, u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
-        h_out = torch.nan_to_num(h, nan=H, posinf=H_MAX_CLIP, neginf=H_MIN_CLIP).clamp(
-            min=H_MIN_CLIP, max=H_MAX_CLIP
-        )
+        h_out = torch.nan_to_num(
+            h,
+            nan=h_mean,
+            posinf=H_MAX_CLIP,
+            neginf=H_MIN_CLIP,
+        ).clamp(min=H_MIN_CLIP, max=H_MAX_CLIP)
         u_out = torch.nan_to_num(
             u, nan=0.0, posinf=UV_ABS_CLIP, neginf=-UV_ABS_CLIP
         ).clamp(min=-UV_ABS_CLIP, max=UV_ABS_CLIP)
@@ -433,10 +437,10 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         hyp_factor = torch.exp(hyp_op * dt)  # real, shape [nx, ny//2+1]
         u = to_phys(to_spec(u) * hyp_factor)
         v = to_phys(to_spec(v) * hyp_factor)
-        h_mean = h.mean()
-        h_anom = h - h_mean
+        h_field_mean = h.mean()
+        h_anom = h - h_field_mean
         h_anom = to_phys(to_spec(h_anom) * hyp_factor)
-        h = (h_mean + h_anom).clamp(min=H_MIN_CLIP)
+        h = (h_field_mean + h_anom).clamp(min=H_MIN_CLIP)
         if (
             torch.isfinite(h).all()
             and torch.isfinite(u).all()

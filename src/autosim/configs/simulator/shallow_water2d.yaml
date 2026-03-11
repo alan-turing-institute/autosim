@@ -10,7 +10,7 @@ dt_save: 0.2
 skip_nt: 50
 cfl: 0.12
 g: 9.81
-H: 1.0
+h_mean: 1.0
 nu: 0.0005
 drag: 0.002
 parameters_range:
