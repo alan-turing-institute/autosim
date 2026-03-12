@@ -211,3 +211,6 @@ outputs/
 
 # .DS_Store
 .DS_Store
+
+# Docs
+docs/
