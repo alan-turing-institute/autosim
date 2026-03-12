@@ -25,4 +25,5 @@ __all__ = [
     "SEIRSimulator",
 ]
 
+
 SIMULATOR_REGISTRY = dict(zip(__all__, ALL_SIMULATORS, strict=False))

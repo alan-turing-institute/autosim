@@ -26,6 +26,14 @@ Notebook execution order (recommended):
 3. **Visualization cell** — plot a **spatiotemporal video** using `plot_spatiotemporal_video(batch["data"], batch_idx=0, channel_names=<your output_names>, preserve_aspect=True)` and display it with `HTML(anim.to_jshtml())`. See the template notebook for the exact pattern.
 4. **Exploration config** (wider parameter ranges; mark as optional or may fail for stiff PDEs)
 
+**Regimes and interesting dynamics**: To avoid short, uninteresting runs, document how parameters map to *dynamics* and *complexity*:
+
+- **Parameter regimes**: Describe what different parameter choices do (e.g. small $\varepsilon$ = sharp interfaces vs large $\varepsilon$ = diffuse; low viscosity = turbulent vs high = laminar). Optionally use **low vs high complexity** configs (see `03_01_gross_pitaevskii.ipynb`).
+- **Time and domain**: Choose $T$ and domain size so the PDE exhibits its characteristic behaviour (e.g. coarsening for Allen–Cahn, breathing/sloshing for GPE, pattern formation for reaction–diffusion). A "stable preview" can use short $T$; add a separate **"Interesting dynamics"** run with longer $T$ and/or larger domain.
+- **"What you will see"**: For each regime or example run, add 2–3 bullet points describing the visible dynamics (e.g. "Phase separation: domains of $u \approx \pm 1$ form and coarsen"; "Interference fringes as the packet overlaps with itself"). This helps readers and ML workflows know what to expect.
+
+Reference: `examples/experimental/03_01_gross_pitaevskii.ipynb` (Low Complexity / High Complexity examples and parameter explanations).
+
 ## Template: new `SpatioTemporalSimulator` skeleton
 
 Copy and adapt:

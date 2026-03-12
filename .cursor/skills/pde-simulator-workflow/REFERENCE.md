@@ -129,3 +129,12 @@ use this sequence:
    - Restore wider ranges gradually.
    - Keep retries (`ensure_exact_n=True`) only after single-sample success.
 
+## Parameter regimes and interesting dynamics
+
+Simulation parameters should be chosen so that runs are *physically interesting*, not just numerically stable:
+
+- **Time horizon $T$**: Long enough for the PDE to show its characteristic evolution (e.g. coarsening in Allen–Cahn, vortex formation in 2D fluids, pattern formation in reaction–diffusion). Short $T$ is fine for a "stable preview"; add a second, longer run for "interesting dynamics".
+- **Domain size and resolution**: Larger domains allow more structure (e.g. multiple phase domains, larger vortices). Balance $n$ and $L$ so that key scales are resolved.
+- **Parameter ranges**: Document which ranges yield "easy" (smooth, stable) vs "hard" (stiff, chaotic, or rich) dynamics. See the Gross–Pitaevskii notebook for low-complexity (linear limit, sloshing/breathing) vs high-complexity (turbulence, vortices) examples.
+- **Notebook structure**: After a short stable preview and its video, add an **"Interesting dynamics"** section with a config that produces visible, characteristic behaviour, then a second video. Optionally add a "What you will see" list per regime.
+
