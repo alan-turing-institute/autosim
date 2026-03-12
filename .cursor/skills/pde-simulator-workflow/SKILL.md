@@ -16,6 +16,16 @@ The workflow assumes this repo’s conventions:
 
 ## Quick start (choose one)
 
+### Preferred: use `just` recipes (IDE-generic)
+
+If you have [`just`](https://github.com/casey/just) installed:
+
+```bash
+just validate_advection
+just validate_swe
+just bench_advection
+```
+
 ### A) Validate a simulator rollout now
 
 Run:
