@@ -23,6 +23,8 @@ If you have [`just`](https://github.com/casey/just) installed:
 ```bash
 just validate_advection
 just validate_swe
+just validate_reaction_diffusion
+just validate_advection_multichannel
 just bench_advection
 ```
 
@@ -46,6 +48,27 @@ uv run python scripts/pde_sim/validate_rollout.py \
   --n 1 --seed 123 \
   --residual autosim.pde_residuals:shallow_water_residual \
   --diagnostics autosim.pde_residuals:shallow_water_diagnostics
+```
+
+Reaction-diffusion residual example:
+
+```bash
+uv run python scripts/pde_sim/validate_rollout.py \
+  --target autosim.simulations.reaction_diffusion.ReactionDiffusion \
+  --kwargs return_timeseries=true n=16 L=20 T=0.2 dt=0.1 log_level=warning \
+  --n 1 --seed 0 --ensure-exact-n \
+  --residual autosim.pde_residuals:reaction_diffusion_residual
+```
+
+Advection-diffusion (multichannel) residual+diagnostics example:
+
+```bash
+uv run python scripts/pde_sim/validate_rollout.py \
+  --target autosim.simulations.AdvectionDiffusionMultichannel \
+  --kwargs return_timeseries=true n=16 L=10.0 T=0.5 dt=0.25 log_level=warning \
+  --n 1 --seed 0 --ensure-exact-n \
+  --residual autosim.pde_residuals:advection_diffusion_multichannel_residual \
+  --diagnostics autosim.pde_residuals:advection_diffusion_multichannel_diagnostics
 ```
 
 ### B) Benchmark a simulator

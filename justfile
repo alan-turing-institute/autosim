@@ -30,6 +30,21 @@ validate_swe:
     --residual autosim.pde_residuals:shallow_water_residual \
     --diagnostics autosim.pde_residuals:shallow_water_diagnostics
 
+validate_reaction_diffusion:
+  {{uv_run}} python scripts/pde_sim/validate_rollout.py \
+    --target autosim.simulations.reaction_diffusion.ReactionDiffusion \
+    --kwargs return_timeseries=true n=16 L=20 T=0.2 dt=0.1 log_level=warning \
+    --n 1 --seed 0 --ensure-exact-n \
+    --residual autosim.pde_residuals:reaction_diffusion_residual
+
+validate_advection_multichannel:
+  {{uv_run}} python scripts/pde_sim/validate_rollout.py \
+    --target autosim.simulations.AdvectionDiffusionMultichannel \
+    --kwargs return_timeseries=true n=16 L=10.0 T=0.5 dt=0.25 log_level=warning \
+    --n 1 --seed 0 --ensure-exact-n \
+    --residual autosim.pde_residuals:advection_diffusion_multichannel_residual \
+    --diagnostics autosim.pde_residuals:advection_diffusion_multichannel_diagnostics
+
 # -----------------------------
 # Benchmark
 # -----------------------------
