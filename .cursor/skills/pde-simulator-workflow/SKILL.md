@@ -21,7 +21,7 @@ The workflow assumes this repo’s conventions:
 Run:
 
 ```bash
-python .cursor/skills/pde-simulator-workflow/scripts/validate_rollout.py \
+uv run python scripts/pde_sim/validate_rollout.py \
   --target autosim.simulations.AdvectionDiffusion \
   --kwargs return_timeseries=true n=16 L=4.0 T=0.2 dt=0.1 log_level=warning \
   --n 2 --seed 42
@@ -30,17 +30,18 @@ python .cursor/skills/pde-simulator-workflow/scripts/validate_rollout.py \
 Optionally add a residual function:
 
 ```bash
-python .cursor/skills/pde-simulator-workflow/scripts/validate_rollout.py \
+uv run python scripts/pde_sim/validate_rollout.py \
   --target autosim.experimental.simulations.ShallowWater2D \
   --kwargs return_timeseries=true nx=32 ny=32 T=2.0 dt_save=0.2 log_level=warning \
   --n 1 --seed 123 \
-  --residual autosim_residuals:shallow_water_residual
+  --residual autosim.pde_residuals:shallow_water_residual \
+  --diagnostics autosim.pde_residuals:shallow_water_diagnostics
 ```
 
 ### B) Benchmark a simulator
 
 ```bash
-python .cursor/skills/pde-simulator-workflow/scripts/benchmark_simulator.py \
+uv run python scripts/pde_sim/benchmark_simulator.py \
   --target autosim.simulations.AdvectionDiffusion \
   --kwargs return_timeseries=true n=16 L=4.0 T=0.2 dt=0.1 log_level=warning \
   --n 1 --seed 0 --warmup 1 --runs 5
