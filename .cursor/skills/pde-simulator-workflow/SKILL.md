@@ -25,7 +25,6 @@ just validate_advection
 just validate_swe
 just validate_reaction_diffusion
 just validate_advection_multichannel
-just validate_kolmogorov_flow
 just bench_advection
 ```
 

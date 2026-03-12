@@ -45,14 +45,6 @@ validate_advection_multichannel:
     --residual autosim.pde_residuals:advection_diffusion_multichannel_residual \
     --diagnostics autosim.pde_residuals:advection_diffusion_multichannel_diagnostics
 
-validate_kolmogorov_flow:
-  {{uv_run}} python scripts/pde_sim/validate_rollout.py \
-    --target autosim.simulations.KolmogorovFlow \
-    --kwargs return_timeseries=true n=32 L=6.283185307179586 T=1.0 dt=0.2 kf=4 log_level=warning \
-    --n 1 --seed 0 --ensure-exact-n \
-    --residual autosim.pde_residuals:kolmogorov_flow_residual \
-    --diagnostics autosim.pde_residuals:kolmogorov_flow_diagnostics
-
 # -----------------------------
 # Benchmark
 # -----------------------------
@@ -67,12 +59,6 @@ bench_advection:
     --target autosim.simulations.AdvectionDiffusion \
     --kwargs return_timeseries=true n=16 L=4.0 T=0.2 dt=0.1 log_level=warning \
     --n 1 --seed 0 --warmup 1 --runs 5
-
-bench_kolmogorov_flow:
-  {{uv_run}} python scripts/pde_sim/benchmark_simulator.py \
-    --target autosim.simulations.KolmogorovFlow \
-    --kwargs return_timeseries=true n=32 L=6.283185307179586 T=1.0 dt=0.2 kf=4 log_level=warning \
-    --n 1 --seed 0 --warmup 1 --runs 3
 
 # -----------------------------
 # Regression fixtures

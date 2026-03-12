@@ -2,7 +2,6 @@ from .advection_diffusion import AdvectionDiffusion
 from .advection_diffusion_multichannel import AdvectionDiffusionMultichannel
 from .epidemic import Epidemic
 from .flow_problem import FlowProblem
-from .kolmogorov_flow import KolmogorovFlow
 from .projectile import Projectile, ProjectileMultioutput
 from .seir import SEIRSimulator
 
@@ -12,7 +11,6 @@ ALL_SIMULATORS = [
     Epidemic,
     SEIRSimulator,
     FlowProblem,
-    KolmogorovFlow,
     Projectile,
     ProjectileMultioutput,
 ]
@@ -22,7 +20,6 @@ __all__ = [
     "AdvectionDiffusionMultichannel",
     "Epidemic",
     "FlowProblem",
-    "KolmogorovFlow",
     "Projectile",
     "ProjectileMultioutput",
     "SEIRSimulator",
