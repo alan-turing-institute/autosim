@@ -1,5 +1,22 @@
 # Templates: simulator + validation + tests
 
+## Template: example notebook checklist (recommended)
+
+Each simulator should have an example/comparison notebook (see `examples/experimental/*.ipynb`) whose *first markdown cells* include:
+
+- **PDE**: the governing equation(s) in math form.
+- **Physics**: what phenomenon it models and why it’s interesting.
+- **Symbols**: define all state variables, parameters, operators (e.g. \(u,v,\omega,\psi,\nu,\mu\)).
+- **Initial conditions**: how they’re generated, plus rationale and any randomness/seed story.
+- **Boundary conditions**: periodic/Dirichlet/Neumann and how they’re enforced numerically.
+- **Assumptions**: dimensionality, incompressibility, nondimensionalization, forcing, filtering/hyperviscosity/clipping, solver tolerances.
+- **What distinguishes this PDE**: key regimes, parameters, outputs/channels, failure modes, what makes it different from existing simulators.
+
+Optional but very helpful:
+- **Numerics**: spatial discretization + time integrator (and any CFL/stability constraints).
+- **Validation notes**: which residual/diagnostics are meaningful and how to run them.
+- **Runtime notes**: a small “fast config” for quick iteration.
+
 ## Template: new `SpatioTemporalSimulator` skeleton
 
 Copy and adapt:
