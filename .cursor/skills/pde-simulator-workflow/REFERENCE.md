@@ -95,3 +95,37 @@ For “good smooth change per frame”:
   - warn if \( \max|\Delta_t| / (\max|u|+\epsilon) \) is too large (blow-up) or too small (frozen).
 - Use per-channel thresholds because channels have different scales.
 
+## Debug playbook: all trajectories failed
+
+When you hit repeated errors like:
+- `ODE solver failed: Required step size is less than spacing between numbers`
+- `All <Simulator> trajectories failed`
+
+use this sequence:
+
+1. **Fixed-point preflight**
+   - Set `parameters_range` to fixed values (`min=max`) at conservative settings.
+   - Run one sample first.
+
+2. **Shorten and coarsen**
+   - Reduce horizon `T`.
+   - Increase saved step size (fewer frames).
+   - Lower grid resolution for diagnosis.
+
+3. **Increase damping**
+   - Raise viscosity / drag / damping.
+   - Lower forcing and IC amplitude.
+
+4. **Solver strategy**
+   - For interactive speed: start with `RK45` + fallback.
+   - For stiff cases: try `BDF`/`Radau` (expect slower runtime).
+   - Relax tolerances for preview runs.
+
+5. **Environment sanity**
+   - Check notebook uses current source path (`inspect.getsourcefile`).
+   - If mismatch: `%pip install -e .` then restart kernel.
+
+6. **Only then broaden sampling**
+   - Restore wider ranges gradually.
+   - Keep retries (`ensure_exact_n=True`) only after single-sample success.
+

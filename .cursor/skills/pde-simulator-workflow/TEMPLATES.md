@@ -17,6 +17,12 @@ Optional but very helpful:
 - **Validation notes**: which residual/diagnostics are meaningful and how to run them.
 - **Runtime notes**: a small “fast config” for quick iteration.
 
+Notebook execution order (recommended):
+1. **Import cell**
+2. **Fast/stable preview config** (fixed conservative params; runs first)
+3. **Visualization cell**
+4. **Exploration config** (wider ranges; clearly marked as may fail)
+
 ## Template: new `SpatioTemporalSimulator` skeleton
 
 Copy and adapt:
@@ -101,6 +107,11 @@ Invariants/diagnostics:
 Performance:
 - canonical config: <small grid, short T>
 - budget: <ms/call or ms/frame>
+
+Preflight:
+- [ ] single-sample fixed conservative parameters succeeds at target horizon
+- [ ] only after preflight, broaden parameter ranges
+- [ ] notebook kernel points to repo source (`inspect.getsourcefile`)
 ```
 
 ## Template: pytest smoke test for a simulator rollout

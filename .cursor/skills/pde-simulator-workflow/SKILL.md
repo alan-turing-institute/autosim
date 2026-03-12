@@ -25,6 +25,7 @@ just validate_advection
 just validate_swe
 just validate_reaction_diffusion
 just validate_advection_multichannel
+just validate_kolmogorov_flow
 just bench_advection
 ```
 
@@ -113,6 +114,31 @@ Use these layers:
 - **Performance**: ms/frame or ms/step budget on a small canonical config.
 
 Run `scripts/validate_rollout.py` and capture the JSON output (useful for regression tests and CI).
+
+### 3.5) Stability preflight (required before broad sampling)
+
+Before using wide `parameters_range` in notebooks/dataset generation, always do this:
+- Run **one fixed conservative parameter point** (`min=max`) at your target horizon.
+- Keep `n` modest first (e.g. 16/32), then scale up.
+- Set `ensure_exact_n=True` only after single-sample stability is proven.
+- If fixed-point fails, do not proceed to random sampling.
+
+For notebook demos:
+- Provide two presets:
+  - **Fast/stable preview**: short `T`, modest `n`, fixed conservative params.
+  - **Exploration mode**: wider ranges, with note that failures may occur.
+- Do not make wide random ranges the first executable cell.
+
+If you see `All <Simulator> trajectories failed`:
+- Increase dissipation (`nu`, drag/damping).
+- Reduce forcing amplitude and/or horizon `T`.
+- Relax solver tolerances for preview runs.
+- Try solver fallback (`method=RK45` with fallback to stiff methods, or the reverse depending on the PDE).
+- Re-run fixed-point preflight before restoring sampled ranges.
+
+If notebook results differ from CLI/script results:
+- Verify runtime source path in notebook (`inspect.getsourcefile(...)`).
+- Reinstall editable package in-kernel (`%pip install -e .`) and restart kernel.
 
 ### 4) Turn validations into tests (fast + deterministic)
 

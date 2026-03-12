@@ -1,0 +1,13 @@
+_target_: autosim.simulations.KolmogorovFlow
+return_timeseries: true
+log_level: warning
+n: 64
+L: 6.283185307179586
+T: 20.0
+dt: 0.1
+kf: 4
+parameters_range:
+  nu: [0.004, 0.01]
+  forcing: [0.4, 1.0]
+  alpha: [0.04, 0.2]
+
