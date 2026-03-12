@@ -1,27 +1,30 @@
 # Templates: simulator + validation + tests
 
-## Template: example notebook checklist (recommended)
+## Template: example notebook structure (recommended)
 
-Each simulator should have an example/comparison notebook (see `examples/experimental/*.ipynb`) whose *first markdown cells* include:
+**Template notebooks**: Copy structure and patterns from `examples/experimental/00_00_reaction_diffusion.ipynb` or `01_00_advection_diffusion.ipynb`. Use **two introductory markdown cells**:
 
-- **PDE**: the governing equation(s) in math form.
-- **Physics**: what phenomenon it models and why it’s interesting.
-- **Symbols**: define all state variables, parameters, operators (e.g. \(u,v,\omega,\psi,\nu,\mu\)).
-- **Initial conditions**: how they’re generated, plus rationale and any randomness/seed story.
-- **Boundary conditions**: periodic/Dirichlet/Neumann and how they’re enforced numerically.
-- **Assumptions**: dimensionality, incompressibility, nondimensionalization, forcing, filtering/hyperviscosity/clipping, solver tolerances.
-- **What distinguishes this PDE**: key regimes, parameters, outputs/channels, failure modes, what makes it different from existing simulators.
+**First cell** — short title and overview:
+- One paragraph describing the simulator and the PDE in plain language.
+- Bullet list: **State variables**, **Conditioning variables**, **Dynamics**, **Boundary conditions**.
+- A **Why this is useful** subsection (one short paragraph).
 
-Optional but very helpful:
-- **Numerics**: spatial discretization + time integrator (and any CFL/stability constraints).
-- **Validation notes**: which residual/diagnostics are meaningful and how to run them.
-- **Runtime notes**: a small “fast config” for quick iteration.
+**Second cell** — governing equations and parameters:
+- **Governing equations**: the PDE(s) in display math (see math formatting below).
+- **Boundary conditions**: how they are enforced (with equations if helpful).
+- **Parameters**: one bullet per parameter with a short explanation.
+- Optionally: **Initial conditions**, **Numerics**, or **Execution order** (stable preview first, then viz, then exploration).
+
+**Math in notebooks**: Use Jupyter-friendly LaTeX so equations render correctly in Cursor and Jupyter:
+- **Inline math**: `$...$` (e.g. `$\nu$`, `$[0,L]^2$`).
+- **Display (block) math**: `$$...$$` on its own lines.
+- Avoid `\(...\)` and `\[...\]`; they often do not render in notebook markdown.
 
 Notebook execution order (recommended):
-1. **Import cell**
-2. **Fast/stable preview config** (fixed conservative params; runs first)
-3. **Visualization cell**
-4. **Exploration config** (wider ranges; clearly marked as may fail)
+1. **Import cell** — include `from IPython.display import HTML` and `from autosim.utils import plot_spatiotemporal_video`.
+2. **Stable preview config** (fixed conservative parameters; run this first)
+3. **Visualization cell** — plot a **spatiotemporal video** using `plot_spatiotemporal_video(batch["data"], batch_idx=0, channel_names=<your output_names>, preserve_aspect=True)` and display it with `HTML(anim.to_jshtml())`. See the template notebook for the exact pattern.
+4. **Exploration config** (wider parameter ranges; mark as optional or may fail for stiff PDEs)
 
 ## Template: new `SpatioTemporalSimulator` skeleton
 
