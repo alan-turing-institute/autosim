@@ -10,10 +10,14 @@ def _get_param(
     payload: dict[str, Any], simulator: Any, name: str, *, default: float | None = None
 ) -> float:
     const = payload.get("constant_scalars")
-    if isinstance(const, torch.Tensor) and hasattr(simulator, "get_parameter_idx"):
-        if hasattr(simulator, "param_names") and name in simulator.param_names:
-            idx = int(simulator.get_parameter_idx(name))
-            return float(const[0, idx].item())
+    if (
+        isinstance(const, torch.Tensor)
+        and hasattr(simulator, "get_parameter_idx")
+        and hasattr(simulator, "param_names")
+        and name in simulator.param_names
+    ):
+        idx = int(simulator.get_parameter_idx(name))
+        return float(const[0, idx].item())
     if default is None:
         raise ValueError(f"Could not infer parameter {name!r} from payload/simulator")
     return float(default)
@@ -60,7 +64,8 @@ def shallow_water_diagnostics(
     """
     data = payload["data"]
     if not isinstance(data, torch.Tensor) or data.ndim != 5 or data.shape[-1] < 3:
-        raise ValueError("Expected payload['data'] as [b,t,nx,ny,3+] torch.Tensor")
+        msg = "Expected payload['data'] as [b,t,nx,ny,3+] torch.Tensor"
+        raise ValueError(msg)
 
     h = data[..., 0]
     u = data[..., 1]
@@ -100,7 +105,7 @@ def shallow_water_diagnostics(
     return out
 
 
-def shallow_water_residual(
+def shallow_water_residual(  # noqa: PLR0915
     payload: dict[str, Any],
     *,
     simulator: Any | None = None,
@@ -112,15 +117,18 @@ def shallow_water_residual(
       (q_{t+1}-q_t)/dt.
 
     This is an *approximate* residual intended for regression/sanity. It will not
-    match the simulator’s internal pseudo-spectral operator exactly (and that’s OK).
+    match the simulator's internal pseudo-spectral operator exactly (and that's OK).
     """
     data = payload["data"]
     if not isinstance(data, torch.Tensor) or data.ndim != 5 or data.shape[-1] < 3:
-        raise ValueError("Expected payload['data'] as [b,t,nx,ny,3+] torch.Tensor")
+        msg = "Expected payload['data'] as [b,t,nx,ny,3+] torch.Tensor"
+        raise ValueError(msg)
     if data.shape[1] < 2:
-        raise ValueError("Need at least 2 time steps to compute a time residual")
+        msg = "Need at least 2 time steps to compute a time residual"
+        raise ValueError(msg)
     if simulator is None:
-        raise ValueError("shallow_water_residual requires simulator=ShallowWater2D")
+        msg = "shallow_water_residual requires simulator=ShallowWater2D"
+        raise ValueError(msg)
 
     nx = int(data.shape[2])
     ny = int(data.shape[3])
@@ -205,17 +213,19 @@ def reaction_diffusion_residual(
     """Approximate residual for the repo's two-species reaction-diffusion system.
 
     Uses periodic central differences for the Laplacian and forward time differences.
-    PDE form (in physical space) follows the implementation in `simulations/reaction_diffusion.py`.
+    PDE form (in physical space) follows the implementation in
+    `simulations/reaction_diffusion.py`.
     """
     data = payload["data"]
     if not isinstance(data, torch.Tensor) or data.ndim != 5 or data.shape[-1] < 2:
-        raise ValueError("Expected payload['data'] as [b,t,n,n,2+] torch.Tensor")
+        msg = "Expected payload['data'] as [b,t,n,n,2+] torch.Tensor"
+        raise ValueError(msg)
     if data.shape[1] < 2:
-        raise ValueError("Need at least 2 time steps to compute a time residual")
+        msg = "Need at least 2 time steps to compute a time residual"
+        raise ValueError(msg)
     if simulator is None:
-        raise ValueError(
-            "reaction_diffusion_residual requires simulator=ReactionDiffusion"
-        )
+        msg = "reaction_diffusion_residual requires simulator=ReactionDiffusion"
+        raise ValueError(msg)
 
     n = int(data.shape[2])
     L = float(getattr(simulator, "L", 1.0))
@@ -276,7 +286,8 @@ def advection_diffusion_multichannel_diagnostics(
     """
     data = payload["data"]
     if not isinstance(data, torch.Tensor) or data.ndim != 5:
-        raise ValueError("Expected payload['data'] as [b,t,n,n,c] torch.Tensor")
+        msg = "Expected payload['data'] as [b,t,n,n,c] torch.Tensor"
+        raise ValueError(msg)
 
     idx_w = _channel_index_by_name(simulator, "vorticity") if simulator else None
     idx_u = _channel_index_by_name(simulator, "u") if simulator else None
@@ -294,7 +305,8 @@ def advection_diffusion_multichannel_diagnostics(
         n = int(data.shape[2])
         L = float(getattr(simulator, "L", 1.0))
         dx = L / float(n)
-        div = _central_diff_x(u, dx) + _central_diff_y(v, dx)
+        dy = dx
+        div = _central_diff_x(u, dx) + _central_diff_y(v, dy)
         out["div_uv_l2"] = float(torch.linalg.vector_norm(div.float()).item())
     if idx_w is not None and idx_psi is not None and simulator is not None:
         w = data[..., idx_w]
@@ -308,7 +320,7 @@ def advection_diffusion_multichannel_diagnostics(
     return out
 
 
-def advection_diffusion_multichannel_residual(
+def advection_diffusion_multichannel_residual(  # noqa: PLR0915
     payload: dict[str, Any],
     *,
     simulator: Any | None = None,
@@ -318,20 +330,25 @@ def advection_diffusion_multichannel_residual(
 
     PDE (as implemented):  ω_t = ν ∇²ω - μ (u ω_x + v ω_y)
     with u = ψ_y, v = -ψ_x, periodic domain.
-    """
+    """  # noqa: RUF002
     data = payload["data"]
     if not isinstance(data, torch.Tensor) or data.ndim != 5:
-        raise ValueError("Expected payload['data'] as [b,t,n,n,c] torch.Tensor")
+        msg = "Expected payload['data'] as [b,t,n,n,c] torch.Tensor"
+        raise ValueError(msg)
     if data.shape[1] < 2:
-        raise ValueError("Need at least 2 time steps to compute a time residual")
+        msg = "Need at least 2 time steps to compute a time residual"
+        raise ValueError(msg)
     if simulator is None:
-        raise ValueError(
-            "advection_diffusion_multichannel_residual requires simulator=AdvectionDiffusionMultichannel"
+        msg = (
+            "advection_diffusion_multichannel_residual requires "
+            "simulator=AdvectionDiffusionMultichannel"
         )
+        raise ValueError(msg)
 
     idx_w = _channel_index_by_name(simulator, "vorticity")
     if idx_w is None:
-        raise ValueError("Simulator outputs do not include 'vorticity'")
+        msg = "Simulator outputs do not include 'vorticity'"
+        raise ValueError(msg)
     idx_u = _channel_index_by_name(simulator, "u")
     idx_v = _channel_index_by_name(simulator, "v")
     idx_psi = _channel_index_by_name(simulator, "streamfunction")
@@ -345,16 +362,17 @@ def advection_diffusion_multichannel_residual(
         n = int(data.shape[2])
         L = float(getattr(simulator, "L", 1.0))
         dx = L / float(n)
-        u = _central_diff_y(psi, dx)
+        dy = dx
+        u = _central_diff_y(psi, dy)
         v = -_central_diff_x(psi, dx)
     else:
-        raise ValueError(
-            "Need either (u,v) or streamfunction channel to compute advection"
-        )
+        msg = "Need either (u,v) or streamfunction channel to compute advection"
+        raise ValueError(msg)
 
     n = int(data.shape[2])
     L = float(getattr(simulator, "L", 1.0))
     dx = L / float(n)
+    dy = dx
     dt = float(getattr(simulator, "dt", 1.0))
 
     nu = _get_param(payload, simulator, "nu")
@@ -366,7 +384,7 @@ def advection_diffusion_multichannel_residual(
     v_t = v[:, :-1]
 
     dw_dx = _central_diff_x(w_t, dx)
-    dw_dy = _central_diff_y(w_t, dx)
+    dw_dy = _central_diff_y(w_t, dy)
     lap_w = _laplacian(w_t, dx, dx)
     rhs = nu * lap_w - mu * (u_t * dw_dx + v_t * dw_dy)
     r = dw_dt - rhs
