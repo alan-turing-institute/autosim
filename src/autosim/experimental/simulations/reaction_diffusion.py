@@ -1,9 +1,12 @@
 import numpy as np
 import torch
 from numpy.fft import fft2, ifft2
+from scipy.integrate import solve_ivp
 
 from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import NumpyLike, TensorLike
+
+integrator_keywords = {"rtol": 1e-6, "atol": 1e-6, "method": "RK45"}
 
 
 def _etdrk4_coefficients(
@@ -41,9 +44,9 @@ def _rd_nonlinear_terms(
 
 def _build_dealias_mask(n: int) -> np.ndarray:
     freq_idx = np.fft.fftfreq(n) * n
-    KX, KY = np.meshgrid(freq_idx, freq_idx, indexing="ij")
+    kx, ky = np.meshgrid(freq_idx, freq_idx, indexing="ij")
     cutoff = n / 3.0
-    return ((np.abs(KX) <= cutoff) & (np.abs(KY) <= cutoff)).astype(np.float64)
+    return ((np.abs(kx) <= cutoff) & (np.abs(ky) <= cutoff)).astype(np.float64)
 
 
 def _etdrk4_step_rd(
@@ -122,13 +125,102 @@ def _etdrk4_step_rd(
 
 
 def _compute_snapshot_count(total_time: float, dt: float, snapshot_dt: float) -> int:
-    """Match Gray-Scott: initial frame + store when (step+1)%stride==0 or step==last."""
+    """Initial frame + periodic snapshots + final frame when needed."""
     num_steps = max(1, int(np.ceil(total_time / dt)))
     stride = max(1, int(np.round(snapshot_dt / dt)))
     count = 1 + num_steps // stride
     if num_steps % stride != 0:
         count += 1
     return count
+
+
+def reaction_diffusion(
+    t: float,  # noqa: ARG001
+    uvt: NumpyLike,
+    K22: NumpyLike,
+    d1: float,
+    d2: float,
+    beta: float,
+    n: int,
+    N: int,
+) -> NumpyLike:
+    """RHS used by RK45 baseline implementation."""
+    u = np.real(ifft2(uvt[:N].reshape(n, n)))
+    v = np.real(ifft2(uvt[N:].reshape(n, n)))
+    u2v = u * u * v
+    uv2 = u * v * v
+    rhs = np.empty(2 * N, dtype=complex)
+    rhs[:N] = fft2(u - u**3 - uv2 + beta * (u2v + v**3)).ravel() - d1 * K22 * uvt[:N]
+    rhs[N:] = fft2(v - u2v - v**3 - beta * (u**3 + uv2)).ravel() - d2 * K22 * uvt[N:]
+    return rhs
+
+
+def simulate_reaction_diffusion_rk45(
+    x: NumpyLike,
+    return_timeseries: bool = False,
+    n: int = 32,
+    L: int = 20,
+    T: float = 10.0,
+    dt: float = 0.1,
+) -> tuple[NumpyLike, NumpyLike]:
+    """Original solve_ivp-based implementation for compatibility."""
+    beta, d = x
+    d1 = d2 = d
+
+    t = np.linspace(0, T, int(T / dt))
+    N = n * n
+    x_uniform = np.linspace(-L / 2, L / 2, n + 1)
+    x_grid = x_uniform[:n]
+    n2 = n // 2
+    kx = (2 * np.pi / L) * np.hstack(
+        (np.linspace(0, n2 - 1, n2), np.linspace(-n2, -1, n2))
+    )
+    X_grid, Y_grid = np.meshgrid(x_grid, x_grid)
+    KX, KY = np.meshgrid(kx, kx)
+    K2 = KX**2 + KY**2
+    K22 = K2.ravel()
+
+    r = np.sqrt(X_grid**2 + Y_grid**2)
+    theta = np.angle(X_grid + 1j * Y_grid)
+    u0 = np.tanh(r) * np.cos(theta - r)
+    v0 = np.tanh(r) * np.sin(theta - r)
+    uvt0 = np.hstack([fft2(u0).ravel(), fft2(v0).ravel()])
+
+    uvsol = solve_ivp(
+        reaction_diffusion,
+        (t[0], t[-1]),
+        y0=uvt0,
+        t_eval=t,
+        args=(K22, d1, d2, beta, n, N),
+        **integrator_keywords,
+    )
+    uvsol = uvsol.y
+
+    u_out = np.empty((len(t), n, n), dtype=np.float32)
+    v_out = np.empty((len(t), n, n), dtype=np.float32)
+    for j in range(len(t)):
+        u_out[j] = np.real(ifft2(uvsol[:N, j].reshape(n, n))).astype(
+            np.float32, copy=False
+        )
+        v_out[j] = np.real(ifft2(uvsol[N:, j].reshape(n, n))).astype(
+            np.float32, copy=False
+        )
+
+    if return_timeseries:
+        return u_out, v_out
+    return u_out[-1], v_out[-1]
+
+
+def simulate_reaction_diffusion(
+    x: NumpyLike,
+    return_timeseries: bool = False,
+    n: int = 32,
+    L: int = 20,
+    T: float = 10.0,
+    dt: float = 0.1,
+) -> tuple[NumpyLike, NumpyLike]:
+    """Backward-compatible alias to original RK45 solver."""
+    return simulate_reaction_diffusion_rk45(x, return_timeseries, n, L, T, dt)
 
 
 def simulate_reaction_diffusion_spectral(
@@ -142,10 +234,10 @@ def simulate_reaction_diffusion_spectral(
     dealias: bool = True,
 ) -> tuple[NumpyLike, NumpyLike]:
     """
-    Simulate reaction-diffusion using fixed-step spectral ETDRK4 (Gray-Scott style).
+    Simulate reaction-diffusion using fixed-step spectral ETDRK4.
 
-    Uses only current state plus snapshot lists during time stepping, avoiding
-    the large solve_ivp internal storage. snapshot_dt defaults to dt (save every step).
+    Uses only current state plus snapshots during time stepping, avoiding solve_ivp's
+    internal dense memory use. snapshot_dt defaults to dt.
     """
     beta, d = float(x[0]), float(x[1])
     d1 = d2 = d
@@ -223,11 +315,7 @@ def simulate_reaction_diffusion_spectral(
 
 
 class ReactionDiffusion(SpatioTemporalSimulator):
-    """Simulate the reaction-diffusion PDE for a given set of parameters.
-
-    Uses spectral ETDRK4 (fixed timestep) by default for lower memory and faster
-    runs at large n, similar to the Gray-Scott simulator.
-    """
+    """Reaction-diffusion simulator with selectable backend (`rk45` or `spectral`)."""
 
     def __init__(
         self,
@@ -239,70 +327,59 @@ class ReactionDiffusion(SpatioTemporalSimulator):
         L: int = 20,
         T: float = 10.0,
         dt: float = 0.1,
+        backend: str = "rk45",
         snapshot_dt: float | None = None,
         dealias: bool = True,
     ):
-        """
-        Initialize the ReactionDiffusion simulator.
-
-        Parameters
-        ----------
-        parameters_range: dict[str, tuple[float, float]]
-            Dictionary mapping input parameter names to their (min, max) ranges.
-        output_names: list[str]
-            List of output parameters' names.
-        log_level: str
-            Logging level for the simulator. Can be one of:
-            - "progress_bar": shows a progress bar during batch simulations
-            - "debug": shows debug messages
-            - "info": shows informational messages
-            - "warning": shows warning messages
-            - "error": shows error messages
-            - "critical": shows critical messages
-        return_timeseries: bool
-            Whether to return the full timeseries or just the spatial solution at the
-            final time step. Defaults to False.
-        n: int
-            Number of spatial points in each direction.
-        L: int
-            Domain size in X and Y directions.
-        T: float
-            Total time to simulate.
-        dt: float
-            Time step size.
-        snapshot_dt: float | None
-            Interval between saved frames when return_timeseries is True. Defaults to
-            dt (save every step). Use a multiple of dt to reduce output size.
-        dealias: bool
-            Apply 2/3 dealiasing in spectral space. Default True for stability at large n.
-        """
         if parameters_range is None:
             parameters_range = {"beta": (1.0, 2.0), "d": (0.05, 0.3)}
         if output_names is None:
             output_names = ["u", "v"]
         super().__init__(parameters_range, output_names, log_level)
+        if backend not in {"rk45", "spectral"}:
+            raise ValueError(
+                f"backend must be one of ['rk45', 'spectral'], got '{backend}'."
+            )
         self.return_timeseries = return_timeseries
         self.n = n
         self.L = L
         self.T = T
         self.dt = dt
+        self.backend = backend
         self.snapshot_dt = dt if snapshot_dt is None else snapshot_dt
         self.dealias = dealias
+
+    def _n_time_output(self) -> int:
+        if not self.return_timeseries:
+            return 1
+        if self.backend == "rk45":
+            return int(self.T / self.dt)
+        return _compute_snapshot_count(self.T, self.dt, self.snapshot_dt)
 
     def _forward(self, x: TensorLike) -> TensorLike:
         assert x.shape[0] == 1, (
             f"Simulator._forward expects a single input, got {x.shape[0]}"
         )
-        u_sol, v_sol = simulate_reaction_diffusion_spectral(
-            x.cpu().numpy()[0],
-            return_timeseries=self.return_timeseries,
-            n=self.n,
-            L=self.L,
-            T=self.T,
-            dt=self.dt,
-            snapshot_dt=self.snapshot_dt,
-            dealias=self.dealias,
-        )
+        if self.backend == "rk45":
+            u_sol, v_sol = simulate_reaction_diffusion_rk45(
+                x.cpu().numpy()[0],
+                return_timeseries=self.return_timeseries,
+                n=self.n,
+                L=self.L,
+                T=self.T,
+                dt=self.dt,
+            )
+        else:
+            u_sol, v_sol = simulate_reaction_diffusion_spectral(
+                x.cpu().numpy()[0],
+                return_timeseries=self.return_timeseries,
+                n=self.n,
+                L=self.L,
+                T=self.T,
+                dt=self.dt,
+                snapshot_dt=self.snapshot_dt,
+                dealias=self.dealias,
+            )
         concat_array = np.concatenate([u_sol.ravel(), v_sol.ravel()]).astype(
             np.float32, copy=False
         )
@@ -314,39 +391,16 @@ class ReactionDiffusion(SpatioTemporalSimulator):
         random_seed: int | None = None,
         ensure_exact_n: bool = False,
     ) -> dict:
-        """Reshape to spatiotemporal format.
-
-        Parameters
-        ----------
-        n: int
-            Number of samples to generate.
-        random_seed: int | None
-            Random seed for reproducibility. Defaults to None.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the reshaped spatiotemporal data, constant scalars,
-            and constant fields.
-        """
-        # Run simulation with compact preallocation to avoid list+cat peak-memory blowups
-        # for large spatiotemporal outputs (e.g. n=128 with full timeseries).
         y, x = self._forward_batch_compact(
             n=n,
             random_seed=random_seed,
             ensure_exact_n=ensure_exact_n,
         )
 
-        if self.return_timeseries:
-            n_time = _compute_snapshot_count(self.T, self.dt, self.snapshot_dt)
-            y_reshaped_permuted = y.reshape(
-                y.shape[0], 2, n_time, self.n, self.n
-            ).permute(0, 2, 3, 4, 1)
-        else:
-            y_reshaped_permuted = y.reshape(y.shape[0], 2, 1, self.n, self.n).permute(
-                0, 2, 3, 4, 1
-            )
-
+        n_time = self._n_time_output()
+        y_reshaped_permuted = y.reshape(y.shape[0], 2, n_time, self.n, self.n).permute(
+            0, 2, 3, 4, 1
+        )
         return {
             "data": y_reshaped_permuted,
             "constant_scalars": x,
@@ -360,19 +414,13 @@ class ReactionDiffusion(SpatioTemporalSimulator):
         ensure_exact_n: bool = False,
     ) -> tuple[TensorLike, TensorLike]:
         """Run batch simulations while minimizing transient memory allocations."""
-        if self.return_timeseries:
-            n_time = _compute_snapshot_count(self.T, self.dt, self.snapshot_dt)
-        else:
-            n_time = 1
-        features_per_sample = 2 * n_time * self.n * self.n
-
+        features_per_sample = 2 * self._n_time_output() * self.n * self.n
         y_buffer = torch.empty((n, features_per_sample), dtype=torch.float32)
         x_buffer = torch.empty((n, self.in_dim), dtype=torch.float32)
         successful = 0
 
         retry_round = 0
         max_rounds = self._retry_budget(n)
-
         while True:
             if retry_round == 0:
                 sample_count = n
@@ -395,9 +443,7 @@ class ReactionDiffusion(SpatioTemporalSimulator):
                 x_buffer[successful] = xi.squeeze(0)
                 successful += 1
 
-            if not ensure_exact_n:
-                break
-            if successful >= n:
+            if not ensure_exact_n or successful >= n:
                 break
 
             retry_round += 1
@@ -406,5 +452,4 @@ class ReactionDiffusion(SpatioTemporalSimulator):
                     f"Could not collect exactly n={n} successful samples after "
                     f"{max_rounds} retry rounds. Collected {successful}."
                 )
-
         return y_buffer[:successful], x_buffer[:successful]
