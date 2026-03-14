@@ -209,64 +209,80 @@ def _infer_core_field_names_from_resolved_config(
 
 
 def _resolve_shared_group_indices(
-    shared_core_field_groups: list[list[str]] | None,
+    shared_core_field_groups: list[tuple[list[str], list[str] | None]] | None,
     core_field_names: list[str],
-) -> list[list[int]]:
-    """Resolve named shared-stat groups into channel indices."""
+) -> list[tuple[list[int], list[int]]]:
+    """Resolve named shared-stat groups into (apply_to_indices, pool_indices).
+
+    Stats are computed from pool_indices and assigned to apply_to_indices.
+    """
     if shared_core_field_groups is None:
         return []
 
     field_to_idx = {name: idx for idx, name in enumerate(core_field_names)}
-    resolved_groups: list[list[int]] = []
+    resolved: list[tuple[list[int], list[int]]] = []
     assigned_group_by_name: dict[str, int] = {}
 
-    for group_idx, group in enumerate(shared_core_field_groups):
-        if not group:
+    for group_idx, (apply_to_names, pool_from_names) in enumerate(
+        shared_core_field_groups
+    ):
+        if not apply_to_names:
             msg = (
-                "Each shared normalization group must include at least one field name."
+                "Each shared normalization group apply_to must include at least one "
+                "field name."
             )
             raise ValueError(msg)
 
-        group_names = [str(name) for name in group]
-        duplicate_names = sorted(
-            {name for name in group_names if group_names.count(name) > 1}
-        )
+        names = [str(n) for n in apply_to_names]
+        duplicate_names = sorted({n for n in names if names.count(n) > 1})
         if duplicate_names:
             msg = (
-                "Shared normalization groups cannot repeat names inside the same "
-                f"group. Repeated names in group {group_idx}: {duplicate_names}"
+                "Shared normalization groups cannot repeat names inside apply_to. "
+                f"Repeated in group {group_idx}: {duplicate_names}"
             )
             raise ValueError(msg)
 
-        unknown_names = sorted(set(group_names) - set(field_to_idx))
-        if unknown_names:
+        unknown = sorted(set(names) - set(field_to_idx))
+        if unknown:
             msg = (
                 "Shared normalization groups reference unknown core field names. "
-                f"Unknown names in group {group_idx}: {unknown_names}. "
-                f"Known names: {core_field_names}"
+                f"Unknown in group {group_idx}: {unknown}. Known: {core_field_names}"
             )
             raise ValueError(msg)
 
-        for field_name in group_names:
-            prior_group_idx = assigned_group_by_name.get(field_name)
-            if prior_group_idx is not None:
+        for name in names:
+            prior = assigned_group_by_name.get(name)
+            if prior is not None:
                 msg = (
                     "Shared normalization groups cannot overlap. "
-                    f"Field '{field_name}' appears in groups "
-                    f"{prior_group_idx} and {group_idx}."
+                    f"Field '{name}' appears in groups {prior} and {group_idx}."
                 )
                 raise ValueError(msg)
-            assigned_group_by_name[field_name] = group_idx
+            assigned_group_by_name[name] = group_idx
 
-        resolved_groups.append([field_to_idx[name] for name in group_names])
+        apply_to_indices = [field_to_idx[n] for n in names]
+        pool_indices = (
+            [field_to_idx[n] for n in pool_from_names]
+            if pool_from_names is not None
+            else list(apply_to_indices)
+        )
+        resolved.append((apply_to_indices, pool_indices))
 
-    return resolved_groups
+    return resolved
 
 
 def _parse_shared_core_field_groups(
     normalization_cfg: Any | None,
-) -> list[list[str]] | None:
-    """Parse optional shared normalization groups from config."""
+) -> list[tuple[list[str], list[str] | None]] | None:
+    """Parse optional shared normalization groups from config.
+
+    Each group is (apply_to, pool_from). Stats are computed from pool_from
+    (or apply_to if pool_from is None) and assigned to apply_to.
+    Config items may be:
+    - A list of field names: pool and apply both use that list.
+    - A dict with "apply_to" (list) and optional "pool_from" (list, must be
+      a subset of apply_to): stats computed from pool_from only, applied to apply_to.
+    """
     if normalization_cfg is None:
         return None
 
@@ -276,26 +292,64 @@ def _parse_shared_core_field_groups(
     if OmegaConf.is_config(groups_cfg):
         groups_cfg = OmegaConf.to_container(groups_cfg, resolve=True)
     if not isinstance(groups_cfg, list):
-        msg = "normalization.shared_core_field_groups must be a list of lists."
+        msg = "normalization.shared_core_field_groups must be a list."
         raise ValueError(msg)
 
-    shared_groups: list[list[str]] = []
+    result: list[tuple[list[str], list[str] | None]] = []
     for group_idx, group in enumerate(groups_cfg):
-        if not isinstance(group, (list, tuple)):
+        if isinstance(group, list | tuple):
+            names = [str(n) for n in group]
+            result.append((names, None))  # pool from and apply to same
+        elif isinstance(group, dict):
+            apply_to = group.get("apply_to")
+            pool_from = group.get("pool_from")
+            if apply_to is None:
+                msg = (
+                    "normalization.shared_core_field_groups: dict entry must have "
+                    f"'apply_to'. Group {group_idx}."
+                )
+                raise ValueError(msg)
+            apply_to = [
+                str(n)
+                for n in (
+                    apply_to if isinstance(apply_to, list | tuple) else [apply_to]
+                )
+            ]
+            if pool_from is not None:
+                pool_from = [
+                    str(n)
+                    for n in (
+                        pool_from
+                        if isinstance(pool_from, (list, tuple))
+                        else [pool_from]
+                    )
+                ]
+                extra = set(pool_from) - set(apply_to)
+                if extra:
+                    msg = (
+                        "normalization.shared_core_field_groups: 'pool_from' must be "
+                        f"a subset of 'apply_to'. "
+                        f"Group {group_idx} pool_from has: {sorted(extra)}."
+                    )
+                    raise ValueError(msg)
+            else:
+                pool_from = None
+            result.append((apply_to, pool_from))
+        else:
             msg = (
-                "normalization.shared_core_field_groups must be a list of "
-                f"lists. Group {group_idx} is not a list."
+                "normalization.shared_core_field_groups entries must be a list of "
+                f"names or a dict with apply_to (and optional pool_from)."
+                f"Group {group_idx}."
             )
             raise ValueError(msg)
-        shared_groups.append([str(name) for name in group])
-    return shared_groups
+    return result
 
 
 def compute_normalization_stats(
     split_payload: dict[str, Any],
     core_field_names: list[str] | None = None,
     constant_field_names: list[str] | None = None,
-    shared_core_field_groups: list[list[str]] | None = None,
+    shared_core_field_groups: list[tuple[list[str], list[str] | None]] | None = None,
 ) -> dict[str, Any]:
     """Compute normalization statistics for one split payload."""
     data = split_payload.get("data")
@@ -343,17 +397,17 @@ def compute_normalization_stats(
         std = std.clone()
         mean_delta = mean_delta.clone()
         std_delta = std_delta.clone()
-        for group_indices in shared_group_indices:
-            group_data = flattened_data[:, group_indices].reshape(-1)
-            group_deltas = flattened_deltas[:, group_indices].reshape(-1)
+        for apply_to_indices, pool_indices in shared_group_indices:
+            group_data = flattened_data[:, pool_indices].reshape(-1)
+            group_deltas = flattened_deltas[:, pool_indices].reshape(-1)
             shared_mean = group_data.mean()
             shared_std = group_data.std(unbiased=False)
             shared_mean_delta = group_deltas.mean()
             shared_std_delta = group_deltas.std(unbiased=False)
-            mean[group_indices] = shared_mean
-            std[group_indices] = shared_std
-            mean_delta[group_indices] = shared_mean_delta
-            std_delta[group_indices] = shared_std_delta
+            mean[apply_to_indices] = shared_mean
+            std[apply_to_indices] = shared_std
+            mean_delta[apply_to_indices] = shared_mean_delta
+            std_delta[apply_to_indices] = shared_std_delta
 
     def _stats_by_channel(values: torch.Tensor) -> dict[str, float]:
         return {

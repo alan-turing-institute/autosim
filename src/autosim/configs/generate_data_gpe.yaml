@@ -1,6 +1,6 @@
-# GPE generation with shared normalization so density/real/imag get the same
-# mean/std in stats.yml (for correct phase reconstruction). Override simulator
-# if needed: e.g. simulator=gpe_low_complexity or simulator=gpe_high_complexity.
+# GPE generation: normalization mean/std computed from real+imag only, then
+# the same stats applied to density, real, and imag (for correct phase reconstruction).
+# Override simulator if needed: e.g. simulator=gpe_ri_low_complexity or gpe_ri_high_complexity.
 defaults:
   - simulator: gross_pitaevskii_equation_2d
   - _self_
@@ -31,7 +31,8 @@ visualize:
 
 normalization:
   shared_core_field_groups:
-    - [density, real, imag]
+    - apply_to: [density, real, imag]
+      pool_from: [real, imag]
 
 hydra:
   run:
