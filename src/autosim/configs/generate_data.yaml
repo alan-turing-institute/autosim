@@ -29,6 +29,8 @@ visualize:
 normalization:
   # Optional channel groups that should share identical stats in stats.yml.
   # Example: [[real, imag]] or [[density, real, imag]].
+  # For GPE (density/real/imag) use --config-name=generate_data_gpe or override:
+  #   normalization.shared_core_field_groups='[[density, real, imag]]'
   shared_core_field_groups: []
 
 hydra:

@@ -1,3 +1,6 @@
+# GPE generation with shared normalization so density/real/imag get the same
+# mean/std in stats.yml (for correct phase reconstruction). Override simulator
+# if needed: e.g. simulator=gpe_low_complexity or simulator=gpe_high_complexity.
 defaults:
   - simulator: gross_pitaevskii_equation_2d
   - _self_
