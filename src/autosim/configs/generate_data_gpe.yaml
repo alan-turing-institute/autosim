@@ -1,5 +1,5 @@
 defaults:
-  - simulator: shallow_water2d
+  - simulator: gross_pitaevskii_equation_2d
   - _self_
 
 dataset:
@@ -27,9 +27,8 @@ visualize:
   preserve_aspect: true
 
 normalization:
-  # Optional channel groups that should share identical stats in stats.yml.
-  # Example: [[real, imag]] or [[density, real, imag]].
-  shared_core_field_groups: []
+  shared_core_field_groups:
+    - [density, real, imag]
 
 hydra:
   run:

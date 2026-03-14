@@ -208,10 +208,94 @@ def _infer_core_field_names_from_resolved_config(
     return inferred_names
 
 
+def _resolve_shared_group_indices(
+    shared_core_field_groups: list[list[str]] | None,
+    core_field_names: list[str],
+) -> list[list[int]]:
+    """Resolve named shared-stat groups into channel indices."""
+    if shared_core_field_groups is None:
+        return []
+
+    field_to_idx = {name: idx for idx, name in enumerate(core_field_names)}
+    resolved_groups: list[list[int]] = []
+    assigned_group_by_name: dict[str, int] = {}
+
+    for group_idx, group in enumerate(shared_core_field_groups):
+        if not group:
+            msg = (
+                "Each shared normalization group must include at least one field name."
+            )
+            raise ValueError(msg)
+
+        group_names = [str(name) for name in group]
+        duplicate_names = sorted(
+            {name for name in group_names if group_names.count(name) > 1}
+        )
+        if duplicate_names:
+            msg = (
+                "Shared normalization groups cannot repeat names inside the same "
+                f"group. Repeated names in group {group_idx}: {duplicate_names}"
+            )
+            raise ValueError(msg)
+
+        unknown_names = sorted(set(group_names) - set(field_to_idx))
+        if unknown_names:
+            msg = (
+                "Shared normalization groups reference unknown core field names. "
+                f"Unknown names in group {group_idx}: {unknown_names}. "
+                f"Known names: {core_field_names}"
+            )
+            raise ValueError(msg)
+
+        for field_name in group_names:
+            prior_group_idx = assigned_group_by_name.get(field_name)
+            if prior_group_idx is not None:
+                msg = (
+                    "Shared normalization groups cannot overlap. "
+                    f"Field '{field_name}' appears in groups "
+                    f"{prior_group_idx} and {group_idx}."
+                )
+                raise ValueError(msg)
+            assigned_group_by_name[field_name] = group_idx
+
+        resolved_groups.append([field_to_idx[name] for name in group_names])
+
+    return resolved_groups
+
+
+def _parse_shared_core_field_groups(
+    normalization_cfg: Any | None,
+) -> list[list[str]] | None:
+    """Parse optional shared normalization groups from config."""
+    if normalization_cfg is None:
+        return None
+
+    groups_cfg = normalization_cfg.get("shared_core_field_groups")
+    if groups_cfg is None:
+        return None
+    if OmegaConf.is_config(groups_cfg):
+        groups_cfg = OmegaConf.to_container(groups_cfg, resolve=True)
+    if not isinstance(groups_cfg, list):
+        msg = "normalization.shared_core_field_groups must be a list of lists."
+        raise ValueError(msg)
+
+    shared_groups: list[list[str]] = []
+    for group_idx, group in enumerate(groups_cfg):
+        if not isinstance(group, (list, tuple)):
+            msg = (
+                "normalization.shared_core_field_groups must be a list of "
+                f"lists. Group {group_idx} is not a list."
+            )
+            raise ValueError(msg)
+        shared_groups.append([str(name) for name in group])
+    return shared_groups
+
+
 def compute_normalization_stats(
     split_payload: dict[str, Any],
     core_field_names: list[str] | None = None,
     constant_field_names: list[str] | None = None,
+    shared_core_field_groups: list[list[str]] | None = None,
 ) -> dict[str, Any]:
     """Compute normalization statistics for one split payload."""
     data = split_payload.get("data")
@@ -249,6 +333,27 @@ def compute_normalization_stats(
     std = flattened_data.std(dim=0, unbiased=False)
     mean_delta = flattened_deltas.mean(dim=0)
     std_delta = flattened_deltas.std(dim=0, unbiased=False)
+
+    shared_group_indices = _resolve_shared_group_indices(
+        shared_core_field_groups=shared_core_field_groups,
+        core_field_names=resolved_core_field_names,
+    )
+    if shared_group_indices:
+        mean = mean.clone()
+        std = std.clone()
+        mean_delta = mean_delta.clone()
+        std_delta = std_delta.clone()
+        for group_indices in shared_group_indices:
+            group_data = flattened_data[:, group_indices].reshape(-1)
+            group_deltas = flattened_deltas[:, group_indices].reshape(-1)
+            shared_mean = group_data.mean()
+            shared_std = group_data.std(unbiased=False)
+            shared_mean_delta = group_deltas.mean()
+            shared_std_delta = group_deltas.std(unbiased=False)
+            mean[group_indices] = shared_mean
+            std[group_indices] = shared_std
+            mean_delta[group_indices] = shared_mean_delta
+            std_delta[group_indices] = shared_std_delta
 
     def _stats_by_channel(values: torch.Tensor) -> dict[str, float]:
         return {
@@ -488,9 +593,11 @@ def _generate_main(cfg: Any) -> None:
     save_resolved_config(cfg=cfg, output_dir=output_dir)
 
     save_dataset_splits(splits=splits, output_dir=output_dir, overwrite=cfg.overwrite)
+    shared_core_field_groups = _parse_shared_core_field_groups(cfg.get("normalization"))
     normalization_stats_payload = compute_normalization_stats(
         split_payload=splits["train"],
         core_field_names=channel_names_for_visualization,
+        shared_core_field_groups=shared_core_field_groups,
     )
     save_normalization_stats(
         stats_payload=normalization_stats_payload,

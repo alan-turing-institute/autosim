@@ -349,12 +349,14 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
         )
 
     history_density = []
-    history_phase = []
+    history_real = []
+    history_imag = []
 
     def _snapshot(p) -> torch.Tensor:
         density = torch.abs(p) ** 2
-        phase = torch.angle(p)
-        return torch.stack([density, phase], dim=-1)
+        real = p.real
+        imag = p.imag
+        return torch.stack([density, real, imag], dim=-1)
 
     with torch.no_grad():
         next_snapshot_t = float(snapshot_dt)
@@ -362,7 +364,8 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
 
         if return_timeseries:
             history_density.append(torch.abs(psi) ** 2)
-            history_phase.append(torch.angle(psi))
+            history_real.append(psi.real)
+            history_imag.append(psi.imag)
 
         t = 0.0
 
@@ -385,19 +388,22 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
             if return_timeseries:
                 while next_snapshot_t <= t + 1e-12:
                     history_density.append(torch.abs(psi) ** 2)
-                    history_phase.append(torch.angle(psi))
+                    history_real.append(psi.real)
+                    history_imag.append(psi.imag)
                     last_snapshot_t = next_snapshot_t
                     next_snapshot_t += snapshot_dt
 
         if return_timeseries and T - last_snapshot_t > 1e-9:
             history_density.append(torch.abs(psi) ** 2)
-            history_phase.append(torch.angle(psi))
+            history_real.append(psi.real)
+            history_imag.append(psi.imag)
 
     if return_timeseries:
         densities = torch.stack(history_density, dim=0)
-        phases = torch.stack(history_phase, dim=0)
+        real_parts = torch.stack(history_real, dim=0)
+        imag_parts = torch.stack(history_imag, dim=0)
         # return shape: (T, X, Y, Channels)
-        return torch.stack([densities, phases], dim=-1)
+        return torch.stack([densities, real_parts, imag_parts], dim=-1)
 
     return _snapshot(psi)
 
@@ -460,7 +466,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
                 "wy": (0.5, 2.0),
             }
         if output_names is None:
-            output_names = ["density", "phase"]
+            output_names = ["density", "real", "imag"]
 
         unknown_parameters = set(parameters_range) - set(self._ALLOWED_PARAMETER_NAMES)
         if unknown_parameters:
@@ -555,7 +561,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
             ensure_exact_n=ensure_exact_n,
         )
 
-        channels = 2  # density, phase
+        channels = 3  # density, real, imag
         features_per_step = self.n * self.n * channels
 
         if self.return_timeseries:

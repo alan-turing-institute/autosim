@@ -197,6 +197,39 @@ def test_compute_normalization_stats_includes_temporal_deltas() -> None:
     assert stats_payload["constant_field_names"] == []
 
 
+def test_compute_normalization_stats_supports_shared_groups() -> None:
+    split_payload = {
+        "data": torch.tensor(
+            [
+                [
+                    [[[1.0, 2.0, 3.0]]],
+                    [[[2.0, 4.0, 6.0]]],
+                    [[[3.0, 6.0, 9.0]]],
+                ]
+            ],
+            dtype=torch.float32,
+        )
+    }
+    names = ["density", "real", "imag"]
+    independent = compute_normalization_stats(
+        split_payload=split_payload,
+        core_field_names=names,
+    )
+    shared = compute_normalization_stats(
+        split_payload=split_payload,
+        core_field_names=names,
+        shared_core_field_groups=[["density", "real", "imag"]],
+    )
+
+    independent_mean = independent["stats"]["mean"]
+    assert independent_mean["density"] != pytest.approx(independent_mean["real"])
+
+    for stat_key in ("mean", "std", "mean_delta", "std_delta"):
+        values = shared["stats"][stat_key]
+        assert values["density"] == pytest.approx(values["real"])
+        assert values["density"] == pytest.approx(values["imag"])
+
+
 def test_generate_normalization_stats_yaml_from_existing_dataset(
     tmp_path: Path,
 ) -> None:
