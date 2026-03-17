@@ -670,7 +670,10 @@ def list_simulators() -> list[str]:
     simulator_dir = Path(__file__).parent / "configs" / "simulator"
     if not simulator_dir.exists():
         return []
-    return sorted(path.stem for path in simulator_dir.glob("*.yaml"))
+    return sorted(
+        str(path.relative_to(simulator_dir).with_suffix(""))
+        for path in simulator_dir.rglob("*.yaml")
+    )
 
 
 def main() -> None:
