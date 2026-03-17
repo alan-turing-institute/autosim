@@ -32,8 +32,10 @@ visualize:
 
 normalization:
   shared_core_field_groups:
-    - apply_to: [density, real, imag]
+    - apply_to: [real, imag]
       pool_from: [real, imag]
+    - apply_to: [density]
+      pool_from: [density]
 
 hydra:
   run:
