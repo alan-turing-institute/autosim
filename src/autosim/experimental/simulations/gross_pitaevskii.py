@@ -174,7 +174,7 @@ class GPESimulator2D:
         self._cached_rot_grid: torch.Tensor | None = None
 
     def _apply_rotation(self, psi: torch.Tensor, angle: float) -> torch.Tensor:
-        """Rotate the wavefunction by `angle` radians via bilinear interpolation.
+        """Rotate the wavefunction by `angle` radians via bicubic interpolation.
 
         Implements exp(i * angle * Lz) as a coordinate rotation
         psi'(r) = psi(R_{-angle} r).
@@ -207,14 +207,14 @@ class GPESimulator2D:
         psi_r = F.grid_sample(
             psi.real.unsqueeze(0).unsqueeze(0).float(),
             grid,
-            mode="bilinear",
+            mode="bicubic",
             padding_mode="zeros",
             align_corners=False,
         ).squeeze()
         psi_i = F.grid_sample(
             psi.imag.unsqueeze(0).unsqueeze(0).float(),
             grid,
-            mode="bilinear",
+            mode="bicubic",
             padding_mode="zeros",
             align_corners=False,
         ).squeeze()
