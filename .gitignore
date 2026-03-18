@@ -214,3 +214,5 @@ outputs
 
 # core
 core
+examples/
+docs/
