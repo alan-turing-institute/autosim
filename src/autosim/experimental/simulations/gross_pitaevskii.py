@@ -420,8 +420,21 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
 
         t = 0.0
 
-        Omega = config.get("Omega", 0.0)
-        imaginary_time = config.get("imaginary_time", False)
+        Omega = float(config.get("Omega", 0.0))
+        imaginary_time = bool(config.get("imaginary_time", False))
+        imaginary_time_steps = int(config.get("imaginary_time_steps", 0))
+
+        if imaginary_time_steps > 0:
+            for _ in range(imaginary_time_steps):
+                V_init = generate_complex_potential(
+                    simulator.X,
+                    simulator.Y,
+                    config,
+                    0.0,
+                    static_disorder=static_disorder,
+                    rng=rng,
+                )
+                psi = simulator.step(psi, V_init, g, Omega=0.0, imaginary_time=True)
 
         while t < T - 1e-12:
             t_mid = t + 0.5 * dt
@@ -481,6 +494,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "ky0": 0.0,
         "Omega": 0.0,
         "imaginary_time": False,
+        "imaginary_time_steps": 0,
         "initial_noise": 0.0,
     }
 
@@ -492,6 +506,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
     # Parameters not listed here are kept as plain floats.
     _PARAM_CONVERTERS: ClassVar[dict[str, Callable[[float], Any]]] = {
         "imaginary_time": lambda v: bool(round(v)),
+        "imaginary_time_steps": lambda v: int(round(v)),
     }
 
     def __init__(
