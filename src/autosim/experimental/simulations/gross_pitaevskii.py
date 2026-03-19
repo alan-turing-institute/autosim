@@ -31,13 +31,17 @@ def generate_complex_potential(
     # wx, wy control the "squish", box_param adds steep walls.
     wx = config.get("wx", 1.0)
     wy = config.get("wy", 1.0)
-    box_param = config.get("box_param", 0.0)
 
-    # Use a 10th-order polynomial to create a much flatter 'box' trap in the
-    # center. We scale by 5.0**6 so that at standard boundaries (x=5 or L=10),
-    # the barrier height matches the old x**4 formulation, keeping backward
-    # compatibility for the box_param scale.
-    V_base = 0.5 * (wx**2 * X**2 + wy**2 * Y**2) + box_param * (X**10 + Y**10) / 15625.0
+    V_base = 0.5 * (wx**2 * X**2 + wy**2 * Y**2)
+
+    box_param = float(config.get("box_param", 0.0))
+    if box_param > 0:
+        box_power = float(config.get("box_power", 4.0))
+        # To retain the exact same physical scale for the walls across different powers,
+        # we calculate the effective radius where the old quartic wall equals 1.0.
+        # old V = box_param * X**4 = 1.0 --> R_wall = (1 / box_param)**0.25
+        R_wall = (1.0 / box_param) ** 0.25
+        V_base += (X / R_wall) ** box_power + (Y / R_wall) ** box_power
 
     # 2. Add Spatial Disorder (Optical Speckle)
     V_disorder = torch.zeros_like(X)
@@ -479,6 +483,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "wx": 1.0,
         "wy": 1.0,
         "box_param": 0.0,
+        "box_power": 4.0,
         "disorder_strength": 0.0,
         "disorder_time_dependent": False,
         "disorder_radius": 0.0,  # 0.0 -> auto (2/sqrt(wx*wy))
@@ -506,7 +511,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
     # Parameters not listed here are kept as plain floats.
     _PARAM_CONVERTERS: ClassVar[dict[str, Callable[[float], Any]]] = {
         "imaginary_time": lambda v: bool(round(v)),
-        "imaginary_time_steps": lambda v: int(round(v)),
+        "imaginary_time_steps": lambda v: round(v),
     }
 
     def __init__(
