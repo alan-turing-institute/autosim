@@ -48,13 +48,20 @@ uv run autosim list
 
 Simulator defaults now live in package configs under
 `src/autosim/configs/simulator` and can be selected via config groups.
+Nested groups are supported, so you can select configs such as
+`simulator=gpe/laser_only`.
 
-Available simulator config names:
+Available simulator config names include:
 `advection_diffusion`, `advection_diffusion_multichannel`, `compressible_fluid_2d`,
-`conditioned_navier_stokes_2d`, `epidemic`, `flow_problem`, `gray_scott`,
-`gross_pitaevskii_equation_2d`, `hydrodynamics_2d`, `lattice_boltzmann`,
-`projectile`, `projectile_multioutput`, `reaction_diffusion`, `seir_simulator`,
+`conditioned_navier_stokes_2d`, `epidemic`, `flow_problem`, `gpe/high_complexity`,
+`gpe/laser_only`, `gpe/low_complexity`, `gpe/speckle_only`,
+`gpe/vortex_lattice`, `gray_scott`, `gross_pitaevskii_equation_2d`,
+`hydrodynamics_2d`, `lattice_boltzmann`, `projectile`,
+`projectile_multioutput`, `reaction_diffusion`, `seir_simulator`,
 `shallow_water2d`.
+
+The older `gpe_ri_low_complexity` and `gpe_ri_high_complexity` presets are kept
+as legacy backups for comparison with the newer `simulator=gpe/...` regime set.
 
 Override simulator and dataset settings from the command line via Hydra:
 

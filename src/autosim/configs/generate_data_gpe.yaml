@@ -1,5 +1,9 @@
+# GPE generation: normalization mean/std computed from real+imag only, then
+# the same stats applied to density, real, and imag (for correct phase reconstruction).
+# Override simulator if needed: e.g. simulator=gpe/laser_only or
+# simulator=gpe/high_complexity.
 defaults:
-  - simulator: shallow_water2d
+  - simulator: gross_pitaevskii_equation_2d
   - _self_
 
 dataset:
@@ -27,10 +31,11 @@ visualize:
   preserve_aspect: true
 
 normalization:
-  # Optional channel groups that share identical stats in stats.yml.
-  # List of: [name, ...] (pool and apply to same) or {apply_to: [...], pool_from: [...]}
-  # (compute from pool_from only, apply to apply_to). For GPE use --config-name=generate_data_gpe.
-  shared_core_field_groups: []
+  shared_core_field_groups:
+    - apply_to: [real, imag]
+      pool_from: [real, imag]
+    - apply_to: [density]
+      pool_from: [density]
 
 hydra:
   run:

@@ -1,0 +1,30 @@
+_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+return_timeseries: true
+log_level: warning
+output_names: [density, real, imag]
+n: 64
+L: 10.0
+T: 17.05
+dt: 0.005
+snapshot_dt: 0.05
+skip_nt: 20
+random_seed: 42
+parameters_range:
+  wx: [0.9, 1.2]
+  wy: [0.9, 1.2]
+  box_param: [0.2, 0.2]
+  width: [0.5, 1.1]
+  x0: [-1.0, 1.0]
+  y0: [-1.0, 1.0]
+  kx0: [-2.0, 2.0]
+  ky0: [-2.0, 2.0]
+  imaginary_time: [0, 0]
+  g: [0.0, 15.0]
+  disorder_strength: [0.0, 0.15]
+  disorder_radius: [0.8, 1.3]
+  disorder_time_dependent: [0, 0]
+  spoon_strength: [0.0, 0.0]
+  spoon_speed: [0.0, 0.0]
+  spoon_width: [0.12, 0.22]
+  spoon_radius: [1.2, 1.9]
+  Omega: [0.0, 0.05]

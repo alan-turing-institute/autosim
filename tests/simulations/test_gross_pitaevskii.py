@@ -33,9 +33,15 @@ def test_single_forward(base_simulator):
     y = base_simulator._forward(x)
 
     # Output shape should be (1, n*n*channels)
-    # channels = 2 (density, phase)
+    # channels = 3 (density, real, imag)
     assert y is not None
-    assert y.shape == (1, base_simulator.n * base_simulator.n * 2)
+    assert y.shape == (1, base_simulator.n * base_simulator.n * 3)
+
+    field = y.reshape(base_simulator.n, base_simulator.n, 3)
+    density = field[..., 0]
+    real = field[..., 1]
+    imag = field[..., 2]
+    assert torch.allclose(density, real**2 + imag**2, atol=1e-5, rtol=1e-5)
 
 
 def test_batch_forward(base_simulator):
@@ -44,8 +50,8 @@ def test_batch_forward(base_simulator):
     x = base_simulator.sample_inputs(n_samples)
     y, x_valid = base_simulator.forward_batch(x)
 
-    # Expected channels: 2
-    assert y.shape == (n_samples, base_simulator.n * base_simulator.n * 2)
+    # Expected channels: 3 (density, real, imag)
+    assert y.shape == (n_samples, base_simulator.n * base_simulator.n * 3)
     assert x_valid.shape == (n_samples, base_simulator.in_dim)
 
 
@@ -64,12 +70,17 @@ def test_timeseries_forward():
     res = sim.forward_samples_spatiotemporal(n=2)
     data = res["data"]
 
-    # Shape should be [batch(2), time, x(16), y(16), channels(2)]
+    # Shape should be [batch(2), time, x(16), y(16), channels(3)]
     assert data.shape[0] == 2
     assert data.shape[2] == 16
     assert data.shape[3] == 16
-    assert data.shape[4] == 2
+    assert data.shape[4] == 3
     assert data.shape[1] > 1  # Should have multiple timesteps (t=0, t=0.02, t=0.04)
+
+    density = data[..., 0]
+    real = data[..., 1]
+    imag = data[..., 2]
+    assert torch.allclose(density, real**2 + imag**2, atol=1e-5, rtol=1e-5)
 
 
 def test_invalid_parameters():

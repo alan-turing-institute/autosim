@@ -197,6 +197,69 @@ def test_compute_normalization_stats_includes_temporal_deltas() -> None:
     assert stats_payload["constant_field_names"] == []
 
 
+def test_compute_normalization_stats_supports_shared_groups() -> None:
+    split_payload = {
+        "data": torch.tensor(
+            [
+                [
+                    [[[1.0, 2.0, 3.0]]],
+                    [[[2.0, 4.0, 6.0]]],
+                    [[[3.0, 6.0, 9.0]]],
+                ]
+            ],
+            dtype=torch.float32,
+        )
+    }
+    names = ["density", "real", "imag"]
+    independent = compute_normalization_stats(
+        split_payload=split_payload,
+        core_field_names=names,
+    )
+    shared = compute_normalization_stats(
+        split_payload=split_payload,
+        core_field_names=names,
+        shared_core_field_groups=[(["density", "real", "imag"], None)],
+    )
+
+    independent_mean = independent["stats"]["mean"]
+    assert independent_mean["density"] != pytest.approx(independent_mean["real"])
+
+    for stat_key in ("mean", "std", "mean_delta", "std_delta"):
+        values = shared["stats"][stat_key]
+        assert values["density"] == pytest.approx(values["real"])
+        assert values["density"] == pytest.approx(values["imag"])
+
+
+def test_compute_normalization_stats_pool_from_subset() -> None:
+    """Stats computed from pool_from channels only; same stats applied to apply_to."""
+    # Density on different scale so pooling all three would differ from real+imag only
+    split_payload = {
+        "data": torch.tensor(
+            [
+                [
+                    [[[10.0, 1.0, 1.0]]],  # t=0: density=10, real=1, imag=1
+                    [[[20.0, 2.0, 2.0]]],  # t=1: density=20, real=2, imag=2
+                ]
+            ],
+            dtype=torch.float32,
+        )
+    }
+    names = ["density", "real", "imag"]
+    # Compute from real+imag only; apply to density, real, imag
+    with_pool_from = compute_normalization_stats(
+        split_payload=split_payload,
+        core_field_names=names,
+        shared_core_field_groups=[(["density", "real", "imag"], ["real", "imag"])],
+    )
+    mean = with_pool_from["stats"]["mean"]
+    # Mean over real and imag only: (1+2+1+2)/4 = 1.5
+    assert mean["density"] == pytest.approx(1.5)
+    assert mean["real"] == pytest.approx(1.5)
+    assert mean["imag"] == pytest.approx(1.5)
+    # If we had included density, mean would be (10+20+1+2+1+2)/6 = 6
+    assert mean["density"] != pytest.approx(6.0)
+
+
 def test_generate_normalization_stats_yaml_from_existing_dataset(
     tmp_path: Path,
 ) -> None:

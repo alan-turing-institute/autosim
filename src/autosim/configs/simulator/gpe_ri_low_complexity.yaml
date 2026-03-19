@@ -1,6 +1,9 @@
+## Legacy backup of the original low-complexity GPE real/imag preset.
+## Kept for comparison against the newer regime-based configs under simulator/gpe/.
 _target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
 return_timeseries: true
 log_level: warning
+output_names: [density, real, imag]
 n: 64
 L: 10.0
 T: 7.42
