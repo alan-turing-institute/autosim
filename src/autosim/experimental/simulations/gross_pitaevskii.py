@@ -28,12 +28,16 @@ def generate_complex_potential(
         rng: Random number generator for spatial disorder.
     """
     # 1. Base Geometry (Anisotropic Trap)
-    # wx, wy control the "squish", box_param adds steep walls
+    # wx, wy control the "squish", box_param adds steep walls.
     wx = config.get("wx", 1.0)
     wy = config.get("wy", 1.0)
     box_param = config.get("box_param", 0.0)
 
-    V_base = 0.5 * (wx**2 * X**2 + wy**2 * Y**2) + box_param * (X**4 + Y**4)
+    # Use a 10th-order polynomial to create a much flatter 'box' trap in the
+    # center. We scale by 5.0**6 so that at standard boundaries (x=5 or L=10),
+    # the barrier height matches the old x**4 formulation, keeping backward
+    # compatibility for the box_param scale.
+    V_base = 0.5 * (wx**2 * X**2 + wy**2 * Y**2) + box_param * (X**10 + Y**10) / 15625.0
 
     # 2. Add Spatial Disorder (Optical Speckle)
     V_disorder = torch.zeros_like(X)

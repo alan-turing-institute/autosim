@@ -1,3 +1,8 @@
+# References for moving laser obstacles / stirring:
+# Raman, C., et al. "Evidence for a critical velocity in a Bose-Einstein condensed gas." 
+# Physical Review Letters 83, 2502 (1999). DOI: 10.1103/PhysRevLett.83.2502
+# Neely, T. W., et al. "Observation of vortex dipoles in an oblate Bose-Einstein condensate." 
+# Physical Review Letters 104, 160401 (2010). DOI: 10.1103/PhysRevLett.104.160401
 _target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
 return_timeseries: true
 log_level: warning
