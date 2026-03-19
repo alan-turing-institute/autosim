@@ -9,3 +9,7 @@ snapshot_dt: 4.0
 initial_condition: gaussians
 fixed_parameters_given_pattern: true
 pattern: spirals
+# trajectory is rejected if the standard deviation of the 
+# pattern is less than min_std at any point in time. Set to 
+# null to disable this check.
+min_std: 0.01

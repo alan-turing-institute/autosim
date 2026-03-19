@@ -441,6 +441,7 @@ class GrayScott(SpatioTemporalSimulator):
         random_seed: int | None = None,
         pattern: str | None = None,
         fixed_parameters_given_pattern: bool = True,
+        min_std: float | None = None,
     ) -> None:
         if parameters_range is not None:
             parameters_range = dict(parameters_range)
@@ -525,6 +526,7 @@ class GrayScott(SpatioTemporalSimulator):
             parameters_range.get("delta_u", (DEFAULT_DIFFUSIONS[0],))[0],
             parameters_range.get("delta_v", (DEFAULT_DIFFUSIONS[1],))[0],
         )
+        self.min_std = min_std
 
     def _forward(self, x: TensorLike) -> TensorLike:
         if x.shape[0] != 1:
@@ -553,6 +555,32 @@ class GrayScott(SpatioTemporalSimulator):
             dealias=self.dealias,
             random_seed=seed,
         )
+
+        if self.min_std is not None:
+            if u_sol.ndim == 3:
+                # Per-timestep spatial std: u_sol shape [timesteps, n, n]
+                u_std_per_t = np.std(u_sol, axis=(1, 2))
+                v_std_per_t = np.std(v_sol, axis=(1, 2))
+                u_min_std = float(np.min(u_std_per_t))
+                v_min_std = float(np.min(v_std_per_t))
+            else:
+                # Single frame: u_sol shape [n, n]
+                u_min_std = float(np.std(u_sol))
+                v_min_std = float(np.std(v_sol))
+            if u_min_std < self.min_std or v_min_std < self.min_std:
+                self.logger.warning(
+                    "Rejecting trajectory: per-timestep std too low "
+                    "(u_min_std=%.6f, v_min_std=%.6f, min_std=%s). Will retry.",
+                    u_min_std,
+                    v_min_std,
+                    self.min_std,
+                )
+                msg = (
+                    f"Trajectory std below threshold: "
+                    f"u_min_std={u_min_std:.6f}, v_min_std={v_min_std:.6f}, "
+                    f"min_std={self.min_std}"
+                )
+                raise ValueError(msg)
 
         concat = np.concatenate([u_sol.ravel(), v_sol.ravel()]).astype(np.float32)
         return torch.from_numpy(concat).reshape(1, -1)
