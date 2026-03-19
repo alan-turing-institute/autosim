@@ -3,6 +3,7 @@ from .advection_diffusion_multichannel import AdvectionDiffusionMultichannel
 from .epidemic import Epidemic
 from .flow_problem import FlowProblem
 from .projectile import Projectile, ProjectileMultioutput
+from .reaction_diffusion_non_periodic import ReactionDiffusionNonPeriodic
 from .seir import SEIRSimulator
 
 ALL_SIMULATORS = [
@@ -13,6 +14,7 @@ ALL_SIMULATORS = [
     FlowProblem,
     Projectile,
     ProjectileMultioutput,
+    ReactionDiffusionNonPeriodic,
 ]
 
 __all__ = [
@@ -22,6 +24,7 @@ __all__ = [
     "FlowProblem",
     "Projectile",
     "ProjectileMultioutput",
+    "ReactionDiffusionNonPeriodic",
     "SEIRSimulator",
 ]
 
