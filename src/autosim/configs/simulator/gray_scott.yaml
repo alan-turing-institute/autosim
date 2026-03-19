@@ -10,6 +10,11 @@ initial_condition: gaussians
 fixed_parameters_given_pattern: true
 pattern: spirals
 # trajectory is rejected if the standard deviation of the 
-# pattern is less than min_std at any point in time. Set to 
-# null to disable this check.
+# a simulated trajectory is less than min_std at any point in time
+# accross either of the output channels. The simulation 
+# will automatically resimulate the data with the same 
+# input parameters until the output trajectory has a std above the min_std value.
+# Set to null to disable this check.
+# This is done because trajectories with low std 
+# harm the performance metrics during training. 
 min_std: 0.01
