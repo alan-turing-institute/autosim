@@ -173,6 +173,10 @@ class GPESimulator2D:
             torch.exp(-kinetic_energy * self.dt).to(self.device).to(torch.complex64)
         )
 
+        # Store momentum grids for spectral Lz computation
+        self.KX = KX.to(torch.complex64)
+        self.KY = KY.to(torch.complex64)
+
         # Cache for the rotation sampling grid (recomputed only when angle changes)
         self._cached_rot_angle: float | None = None
         self._cached_rot_grid: torch.Tensor | None = None
@@ -234,6 +238,27 @@ class GPESimulator2D:
         density = torch.abs(psi) ** 2
         return psi * torch.exp(-1j * (V + g * density) * half_dt)
 
+    def _apply_Lz_exp(self, psi: torch.Tensor, alpha: float) -> torch.Tensor:
+        """Apply exp(alpha * Lz) for imaginary-time rotation steps.
+
+        For imaginary time the correct sub-step is exp(Ω·dτ·Lz), which is a
+        *non-unitary* operator that amplifies positive-angular-momentum modes and
+        thereby drives vortex nucleation.  A unitary coordinate rotation (used for
+        real time) leaves the density unchanged and cannot form a vortex lattice.
+
+        Lz = -i(x ∂/∂y - y ∂/∂x) is evaluated spectrally:
+            ∂ψ/∂x = IFFT(i kx ψ̂)   ∂ψ/∂y = IFFT(i ky ψ̂)
+
+        exp(alpha * Lz) is approximated to first order (I + alpha*Lz); with the
+        small sub-step alpha = Ω·dt/2 ≈ 5x10⁻⁴ the truncation error is negligible
+        and the caller's renormalisation keeps the norm bounded.
+        """
+        psi_hat = torch.fft.fftn(psi)
+        dpsi_dx = torch.fft.ifftn(1j * self.KX * psi_hat)
+        dpsi_dy = torch.fft.ifftn(1j * self.KY * psi_hat)
+        Lz_psi = -1j * (self.X * dpsi_dy - self.Y * dpsi_dx)
+        return (psi + alpha * Lz_psi).to(torch.complex64)
+
     def initialize_state(self, x0=0.0, y0=0.0, width=1.0, kx0=0.0, ky0=0.0):
         """Create a meaningful initial condition: a moving Gaussian wavepacket."""
         if width <= 0:
@@ -268,16 +293,27 @@ class GPESimulator2D:
         # 1. Potential + nonlinear half-step
         psi = self._apply_V_half(psi, V, g, half_dt)
 
-        # 2. Rotation half-step (unitary coordinate rotation)
+        # 2. Rotation half-step
+        # Real time:      exp(i Ω dt/2 Lz) — unitary coordinate rotation
+        # Imaginary time: exp(Ω dτ/2 Lz)  — non-unitary amplifier, required for
+        #                 vortex nucleation (a coordinate rotation only shifts phases
+        #                 and cannot change the density toward a vortex lattice).
         if Omega != 0.0:
-            psi = self._apply_rotation(psi, Omega * self.dt / 2.0)
+            rot_angle = Omega * self.dt / 2.0
+            if imaginary_time:
+                psi = self._apply_Lz_exp(psi, rot_angle)
+            else:
+                psi = self._apply_rotation(psi, rot_angle)
 
         # 3. Kinetic full-step in momentum space
         psi = torch.fft.ifftn(torch.fft.fftn(psi) * exp_K)
 
         # 4. Rotation half-step (symmetric)
         if Omega != 0.0:
-            psi = self._apply_rotation(psi, Omega * self.dt / 2.0)
+            if imaginary_time:
+                psi = self._apply_Lz_exp(psi, rot_angle)  # pyright: ignore[reportPossiblyUnboundVariable] since set above in block with same condition
+            else:
+                psi = self._apply_rotation(psi, rot_angle)  # pyright: ignore[reportPossiblyUnboundVariable] since set above in block with same condition
 
         # 5. Potential + nonlinear half-step
         psi = self._apply_V_half(psi, V, g, half_dt)
@@ -339,6 +375,17 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
         kx0=config.get("kx0", 0.0),
         ky0=config.get("ky0", 0.0),
     )
+
+    imaginary_time = config.get("imaginary_time", False)
+    if imaginary_time:
+        # Seed initial state with tiny noise to break symmetry, which is required
+        # for vortex lattices to nucleate during imaginary time evolution.
+        noise_amp = config.get("initial_noise", 0.05)
+        if noise_amp > 0:
+            noise_real = torch.randn_like(psi.real, generator=rng)
+            noise_imag = torch.randn_like(psi.imag, generator=rng)
+            psi = psi + noise_amp * torch.complex(noise_real, noise_imag)
+            psi = psi / torch.sqrt(torch.sum(torch.abs(psi) ** 2) * simulator.dx**2)
 
     g = config.get("g", 10.0)
 
@@ -434,6 +481,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "ky0": 0.0,
         "Omega": 0.0,
         "imaginary_time": False,
+        "initial_noise": 0.0,
     }
 
     _ALLOWED_PARAMETER_NAMES: ClassVar[tuple[str, ...]] = tuple(
