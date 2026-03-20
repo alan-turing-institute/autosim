@@ -41,7 +41,6 @@ def generate_complex_potential(
         box_type = str(config.get("box_type", "power"))
 
         R_wall = (1.0 / box_param) ** 0.25
-        r_eff = torch.sqrt(X**2 + (Y / box_anisotropy) ** 2)
 
         if box_type == "power":
             term_x = (X / R_wall) ** box_power
@@ -50,6 +49,7 @@ def generate_complex_potential(
         elif box_type == "woods_saxon":
             ws_a = float(config.get("ws_a", 0.1))
             ws_V0 = float(config.get("ws_V0", 100.0))
+            r_eff = torch.sqrt(X**2 + (Y / box_anisotropy) ** 2)
             V_base += ws_V0 / (1.0 + torch.exp(-(r_eff - R_wall) / ws_a))
 
     # 2. Add Spatial Disorder (Optical Speckle)
