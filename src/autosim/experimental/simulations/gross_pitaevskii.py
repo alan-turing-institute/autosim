@@ -441,7 +441,7 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
                     static_disorder=static_disorder,
                     rng=rng,
                 )
-                psi = simulator.step(psi, V_init, g, Omega=0.0, imaginary_time=True)
+                psi = simulator.step(psi, V_init, g, Omega=Omega, imaginary_time=True)
 
         while t < T - 1e-12:
             t_mid = t + 0.5 * dt
