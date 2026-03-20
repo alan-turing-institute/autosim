@@ -384,7 +384,7 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
     )
 
     imaginary_time = config.get("imaginary_time", False)
-    if imaginary_time:
+    if imaginary_time or config.get("imaginary_time_steps", 0) > 0:
         # Seed initial state with tiny noise to break symmetry, which is required
         # for vortex lattices to nucleate during imaginary time evolution.
         noise_amp = config.get("initial_noise", 0.05)
@@ -504,7 +504,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "Omega": 0.0,
         "imaginary_time": False,
         "imaginary_time_steps": 0,
-        "initial_noise": 0.0,
+        "initial_noise": 0.05,
     }
 
     _ALLOWED_PARAMETER_NAMES: ClassVar[tuple[str, ...]] = tuple(

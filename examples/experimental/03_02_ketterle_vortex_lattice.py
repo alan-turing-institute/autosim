@@ -9,11 +9,21 @@ Abo-Shaeer, Raman, Vogels, Ketterle. (2001).
 Observation of Vortex Lattices in Bose-Einstein Condensates.
 Science. DOI: 10.1126/science.1060182
 
-Two-Phase Ground State Nucleation & Imaginary Time Rotation:
-Bao, W. et al. (2006). Dynamics of rotating Bose-Einstein condensates
-and its efficient and accurate numerical computation.
-SIAM J. Appl. Math. DOI: 10.1137/050639050
+Two-Phase Ground State Nucleation & Symmetry-Breaking Noise:
+To mathematically nucleate the perfect topological ground state during
+Phase 1 cooling, the non-unitary rotation operator requires the injection
+of microscopic quantum noise (vacuum fluctuations) to break parity symmetry:
+- Bao, W. et al. (2006). Dynamics of rotating Bose-Einstein condensates
+  and its efficient and accurate numerical computation.
+  SIAM J. Appl. Math. DOI: 10.1137/050639050
 
+The Quadrupole Instability (Turbulent Quench):
+Without initial noise, the condensate retains zero angular momentum during
+cooling. Switching to a rapidly rotating Phase 2 causes the fluid to dynamically
+shear along a diagonal and violently emit turbulent vortices instead of a lattice:
+- Sinha, S., & Castin, Y. (2001). Dynamic instability of a rotating Bose-Einstein
+  condensate.
+  Physical Review Letters. DOI: 10.1103/PhysRevLett.87.190402
 Modern Flat-Bottom Optical Box Traps:
 While early studies used harmonic traps, modern BEC turbulence experiments
 use uniform box potentials (wx=0, wy=0) to prevent condensate "squishing"
@@ -58,6 +68,10 @@ def run_vortex_lattice_experiment():  # noqa: D103
                 1000,
                 1000,
             ),  # Phase 1: Cool to ground state before Main simulation
+            "initial_noise": (
+                0.05,
+                0.05,
+            ),  # Random symmetry-breaking vacuum fluctuations
             "box_param": (
                 0.01,
                 0.01,
