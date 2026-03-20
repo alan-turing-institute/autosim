@@ -1,0 +1,47 @@
+# Two-phase GPE: imaginary-time ground state → real-time dynamics, few-vortex regime.
+#
+# Phase 1 (imaginary_time_steps): converges to the rotating ground state.
+#   4000 steps × dt=0.005 = 20 imaginary time units; sufficient for g~80-100, mid Ω.
+#   Ground state contains 1–5 vortices depending on Ω and g.
+# Phase 2 (T real-time steps): free evolution from the vortex ground state.
+#   Vortices precess in the lab frame and interact; excitations from residual noise
+#   produce Tkachenko-like oscillations and vortex-core dynamics.
+#
+# Regime: Ω ∈ [0.35, 0.55] — spanning first-vortex entry through a few-vortex state.
+# Approximate Ω_c1 ≈ 0.35–0.45 for box_param=0.2, g~80–100.
+#
+# References:
+#   Madison, K. W., et al. "Vortex formation in a stirred Bose-Einstein condensate."
+#   Phys. Rev. Lett. 84, 806 (2000). DOI: 10.1103/PhysRevLett.84.806
+_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+return_timeseries: true
+log_level: warning
+output_names: [density, real, imag]
+n: 64
+L: 10.0
+T: 12.05
+dt: 0.005
+snapshot_dt: 0.05
+skip_nt: 5
+random_seed: 42
+parameters_range:
+  wx: [0.95, 1.05]
+  wy: [0.95, 1.05]
+  box_param: [0.2, 0.2]
+  width: [0.8, 1.2]
+  x0: [0.0, 0.0]
+  y0: [0.0, 0.0]
+  kx0: [0.0, 0.0]
+  ky0: [0.0, 0.0]
+  imaginary_time: [0, 0]
+  imaginary_time_steps: [4000, 4000]
+  initial_noise: [0.05, 0.05]
+  g: [70.0, 110.0]
+  disorder_strength: [0.0, 0.0]
+  disorder_radius: [1.0, 1.0]
+  disorder_time_dependent: [0, 0]
+  spoon_strength: [0.0, 0.0]
+  spoon_speed: [0.0, 0.0]
+  spoon_width: [0.18, 0.18]
+  spoon_radius: [1.5, 1.5]
+  Omega: [0.35, 0.55]
