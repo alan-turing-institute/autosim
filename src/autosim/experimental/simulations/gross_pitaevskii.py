@@ -38,13 +38,19 @@ def generate_complex_potential(
     if box_param > 0:
         box_power = float(config.get("box_power", 4.0))
         box_anisotropy = float(config.get("box_anisotropy", 1.0))
-        # To retain the exact same physical scale for the walls across different powers,
-        # we calculate the effective radius where the old quartic wall equals 1.0.
-        # old V = box_param * X**4 = 1.0 --> R_wall = (1 / box_param)**0.25
+        box_type = str(config.get("box_type", "power"))
+
         R_wall = (1.0 / box_param) ** 0.25
-        term_x = (X / R_wall) ** box_power
-        term_y = (Y / (R_wall * box_anisotropy)) ** box_power
-        V_base += term_x + term_y
+        r_eff = torch.sqrt(X**2 + (Y / box_anisotropy) ** 2)
+
+        if box_type == "power":
+            term_x = (X / R_wall) ** box_power
+            term_y = (Y / (R_wall * box_anisotropy)) ** box_power
+            V_base += term_x + term_y
+        elif box_type == "woods_saxon":
+            ws_a = float(config.get("ws_a", 0.1))
+            ws_V0 = float(config.get("ws_V0", 100.0))
+            V_base += ws_V0 / (1.0 + torch.exp(-(r_eff - R_wall) / ws_a))
 
     # 2. Add Spatial Disorder (Optical Speckle)
     V_disorder = torch.zeros_like(X)
@@ -488,6 +494,9 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "box_param": 0.0,
         "box_power": 4.0,
         "box_anisotropy": 1.0,
+        "box_type": "power",
+        "ws_a": 0.1,
+        "ws_V0": 100.0,
         "disorder_strength": 0.0,
         "disorder_time_dependent": False,
         "disorder_radius": 0.0,  # 0.0 -> auto (2/sqrt(wx*wy))

@@ -21,8 +21,8 @@ The Quadrupole Instability (Turbulent Quench):
 Without initial noise, the condensate retains zero angular momentum during
 cooling. Switching to a rapidly rotating Phase 2 causes the fluid to dynamically
 shear along a diagonal and violently emit turbulent vortices instead of a lattice:
-- Sinha, S., & Castin, Y. (2001). Dynamic instability of a rotating Bose-Einstein
-  condensate.
+- Sinha, S., & Castin, Y. (2001). Dynamic instability of a rotating
+  Bose-Einstein condensate.
   Physical Review Letters. DOI: 10.1103/PhysRevLett.87.190402
 Modern Flat-Bottom Optical Box Traps:
 While early studies used harmonic traps, modern BEC turbulence experiments
