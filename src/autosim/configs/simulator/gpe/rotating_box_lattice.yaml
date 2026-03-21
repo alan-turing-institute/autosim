@@ -16,6 +16,10 @@
 #   Science 292, 476 (2001). DOI: 10.1126/science.1060182
 #   Baym, G. "Tkachenko modes of vortex lattices in rapidly rotating Bose-Einstein condensates."
 #   Phys. Rev. Lett. 91, 110402 (2003). DOI: 10.1103/PhysRevLett.91.110402
+#   Adhikari, S. K. "Vortex-lattice in a uniform Bose-Einstein condensate in a box trap."
+#   J. Phys.: Condens. Matter 31 295401 (2019). DOI: 10.1088/1361-648X/ab14c5
+#   Simula, T. et al. "Giant vortex lattice deformations in rapidly rotating Bose-Einstein condensates."
+#   Phys. Rev. Lett. 92, 060401 (2004). DOI: 10.1103/PhysRevLett.92.060401
 _target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
 return_timeseries: true
 log_level: warning
@@ -27,10 +31,14 @@ dt: 0.005
 snapshot_dt: 0.05
 skip_nt: 5
 random_seed: 42
+box_type: woods_saxon
 parameters_range:
-  wx: [1.0, 1.0]
-  wy: [1.0, 1.0]
-  box_param: [0.2, 0.2]
+  wx: [0.0, 0.0]
+  wy: [0.0, 0.0]
+  box_param: [0.0039, 0.0039]
+  ws_a: [0.15, 0.15]
+  ws_V0: [200.0, 200.0]
+  box_anisotropy: [1.02, 1.06]
   width: [0.9, 1.1]
   x0: [0.0, 0.0]
   y0: [0.0, 0.0]
@@ -39,7 +47,7 @@ parameters_range:
   imaginary_time: [0, 0]
   imaginary_time_steps: [5000, 5000]
   initial_noise: [0.05, 0.05]
-  g: [70.0, 110.0]
+  g: [100.0, 800.0]
   disorder_strength: [0.0, 0.0]
   disorder_radius: [1.0, 1.0]
   disorder_time_dependent: [0, 0]
@@ -47,4 +55,4 @@ parameters_range:
   spoon_speed: [0.0, 0.0]
   spoon_width: [0.18, 0.18]
   spoon_radius: [1.5, 1.5]
-  Omega: [0.55, 0.75]
+  Omega: [0.65, 0.95]

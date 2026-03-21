@@ -494,7 +494,6 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "box_param": 0.0,
         "box_power": 4.0,
         "box_anisotropy": 1.0,
-        "box_type": "woods_saxon",  # "power"
         "ws_a": 0.1,
         "ws_V0": 100.0,
         "disorder_strength": 0.0,
@@ -540,6 +539,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         snapshot_dt: float | None = None,
         skip_nt: int = 0,
         random_seed: int | None = None,
+        box_type: str = "woods_saxon",
     ) -> None:
         if parameters_range is None:
             # Provide some sensible defaults for complexity knobs
@@ -591,6 +591,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         self.snapshot_dt = snapshot_dt
         self.skip_nt = skip_nt
         self.random_seed = random_seed
+        self.box_type = box_type
         self._rng = (
             torch.Generator().manual_seed(random_seed)
             if random_seed is not None
@@ -606,6 +607,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
 
         config = self._DEFAULT_SIM_PARAMS.copy()
         config.update(param_values)
+        config["box_type"] = self.box_type
         return config
 
     def _forward(self, x: TensorLike) -> TensorLike:
