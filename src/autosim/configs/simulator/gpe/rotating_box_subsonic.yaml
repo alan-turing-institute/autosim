@@ -19,10 +19,10 @@ log_level: warning
 output_names: [density, real, imag]
 n: 64
 L: 10.0
-T: 12.05
+T: 16.0
 dt: 0.005
 snapshot_dt: 0.05
-skip_nt: 5
+skip_nt: 0
 random_seed: 42
 box_type: woods_saxon
 parameters_range:
