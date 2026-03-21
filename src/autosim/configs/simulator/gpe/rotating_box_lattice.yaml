@@ -38,8 +38,8 @@ parameters_range:
   box_param: [0.0039, 0.0039]
   ws_a: [0.15, 0.15]
   ws_V0: [200.0, 200.0]
-  box_anisotropy: [1.02, 1.06]
-  width: [0.9, 1.1]
+  box_anisotropy: [1.0, 1.15] # High anisotropy squishes the lattice into 1D zig-zags
+  width: [1.0, 1.0]
   x0: [0.0, 0.0]
   y0: [0.0, 0.0]
   kx0: [0.0, 0.0]
@@ -55,4 +55,4 @@ parameters_range:
   spoon_speed: [0.0, 0.0]
   spoon_width: [0.18, 0.18]
   spoon_radius: [1.5, 1.5]
-  Omega: [0.65, 0.95]
+  Omega: [0.65, 1.25] # Over 1.0 can expect supersonic rotation and giant vortex rings
