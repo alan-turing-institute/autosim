@@ -38,7 +38,7 @@ def generate_complex_potential(
     if box_param > 0:
         box_power = float(config.get("box_power", 4.0))
         box_anisotropy = float(config.get("box_anisotropy", 1.0))
-        box_type = str(config.get("box_type", "power"))
+        box_type = str(config.get("box_type", "woods_saxon"))
 
         R_wall = (1.0 / box_param) ** 0.25
 
@@ -492,7 +492,6 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "wx": 1.0,
         "wy": 1.0,
         "box_param": 0.0,
-        "box_power": 4.0,
         "box_anisotropy": 1.0,
         "ws_a": 0.1,
         "ws_V0": 100.0,
