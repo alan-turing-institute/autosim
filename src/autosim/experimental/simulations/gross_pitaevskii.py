@@ -494,7 +494,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "box_param": 0.0,
         "box_power": 4.0,
         "box_anisotropy": 1.0,
-        "box_type": "power",
+        "box_type": "woods_saxon",  # "power"
         "ws_a": 0.1,
         "ws_V0": 100.0,
         "disorder_strength": 0.0,
