@@ -395,8 +395,8 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
         # for vortex lattices to nucleate during imaginary time evolution.
         noise_amp = config.get("initial_noise", 0.05)
         if noise_amp > 0:
-            noise_real = torch.randn_like(psi.real, generator=rng)
-            noise_imag = torch.randn_like(psi.imag, generator=rng)
+            noise_real = torch.empty_like(psi.real).normal_(generator=rng)
+            noise_imag = torch.empty_like(psi.imag).normal_(generator=rng)
             psi = psi + noise_amp * torch.complex(noise_real, noise_imag)
             psi = psi / torch.sqrt(torch.sum(torch.abs(psi) ** 2) * simulator.dx**2)
 
@@ -438,6 +438,15 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
         imaginary_time_steps = int(config.get("imaginary_time_steps", 0))
 
         if imaginary_time_steps > 0:
+            imaginary_time_dt = float(config.get("imaginary_time_dt", dt))
+            if imaginary_time_dt != dt:
+                simulator.dt = imaginary_time_dt
+                # Recompute imaginary-time kinetic propagator with new dt
+                kin_E = 0.5 * (simulator.KX.real**2 + simulator.KY.real**2)
+                simulator.exp_K_it = torch.exp(-kin_E * simulator.dt).to(
+                    torch.complex64
+                )
+
             for _ in range(imaginary_time_steps):
                 V_init = generate_complex_potential(
                     simulator.X,
@@ -448,6 +457,10 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
                     rng=rng,
                 )
                 psi = simulator.step(psi, V_init, g, Omega=Omega, imaginary_time=True)
+
+            if imaginary_time_dt != dt:
+                # Restore original real-time dt (real-time exp_K was untouched)
+                simulator.dt = dt
 
         while t < T - 1e-12:
             t_mid = t + 0.5 * dt
@@ -511,6 +524,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "Omega": 0.0,
         "imaginary_time": False,
         "imaginary_time_steps": 0,
+        "imaginary_time_dt": 0.005,
         "initial_noise": 0.05,
     }
 

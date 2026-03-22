@@ -45,7 +45,8 @@ parameters_range:
   kx0: [0.0, 0.0]
   ky0: [0.0, 0.0]
   imaginary_time: [0, 0]
-  imaginary_time_steps: [5000, 5000]
+  imaginary_time_steps: [8000, 8000]
+  imaginary_time_dt: [0.05, 0.05]      # 10x larger learning rate safely allowed!
   initial_noise: [0.05, 0.05]
   g: [100.0, 800.0]
   disorder_strength: [0.0, 0.0]
