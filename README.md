@@ -1,4 +1,4 @@
-# autosim
+# AutoSim <img src="https://raw.githubusercontent.com/alan-turing-institute/autosim/refs/heads/main/AS.png" align="right" height="138" />
 Lots of Simulations
 
 ## Installation
