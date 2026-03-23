@@ -1,0 +1,54 @@
+# Clean vortex wake shedding behind a moving optical obstacle ("laser spoon").
+#
+# Phase 1: Finds the pure stationary ground state of the condensate within
+#   a non-rotating trap (Omega=0). The "laser spoon" acts as a stationary
+#   pinning defect during this phase.
+# 
+# Phase 2: The Gaussian obstacle (the "laser spoon") begins moving through the
+#   condensate at `spoon_speed`. When the speed exceeds the local speed of sound
+#   (the Landau critical velocity), it sheds vortex-antivortex pairs, creating
+#   a quantum von Kármán vortex street.
+#   Crucially, Omega=0 eliminates the bicubic interpolation artifact and provides
+#   perfectly clean, unitary dynamics suitable for AI modeling.
+#
+# References:
+#   Kwon, W. J., et al. "Observation of von Kármán vortex street in an atomic superfluid gas."
+#   Phys. Rev. Lett. 117, 245301 (2016). DOI: 10.1103/PhysRevLett.117.245301
+#   Neely, T. W., et al. "Observation of vortex dipoles in an oblate Bose-Einstein condensate."
+#   Phys. Rev. Lett. 104, 160401 (2010). DOI: 10.1103/PhysRevLett.104.160401
+_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+return_timeseries: true
+log_level: warning
+output_names: [density, real, imag]
+n: 64
+L: 10.0
+T: 16.05
+dt: 0.005
+snapshot_dt: 0.05
+skip_nt: 0
+random_seed: 42
+box_type: woods_saxon
+parameters_range:
+  wx: [0.9, 1.2]
+  wy: [0.9, 1.2]
+  box_param: [0.0, 0.0]  # Standard harmonic trap is fine for wake shedding
+  ws_a: [0.15, 0.15]
+  ws_V0: [200.0, 200.0]
+  box_anisotropy: [1.0, 1.0] # Perfectly symmetric
+  width: [0.9, 1.1]
+  x0: [0.0, 0.0]
+  y0: [0.0, 0.0]
+  kx0: [0.0, 0.0]
+  ky0: [0.0, 0.0]
+  imaginary_time: [0, 0]
+  imaginary_time_steps: [1000, 1000] # Find pure stationary BEC state first
+  initial_noise: [0.0, 0.0] # No macroscopic noise needed for obstacle wakes
+  g: [50.0, 100.0]
+  disorder_strength: [0.0, 0.0]
+  disorder_radius: [1.0, 1.0]
+  disorder_time_dependent: [0, 0]
+  spoon_strength: [2.5, 6.0]
+  spoon_speed: [1.0, 2.5] # V > critical velocity causes shedding
+  spoon_width: [0.12, 0.22]
+  spoon_radius: [1.2, 1.9]
+  Omega: [0.0, 0.0] # No grid rotation, perfectly clean PDEs!
