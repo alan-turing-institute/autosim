@@ -1,0 +1,50 @@
+# Moiré Lattice GPE Configuration
+#
+# Simulates a BEC expanding or rotating within a twisted bilayer optical lattice.
+# The Moiré pattern acts as a complex external periodic crystalline potential.
+# This setup is strongly connected to modern analog quantum simulation of 
+# twisted bilayer graphene (magic angle) and flat band physics using cold atoms.
+#
+# Regime: Omega=0 (no macroscopic rotation) or moderate Omega, but highly structured
+# Moiré potential creates localized density peaks and fractional vortex pinning.
+#
+# References:
+#   Meng, Z., et al. "Atomic Bose-Einstein condensate in twisted-bilayer optical lattices."
+#     Nature 615, 231-236 (2023). DOI: 10.1038/s41586-023-05695-4
+#   Gonzalez-Tudela, A., & Cirac, J. I. "Cold atoms in twisted-bilayer optical potentials."
+#     Phys. Rev. A 100, 053604 (2019). DOI: 10.1103/PhysRevA.100.053604
+#
+_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+return_timeseries: true
+log_level: warning
+output_names: [density, real, imag]
+n: 64
+L: 10.0
+T: 16.05
+dt: 0.005
+snapshot_dt: 0.05
+skip_nt: 0
+random_seed: 42
+box_type: woods_saxon
+parameters_range:
+  wx: [1.0, 1.0] # Weak harmonic trap to hold it together
+  wy: [1.0, 1.0]
+  box_param: [0.0, 0.0] 
+  width: [3.0, 3.0] # Broad initial state to cover many lattice sites
+  x0: [0.0, 0.0]
+  y0: [0.0, 0.0]
+  kx0: [0.0, 0.0]
+  ky0: [0.0, 0.0]
+  imaginary_time: [0, 0]
+  imaginary_time_steps: [4000, 4000] # Relax into the Moiré superlattice
+  initial_noise: [0.05, 0.05]
+  g: [20.0, 80.0]
+  disorder_strength: [0.0, 0.0]
+  spoon_strength: [0.0, 0.0]
+  Omega: [0.0, 0.1] # Zero or slow rotation to observe pinning
+  exact_trap_rotation: [1, 1]
+  
+  # Moiré Parameters
+  moire_strength: [100.0, 250.0] # Deep optical lattice
+  moire_k: [9.42, 12.56] # Lattice spacing (3*pi or 4*pi)
+  moire_angle: [0.08, 0.18] # Small twist angle (e.g., ~5-10 degrees) creates large super-cells

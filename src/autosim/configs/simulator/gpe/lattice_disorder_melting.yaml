@@ -1,0 +1,56 @@
+# Quantum Melting of a Vortex Lattice via Spatial Disorder
+#
+# Simulates vortex pinning and lattice melting in a rotating BEC.
+# Phase 1: Imaginary-time evolution converges to the rotating ground state
+#   (an ordered Abrikosov vortex lattice) at angular velocity Omega.
+# Phase 2: Real-time evolution with exact_trap_rotation=1 (no interpolation).
+#   The lattice rotates rigidly but scrapes against a stationary optical speckle
+#   field, which pins individual vortices and tears apart the crystalline order.
+#   Combined with mild trap anisotropy, this drives the lattice into a disordered
+#   "vortex liquid" state — sustained 2D quantum turbulence.
+#
+# This setup directly mirrors the Tung et al. (2006) experiment at JILA/Colorado.
+#
+# References:
+#   Tung, S., et al. "Observation of vortex pinning in Bose-Einstein condensates."
+#     Phys. Rev. Lett. 97, 240402 (2006). DOI: 10.1103/PhysRevLett.97.240402
+#   Lye, J. E., Fallani, L., et al. "Bose-Einstein condensate in a random potential."
+#     Phys. Rev. Lett. 95, 070401 (2005). DOI: 10.1103/PhysRevLett.95.070401
+#   Henn, E. A. L., et al. "Emergence of turbulence in an oscillating Bose-Einstein condensate."
+#     Phys. Rev. Lett. 103, 045301 (2009). DOI: 10.1103/PhysRevLett.103.045301
+_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+return_timeseries: true
+log_level: warning
+output_names: [density, real, imag]
+n: 64
+L: 10.0
+T: 16.05
+dt: 0.005
+snapshot_dt: 0.05
+skip_nt: 0
+random_seed: 42
+box_type: woods_saxon
+parameters_range:
+  wx: [0.0, 0.0]
+  wy: [0.0, 0.0]
+  box_param: [0.0039, 0.0039]
+  ws_a: [0.15, 0.15]
+  ws_V0: [200.0, 200.0]
+  box_anisotropy: [1.20, 1.35] # Moderate oval drives quadrupole stress
+  width: [1.0, 1.0]
+  x0: [0.0, 0.0]
+  y0: [0.0, 0.0]
+  kx0: [0.0, 0.0]
+  ky0: [0.0, 0.0]
+  imaginary_time: [0, 0]
+  imaginary_time_steps: [8000, 8000]
+  imaginary_time_dt: [0.05, 0.05]
+  initial_noise: [0.05, 0.05]
+  g: [100.0, 400.0]
+  disorder_strength: [3.0, 8.0] # Strong stationary speckle pins and drags vortices
+  disorder_radius: [0.6, 1.0] # Tight correlation length for sharper pinning sites
+  disorder_time_dependent: [0, 0] # Must be stationary to provide friction
+  spoon_strength: [0.0, 0.0] # No laser obstacle — disorder only, matching Tung et al.
+  spoon_speed: [0.0, 0.0]
+  Omega: [0.80, 1.0] # Fast rotation for dense lattice under centrifugal stress
+  exact_trap_rotation: [1, 1]

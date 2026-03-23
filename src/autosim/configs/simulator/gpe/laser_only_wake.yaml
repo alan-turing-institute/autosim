@@ -1,21 +1,54 @@
-# Clean vortex wake shedding behind a moving optical obstacle ("laser spoon").
+# =============================================================================
+# Quantum von Kármán Vortex Street: Moving Obstacle in a Uniform BEC
+# =============================================================================
 #
-# Phase 1: Finds the pure stationary ground state of the condensate within
-#   a non-rotating trap (Omega=0). The "laser spoon" acts as a stationary
-#   pinning defect during this phase.
-# 
-# Phase 2: The Gaussian obstacle (the "laser spoon") begins moving through the
-#   condensate at `spoon_speed`. When the speed exceeds the local speed of sound
-#   (the Landau critical velocity), it sheds vortex-antivortex pairs, creating
-#   a quantum von Kármán vortex street.
-#   Crucially, Omega=0 eliminates the bicubic interpolation artifact and provides
-#   perfectly clean, unitary dynamics suitable for AI modeling.
+# A focused laser beam ("spoon") orbits through a stationary BEC confined in a
+# flat-bottomed optical box trap. When the obstacle speed exceeds the Landau
+# critical velocity v_c, it sheds quantised vortex-antivortex pairs, producing
+# a quantum analogue of the classical von Kármán vortex street.
+#
+# Applications:
+#   1. Atomtronics — the critical velocity v_c is the atomic analogue of the
+#      critical current in a superconducting Josephson junction. Predicting v_c
+#      as a function of obstacle geometry is essential for atomtronic circuit design.
+#   2. Quantum Sensing — the wake pattern encodes information about the local
+#      condensate density and interaction strength. An AI surrogate that inverts
+#      "observed wake → local parameters" provides a fast sensor readout pipeline.
+#   3. Superfluid Reynolds Number — the laminar-to-turbulent wake transition
+#      mirrors classical drag physics, but the governing dimensionless parameter
+#      in quantum fluids is still an open question (Kwon 2016, Lim 2022).
+#
+# Why this is a strong AI emulator benchmark:
+#   - Continuously driven: the spoon keeps shedding, creating sustained rich
+#     spatiotemporal structure — no decay-to-boring-equilibrium problem.
+#   - Mixed difficulty: sound propagation (global, spectral, suits FNO) plus
+#     vortex nucleation events (local, topological, suits ViT).
+#   - Clear inverse problem: map spoon_speed/width/strength → v_c, shedding
+#     frequency, and wake regularity via gradient-based optimisation on the
+#     neural surrogate, which is impossible with the non-differentiable FFT solver.
+#
+# Phase 1: Imaginary-time evolution converges to a clean, vortex-free ground
+#   state inside the uniform box trap. The stationary spoon sits inside the
+#   condensate as a density dip.
+# Phase 2: Real-time evolution. The spoon begins orbiting. Omega=0 throughout,
+#   so there is zero grid rotation and zero interpolation — perfectly clean,
+#   unitary PDE dynamics.
 #
 # References:
-#   Kwon, W. J., et al. "Observation of von Kármán vortex street in an atomic superfluid gas."
-#   Phys. Rev. Lett. 117, 245301 (2016). DOI: 10.1103/PhysRevLett.117.245301
-#   Neely, T. W., et al. "Observation of vortex dipoles in an oblate Bose-Einstein condensate."
-#   Phys. Rev. Lett. 104, 160401 (2010). DOI: 10.1103/PhysRevLett.104.160401
+#   Kwon, W. J., et al. "Observation of von Kármán vortex street in an atomic
+#     superfluid gas." Phys. Rev. Lett. 117, 245301 (2016).
+#     DOI: 10.1103/PhysRevLett.117.245301
+#   Neely, T. W., et al. "Observation of vortex dipoles in an oblate Bose-Einstein
+#     condensate." Phys. Rev. Lett. 104, 160401 (2010).
+#     DOI: 10.1103/PhysRevLett.104.160401
+#   Raman, C., et al. "Evidence for a critical velocity in a Bose-Einstein
+#     condensed gas." Phys. Rev. Lett. 83, 2502 (1999).
+#     DOI: 10.1103/PhysRevLett.83.2502
+#   Lim, Y., et al. "Vortex shedding frequency of a moving obstacle in a
+#     Bose-Einstein condensate." New J. Phys. 24, 083020 (2022).
+#     DOI: 10.1088/1367-2630/ac8656
+#
+# =============================================================================
 _target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
 return_timeseries: true
 log_level: warning
@@ -29,26 +62,52 @@ skip_nt: 0
 random_seed: 42
 box_type: woods_saxon
 parameters_range:
-  wx: [0.9, 1.2]
-  wy: [0.9, 1.2]
-  box_param: [0.0, 0.0]  # Standard harmonic trap is fine for wake shedding
-  ws_a: [0.15, 0.15]
-  ws_V0: [200.0, 200.0]
-  box_anisotropy: [1.0, 1.0] # Perfectly symmetric
-  width: [0.9, 1.1]
+  # --- Trap geometry ---
+  wx: [0.0, 0.0]           # No harmonic component — flat box only
+  wy: [0.0, 0.0]
+  box_param: [0.0039, 0.0039]  # box_param>0 activates Woods-Saxon walls
+  ws_a: [0.15, 0.15]           # Wall steepness (smaller = sharper wall)
+  ws_V0: [200.0, 200.0]        # Wall height (must be >> chemical potential mu=g*n)
+  box_anisotropy: [1.0, 1.0]   # Perfectly circular trap
+
+  # --- Initial wavefunction ---
+  width: [1.5, 2.0]    # Broad Gaussian fills the box uniformly after cooling
   x0: [0.0, 0.0]
   y0: [0.0, 0.0]
   kx0: [0.0, 0.0]
   ky0: [0.0, 0.0]
+
+  # --- Phase 1: imaginary-time cooling ---
   imaginary_time: [0, 0]
-  imaginary_time_steps: [1000, 1000] # Find pure stationary BEC state first
-  initial_noise: [0.0, 0.0] # No macroscopic noise needed for obstacle wakes
-  g: [50.0, 100.0]
+  imaginary_time_steps: [2000, 2000]  # Long enough for clean ground state
+  imaginary_time_dt: [0.05, 0.05]
+  initial_noise: [0.0, 0.0]          # No noise needed — obstacle seeds all dynamics
+
+  # --- Interaction strength ---
+  # g sets the speed of sound c_s = sqrt(g * n_peak).
+  # With box radius R~4.0, condensate area A~50, n_peak ~ 1/A ~ 0.02:
+  #   g=80  → c_s ~ 1.3    g=200 → c_s ~ 2.0
+  # The spoon_speed range below spans both sub- and super-critical regimes.
+  g: [80.0, 200.0]
+
+  # --- Disorder (off) ---
   disorder_strength: [0.0, 0.0]
   disorder_radius: [1.0, 1.0]
   disorder_time_dependent: [0, 0]
-  spoon_strength: [2.5, 6.0]
-  spoon_speed: [1.0, 2.5] # V > critical velocity causes shedding
-  spoon_width: [0.12, 0.22]
-  spoon_radius: [1.2, 1.9]
-  Omega: [0.0, 0.0] # No grid rotation, perfectly clean PDEs!
+
+  # --- Moving obstacle (the "laser spoon") ---
+  # spoon_strength: obstacle height relative to mu. Values > mu are "impenetrable"
+  #   (hard wall, like Kwon 2016), values < mu are "penetrable" (soft bump, like Lim 2022).
+  #   Range covers both regimes for dataset diversity.
+  spoon_strength: [3.0, 8.0]
+  # spoon_speed: must exceed v_c for shedding. With c_s ~ 1.3-2.0, this range
+  #   ensures some samples are sub-critical (laminar) and some are well above (turbulent).
+  spoon_speed: [1.0, 3.0]
+  # spoon_width: Gaussian 1/e radius. Healing length xi = 1/sqrt(g*n) ~ 0.5-0.9.
+  #   Obstacle comparable to xi gives cleanest dipole shedding.
+  spoon_width: [0.20, 0.45]
+  # spoon_radius: orbital radius within box (R_box ~ 4.0). Must be well inside walls.
+  spoon_radius: [1.2, 2.2]
+
+  # --- Rotation (off) ---
+  Omega: [0.0, 0.0]  # No rotation: perfectly clean, no interpolation artifacts

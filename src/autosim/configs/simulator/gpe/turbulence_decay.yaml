@@ -1,0 +1,64 @@
+# Turbulence Decay in a Uniform Box Trap
+#
+# Simulates free decay of 2D quantum turbulence following vortex injection.
+# Phase 1 (The Quench): We apply massive initial quantum noise and use only a VERY 
+#   brief imaginary-time cooling phase. This mimics the Kibble-Zurek mechanism, 
+#   rapidly quenching the gas across the transition to leave behind a dense, highly 
+#   populated tangle of both vortices AND antivortices (+ and - charges).
+# Phase 2 (Free Decay): Real-time evolution in a perfectly circular, rigid box 
+#   with zero rotation and zero forcing. The conservative GPE physics takes over.
+#   Opposite-sign vortices act like matter and antimatter—they attract and annihilate,
+#   emitting blasts of sound. Meanwhile, like-sign vortices slowly group together 
+#   (the inverse energy cascade) and the turbulence visually "decays."
+#
+# The key open question: does the decay follow classical Kolmogorov scaling, or
+# a distinct quantum point-vortex mechanism? This is actively debated.
+#
+# Emulator advantage: an AI surrogate enables fast gradient-based inverse problems
+# (reconstructing initial vortex configurations from late-time snapshots) and rapid
+# parameter sweeps over g and initial Omega to map out scaling exponents.
+#
+# References:
+#   Gauthier, G., et al. "Giant vortex clusters in a two-dimensional quantum fluid."
+#     Science 364, 1264-1267 (2019). DOI: 10.1126/science.aat5718
+#   Johnstone, S. P., et al. "Evolution of large-scale flow from turbulence in a
+#     two-dimensional superfluid." Science 364, 1267-1271 (2019).
+#     DOI: 10.1126/science.aat5793
+#   Fetter, A. L. "Rotating trapped Bose-Einstein condensates."
+#     Rev. Mod. Phys. 81, 647 (2009). DOI: 10.1103/RevModPhys.81.647
+_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+return_timeseries: true
+log_level: warning
+output_names: [density, real, imag]
+n: 64
+L: 10.0
+T: 16.05
+dt: 0.005
+snapshot_dt: 0.05
+skip_nt: 0
+random_seed: 42
+box_type: woods_saxon
+parameters_range:
+  wx: [0.0, 0.0]
+  wy: [0.0, 0.0]
+  box_param: [0.0039, 0.0039]
+  ws_a: [0.15, 0.15]
+  ws_V0: [200.0, 200.0]
+  box_anisotropy: [1.0, 1.0] # Perfectly circular: spinning circle = stationary circle
+  width: [1.0, 1.0]
+  x0: [0.0, 0.0]
+  y0: [0.0, 0.0]
+  kx0: [0.0, 0.0]
+  ky0: [0.0, 0.0]
+  imaginary_time: [0, 0]
+  imaginary_time_steps: [50, 150] # Extremely short cooling phase to freeze in the tangle
+  imaginary_time_dt: [0.05, 0.05]
+  initial_noise: [2.0, 5.0] # Massive initial noise to seed the Kibble-Zurek dipoles
+  g: [200.0, 600.0] # Strong repulsion for sharp vortex cores
+  disorder_strength: [0.0, 0.0]
+  disorder_radius: [1.0, 1.0]
+  disorder_time_dependent: [0, 0]
+  spoon_strength: [0.0, 0.0] # No external forcing: pure free decay
+  spoon_speed: [0.0, 0.0]
+  Omega: [0.0, 0.0] # No rotation needed: we want a stationary dipole gas
+  exact_trap_rotation: [1, 1]

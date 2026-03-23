@@ -9,7 +9,7 @@ from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
 
-def generate_complex_potential(
+def generate_complex_potential(  # noqa: PLR0915
     X: torch.Tensor,
     Y: torch.Tensor,
     config: dict[str, Any],
@@ -27,12 +27,21 @@ def generate_complex_potential(
         static_disorder: Optional precomputed stationary disorder field.
         rng: Random number generator for spatial disorder.
     """
+    trap_Omega = float(config.get("trap_Omega", 0.0))
+    X_trap, Y_trap = X, Y
+    if trap_Omega != 0.0:
+        theta = trap_Omega * t
+        cos_t = math.cos(theta)
+        sin_t = math.sin(theta)
+        X_trap = X * cos_t + Y * sin_t
+        Y_trap = -X * sin_t + Y * cos_t
+
     # 1. Base Geometry (Anisotropic Trap)
     # wx, wy control the "squish", box_param adds steep walls.
     wx = config.get("wx", 1.0)
     wy = config.get("wy", 1.0)
 
-    V_base = 0.5 * (wx**2 * X**2 + wy**2 * Y**2)
+    V_base = 0.5 * (wx**2 * X_trap**2 + wy**2 * Y_trap**2)
 
     box_param = float(config.get("box_param", 0.0))
     if box_param > 0:
@@ -43,14 +52,32 @@ def generate_complex_potential(
         R_wall = (1.0 / box_param) ** 0.25
 
         if box_type == "power":
-            term_x = (X / R_wall) ** box_power
-            term_y = (Y / (R_wall * box_anisotropy)) ** box_power
+            term_x = (X_trap / R_wall) ** box_power
+            term_y = (Y_trap / (R_wall * box_anisotropy)) ** box_power
             V_base += term_x + term_y
         elif box_type == "woods_saxon":
             ws_a = float(config.get("ws_a", 0.1))
             ws_V0 = float(config.get("ws_V0", 100.0))
-            r_eff = torch.sqrt(X**2 + (Y / box_anisotropy) ** 2)
+            r_eff = torch.sqrt(X_trap**2 + (Y_trap / box_anisotropy) ** 2)
             V_base += ws_V0 / (1.0 + torch.exp(-(r_eff - R_wall) / ws_a))
+
+    # 1.5 Add Moiré Optical Lattice
+    moire_strength = float(config.get("moire_strength", 0.0))
+    if moire_strength > 0:
+        moire_k = float(config.get("moire_k", 2.0 * math.pi))
+        moire_angle = float(config.get("moire_angle", 0.1))  # Twist angle
+
+        # Lattice 1 (Aligned)
+        V_lat1 = torch.cos(moire_k * X_trap) ** 2 + torch.cos(moire_k * Y_trap) ** 2
+
+        # Lattice 2 (Twisted)
+        cos_m = math.cos(moire_angle)
+        sin_m = math.sin(moire_angle)
+        X_twist = X_trap * cos_m + Y_trap * sin_m
+        Y_twist = -X_trap * sin_m + Y_trap * cos_m
+        V_lat2 = torch.cos(moire_k * X_twist) ** 2 + torch.cos(moire_k * Y_twist) ** 2
+
+        V_base += moire_strength * (V_lat1 + V_lat2)
 
     # 2. Add Spatial Disorder (Optical Speckle)
     V_disorder = torch.zeros_like(X)
@@ -434,6 +461,13 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
         t = 0.0
 
         Omega = float(config.get("Omega", 0.0))
+        exact_trap_rotation = bool(config.get("exact_trap_rotation", False))
+
+        real_time_Omega = Omega
+        if exact_trap_rotation:
+            config["trap_Omega"] = Omega
+            real_time_Omega = 0.0
+
         imaginary_time = bool(config.get("imaginary_time", False))
         imaginary_time_steps = int(config.get("imaginary_time_steps", 0))
 
@@ -472,7 +506,9 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
                 static_disorder=static_disorder,
                 rng=rng,
             )
-            psi = simulator.step(psi, V, g, Omega=Omega, imaginary_time=imaginary_time)
+            psi = simulator.step(
+                psi, V, g, Omega=real_time_Omega, imaginary_time=imaginary_time
+            )
             t += dt
 
             if return_timeseries:
@@ -522,10 +558,14 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "kx0": 0.0,
         "ky0": 0.0,
         "Omega": 0.0,
+        "exact_trap_rotation": False,
         "imaginary_time": False,
         "imaginary_time_steps": 0,
         "imaginary_time_dt": 0.005,
         "initial_noise": 0.05,
+        "moire_strength": 0.0,
+        "moire_k": 6.2831853,
+        "moire_angle": 0.1,
     }
 
     _ALLOWED_PARAMETER_NAMES: ClassVar[tuple[str, ...]] = tuple(
@@ -535,6 +575,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
     # Per-parameter post-processors applied after float sampling.
     # Parameters not listed here are kept as plain floats.
     _PARAM_CONVERTERS: ClassVar[dict[str, Callable[[float], Any]]] = {
+        "exact_trap_rotation": lambda v: bool(round(v)),
         "imaginary_time": lambda v: bool(round(v)),
         "imaginary_time_steps": lambda v: round(v),
     }
