@@ -41,20 +41,20 @@ box_type: woods_saxon
 parameters_range:
   wx: [0.0, 0.0]
   wy: [0.0, 0.0]
-  box_param: [0.0039, 0.0039]
+  box_param: [0.003, 0.003]
   ws_a: [0.15, 0.15]
   ws_V0: [200.0, 200.0]
   box_anisotropy: [1.0, 1.0] # Perfectly circular: spinning circle = stationary circle
-  width: [1.0, 1.0]
+  width: [3.5, 4.5]
   x0: [0.0, 0.0]
   y0: [0.0, 0.0]
   kx0: [0.0, 0.0]
   ky0: [0.0, 0.0]
   imaginary_time: [0, 0]
-  imaginary_time_steps: [50, 150] # Extremely short cooling phase to freeze in the tangle
-  imaginary_time_dt: [0.05, 0.05]
-  initial_noise: [2.0, 5.0] # Massive initial noise to seed the Kibble-Zurek dipoles
-  g: [200.0, 600.0] # Strong repulsion for sharp vortex cores
+  imaginary_time_steps: [0, 3] # Minimal cooling preserves topological defects
+  imaginary_time_dt: [0.01, 0.01] # Gentler steps when cooling does occur
+  initial_noise: [8.0, 15.0] # Dense phase windings across domain
+  g: [200.0, 500.0] # Higher g = smaller healing length = more vortices fit
   disorder_strength: [0.0, 0.0]
   disorder_radius: [1.0, 1.0]
   disorder_time_dependent: [0, 0]

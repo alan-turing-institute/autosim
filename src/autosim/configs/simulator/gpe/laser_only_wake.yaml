@@ -1,16 +1,18 @@
 # =============================================================================
-# Quantum von Kármán Vortex Street: Moving Obstacle in a Uniform BEC
+# Quantum Dispersive Shock Waves: Macroscopic Supersonic Obstacle
 # =============================================================================
 #
-# A focused laser beam ("spoon") orbits through a stationary BEC confined in a
-# flat-bottomed optical box trap. When the obstacle speed exceeds the Landau
-# critical velocity v_c, it sheds quantised vortex-antivortex pairs, producing
-# a quantum analogue of the classical von Kármán vortex street.
+# A massive, focused laser beam ("plough") orbits through a stationary BEC 
+# confined in a flat-bottomed optical box trap. Because the obstacle is much
+# wider than the healing length and moves at highly supersonic speeds (v >> c_s),
+# it generates system-spanning Quantum Dispersive Shock Waves (DSWs) and
+# Bogoliubov-Čerenkov radiation (Mach cones). As these massive 1D/2D acoustic
+# shocks break down, they nucleate into thousands of 2D vortices.
 #
 # Applications:
-#   1. Atomtronics — the critical velocity v_c is the atomic analogue of the
-#      critical current in a superconducting Josephson junction. Predicting v_c
-#      as a function of obstacle geometry is essential for atomtronic circuit design.
+#   1. Atomtronics — when superfluid currents hit macroscopic bends or defects 
+#      in circuits, they shatter into DSWs. Predicting the laminar-to-DSW transition
+#      is essential for robust circuit design.
 #   2. Quantum Sensing — the wake pattern encodes information about the local
 #      condensate density and interaction strength. An AI surrogate that inverts
 #      "observed wake → local parameters" provides a fast sensor readout pipeline.
@@ -18,14 +20,14 @@
 #      mirrors classical drag physics, but the governing dimensionless parameter
 #      in quantum fluids is still an open question (Kwon 2016, Lim 2022).
 #
-# Why this is a strong AI emulator benchmark:
-#   - Continuously driven: the spoon keeps shedding, creating sustained rich
-#     spatiotemporal structure — no decay-to-boring-equilibrium problem.
-#   - Mixed difficulty: sound propagation (global, spectral, suits FNO) plus
-#     vortex nucleation events (local, topological, suits ViT).
-#   - Clear inverse problem: map spoon_speed/width/strength → v_c, shedding
-#     frequency, and wake regularity via gradient-based optimisation on the
-#     neural surrogate, which is impossible with the non-differentiable FFT solver.
+# Why this is the ultimate AI emulator benchmark:
+#   - Solves the FNO Spectral Bias: Standard FNOs blur out tiny point vortices 
+#     because they are high-frequency local defects. But DSWs and Mach cones are
+#     massive, global, wave-dominated phenomena (low-to-mid frequency) that FNOs 
+#     can learn beautifully. This setup has BOTH global waves (for FNOs) and 
+#     local vortex cascades (for ViTs).
+#   - Clear inverse problem: map spoon_speed/width/strength -> Mach cone angle 
+#     and DSW breakdown distance via gradient-based optimisation on the surrogate.
 #
 # Phase 1: Imaginary-time evolution converges to a clean, vortex-free ground
 #   state inside the uniform box trap. The stationary spoon sits inside the
@@ -35,6 +37,9 @@
 #   unitary PDE dynamics.
 #
 # References:
+#   Hoefer, M. A., et al. "Dispersive and classical shock waves in Bose-Einstein
+#     condensates and gas dynamics." Phys. Rev. A 74, 023623 (2006).
+#     DOI: 10.1103/PhysRevA.74.023623
 #   Kwon, W. J., et al. "Observation of von Kármán vortex street in an atomic
 #     superfluid gas." Phys. Rev. Lett. 117, 245301 (2016).
 #     DOI: 10.1103/PhysRevLett.117.245301
@@ -65,7 +70,8 @@ parameters_range:
   # --- Trap geometry ---
   wx: [0.0, 0.0]           # No harmonic component — flat box only
   wy: [0.0, 0.0]
-  box_param: [0.0039, 0.0039]  # box_param>0 activates Woods-Saxon walls
+  # box_param: [0.0039, 0.0039]  # box_param>0 activates Woods-Saxon walls
+  box_param: [0.002, 0.002]  # box_param>0 activates Woods-Saxon walls
   ws_a: [0.15, 0.15]           # Wall steepness (smaller = sharper wall)
   ws_V0: [200.0, 200.0]        # Wall height (must be >> chemical potential mu=g*n)
   box_anisotropy: [1.0, 1.0]   # Perfectly circular trap
@@ -95,18 +101,18 @@ parameters_range:
   disorder_radius: [1.0, 1.0]
   disorder_time_dependent: [0, 0]
 
-  # --- Moving obstacle (the "laser spoon") ---
-  # spoon_strength: obstacle height relative to mu. Values > mu are "impenetrable"
-  #   (hard wall, like Kwon 2016), values < mu are "penetrable" (soft bump, like Lim 2022).
-  #   Range covers both regimes for dataset diversity.
-  spoon_strength: [3.0, 8.0]
-  # spoon_speed: must exceed v_c for shedding. With c_s ~ 1.3-2.0, this range
-  #   ensures some samples are sub-critical (laminar) and some are well above (turbulent).
-  spoon_speed: [1.0, 3.0]
-  # spoon_width: Gaussian 1/e radius. Healing length xi = 1/sqrt(g*n) ~ 0.5-0.9.
-  #   Obstacle comparable to xi gives cleanest dipole shedding.
-  spoon_width: [0.20, 0.45]
-  # spoon_radius: orbital radius within box (R_box ~ 4.0). Must be well inside walls.
+  # --- Moving obstacle (the "macroscopic plough") ---
+  # spoon_strength: must be > mu to act as a hard barrier pushing a massive wave
+  spoon_strength: [8.0, 15.0]
+  # spoon_speed: highly supersonic (c_s ~ 1.3-2.0, speed is 3-6) to ensure 
+  #   a wide, dramatic Mach cone and massive shock fronts.
+  spoon_speed: [3.0, 6.0]
+  # spoon_width: The critical change! Gaussian 1/e radius is now [0.8, 1.5],
+  #   meaning the obstacle is larger than the healing length (~0.5) and takes up
+  #   a significant fraction of the box. This shifts the physics from microscopic
+  #   point-vortex shedding to macroscopic Dispersive Shock Waves.
+  spoon_width: [0.8, 1.5]
+  # spoon_radius: must clear the walls. Box R~4.0.
   spoon_radius: [1.2, 2.2]
 
   # --- Rotation (off) ---
