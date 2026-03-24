@@ -1,6 +1,6 @@
 import math
 from collections.abc import Callable
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 import torch
 import torch.nn.functional as F
@@ -108,8 +108,13 @@ def generate_complex_potential(  # noqa: PLR0915
         speed = config.get("spoon_speed", 1.0)
         spoon_width = config.get("spoon_width", 0.5)
 
-        xs = R * math.cos(speed * t)
-        ys = R * math.sin(speed * t)
+        spoon_type = str(config.get("spoon_type", "orbit"))
+        if spoon_type == "linear":
+            xs = R * math.sin(speed * t)
+            ys = 0.0
+        else:
+            xs = R * math.cos(speed * t)
+            ys = R * math.sin(speed * t)
 
         # Gaussian obstacle
         r2 = (X - xs) ** 2 + (Y - ys) ** 2
@@ -594,6 +599,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         skip_nt: int = 0,
         random_seed: int | None = None,
         box_type: str = "woods_saxon",
+        spoon_type: Literal["orbit", "linear"] = "orbit",
     ) -> None:
         if parameters_range is None:
             # Provide some sensible defaults for complexity knobs
@@ -646,6 +652,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         self.skip_nt = skip_nt
         self.random_seed = random_seed
         self.box_type = box_type
+        self.spoon_type = spoon_type
         self._rng = (
             torch.Generator().manual_seed(random_seed)
             if random_seed is not None
@@ -662,6 +669,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         config = self._DEFAULT_SIM_PARAMS.copy()
         config.update(param_values)
         config["box_type"] = self.box_type
+        config["spoon_type"] = self.spoon_type
         return config
 
     def _forward(self, x: TensorLike) -> TensorLike:
