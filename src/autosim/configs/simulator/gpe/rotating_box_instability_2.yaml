@@ -1,0 +1,59 @@
+# Two-phase GPE: imaginary-time ground state → real-time dynamical instability.
+#
+# Phase 1: Converges to a highly stressed, dynamically unstable state (often a 
+#   giant vortex or hollow annulus) due to extreme rotational and geometric stress.
+#
+# Phase 2: Under perfectly unitary real-time evolution (exact_trap_rotation=1), the
+#   lattice is allowed to obey its physical saddle-point instability and explodes.
+#
+# Regime 1: Quadrupole Instability. High anisotropy causes the trap walls to geometrically
+#   crush the rotating lattice, parametrically driving it to chaos.
+# Regime 2: Centrifugal Instability. Omega > 1.0 causes the centrifugal potential
+#   to overcome the bulk pressure, violently throwing the fluid against the optical Box Trap.
+# 
+# References:
+#   Sinha, S., & Castin, Y. "Dynamic instability of a rotating Bose-Einstein condensate."
+#     Phys. Rev. Lett. 87, 190402 (2001). DOI: 10.1103/PhysRevLett.87.190402
+#   Simula, T. et al. "Giant vortex lattice deformations in rapidly rotating Bose-Einstein condensates."
+#     Phys. Rev. Lett. 92, 060401 (2004). DOI: 10.1103/PhysRevLett.92.060401
+#   Lundh, E., et al. "Dynamic instability of a rotating Bose-Einstein condensate."
+#     Phys. Rev. A 64, 033612 (2001). DOI: 10.1103/PhysRevA.64.033612
+_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+return_timeseries: true
+log_level: warning
+output_names: [density, real, imag]
+n: 64
+L: 10.0
+T: 16.05
+dt: 0.005
+snapshot_dt: 0.05
+skip_nt: 0
+random_seed: 42
+box_type: woods_saxon
+parameters_range:
+  wx: [0.0, 0.0]
+  wy: [0.0, 0.0]
+  # box_param: [0.0039, 0.0039]
+  box_param: [0.02, 0.02]
+  ws_a: [0.15, 0.15]
+  ws_V0: [200.0, 200.0]
+  box_anisotropy: [1.45, 1.85] # High anisotropy triggers quadrupole collapse
+  width: [1.0, 1.0]
+  x0: [0.0, 0.0]
+  y0: [0.0, 0.0]
+  kx0: [0.0, 0.0]
+  ky0: [0.0, 0.0]
+  imaginary_time: [0, 0]
+  imaginary_time_steps: [8000, 8000]
+  imaginary_time_dt: [0.05, 0.05]
+  initial_noise: [0.05, 0.05]
+  g: [100.0, 800.0]
+  disorder_strength: [0.0, 0.0]
+  disorder_radius: [1.0, 1.0]
+  disorder_time_dependent: [0, 0]
+  spoon_strength: [0.0, 0.0]
+  spoon_speed: [0.0, 0.0]
+  spoon_width: [0.18, 0.18]
+  spoon_radius: [1.5, 1.5]
+  Omega: [0.6, 2.50] # Fast rotation triggers centrifugal explosion / giant vortex
+  exact_trap_rotation: [1, 1]
