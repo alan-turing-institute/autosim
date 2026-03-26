@@ -1,3 +1,7 @@
+# NOTE: No imaginary-time cooling phase — evolution starts from an arbitrary
+# Gaussian wavepacket, not the physical ground state. This does not correspond
+# to a realistic experimental setup. Useful as a minimal-complexity baseline
+# but not as a faithful BEC experiment.
 _target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
 return_timeseries: true
 log_level: warning

@@ -1,9 +1,9 @@
 # GPE generation: normalization mean/std computed from real+imag only, then
 # the same stats applied to density, real, and imag (for correct phase reconstruction).
-# Override simulator if needed: e.g. simulator=gpe/laser_only or
-# simulator=gpe/high_complexity.
+# Override simulator if needed: e.g. simulator=gpe/laser_only_wake or
+# simulator=gpe/rotating_box_lattice.
 defaults:
-  - simulator: gross_pitaevskii_equation_2d
+  - simulator: gpe/laser_only_wake
   - _self_
 
 dataset:

@@ -49,19 +49,26 @@ uv run autosim list
 Simulator defaults now live in package configs under
 `src/autosim/configs/simulator` and can be selected via config groups.
 Nested groups are supported, so you can select configs such as
-`simulator=gpe/laser_only`.
+`simulator=gpe/laser_only_wake`.
 
 Available simulator config names include:
 `advection_diffusion`, `advection_diffusion_multichannel`, `compressible_fluid_2d`,
-`conditioned_navier_stokes_2d`, `epidemic`, `flow_problem`, `gpe/high_complexity`,
-`gpe/laser_only`, `gpe/low_complexity`, `gpe/speckle_only`,
-`gpe/vortex_lattice`, `gray_scott`, `gross_pitaevskii_equation_2d`,
+`conditioned_navier_stokes_2d`, `epidemic`, `flow_problem`,
+`gpe/laser_only_wake`, `gpe/rotating_box_lattice`,
+`gray_scott`,
 `hydrodynamics_2d`, `lattice_boltzmann`, `projectile`,
 `projectile_multioutput`, `reaction_diffusion`, `seir_simulator`,
 `shallow_water2d`.
 
-The older `gpe_ri_low_complexity` and `gpe_ri_high_complexity` presets are kept
-as legacy backups for comparison with the newer `simulator=gpe/...` regime set.
+Additional exploratory GPE configs are available under `gpe/exploratory/` for
+reference and in-progress work (note: `high_complexity` and `low_complexity`
+start from an arbitrary Gaussian, not a physical ground state):
+`gpe/exploratory/high_complexity`, `gpe/exploratory/laser_only`,
+`gpe/exploratory/lattice_disorder_melting`, `gpe/exploratory/low_complexity`,
+`gpe/exploratory/moire_lattice`, `gpe/exploratory/rotating_box_few_vortex`,
+`gpe/exploratory/rotating_box_instability`, `gpe/exploratory/rotating_box_instability_2`,
+`gpe/exploratory/rotating_box_subsonic`, `gpe/exploratory/speckle_only`,
+`gpe/exploratory/turbulence_decay`, `gpe/exploratory/vortex_lattice`.
 
 Override simulator and dataset settings from the command line via Hydra:
 
