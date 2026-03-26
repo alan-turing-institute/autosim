@@ -1,15 +1,18 @@
-# Two-phase GPE: imaginary-time ground state → real-time dynamics, vortex lattice regime.
+# Two-phase GPE: imaginary-time ground state -> real-time dynamics, rotating-box lattice regime.
 #
-# Phase 1 (imaginary_time_steps): converges to the Abrikosov vortex lattice ground state.
-#   5000 steps × dt=0.005 = 25 imaginary time units; extra steps needed at high Ω
-#   because vortex lattice ordering takes longer to emerge than single-vortex states.
-#   Ground state contains O(5–15) vortices in a triangular lattice.
-# Phase 2 (T real-time steps): free evolution from the lattice ground state.
-#   The lattice rotates rigidly in the lab frame at ≈ Ω; residual noise excites
-#   Tkachenko (lattice phonon) modes visible as slow wave-like undulations.
+# Phase 1 (imaginary_time_steps): converges to a rotating vortex-array ground state
+# in a circular Woods-Saxon box. In circular geometry, vortices arrange on concentric
+# rings; the interior can approximate triangular Abrikosov ordering.
+# Phase 2 (T real-time steps): free evolution from the prepared state. The array
+# co-rotates with the trap at about Omega; residual noise can excite slow
+# Tkachenko-like lattice modes.
 #
-# Regime: Ω ∈ [0.55, 0.75] — well above Ω_c, multiple vortices, triangular lattice.
-# Above Ω ≈ 0.75 the centrifugal term begins to expel atoms from the trap centre.
+# Regime: moderate-to-fast rotation (Omega in [0.65, 1.25]) and strong
+# interactions (g in [100, 800]) produce multi-vortex rotating states.
+# Lower Omega in this range is typically more lattice-like; higher Omega can
+# become strongly strained or partially depleted by centrifugal effects.
+# In circular box traps, ring-like shell structure appears near boundaries,
+# while the interior can approach triangular Abrikosov ordering.
 #
 # References:
 #   Abo-Shaeer, J. R., et al. "Observation of vortex lattices in Bose-Einstein condensates."
@@ -38,7 +41,7 @@ parameters_range:
   box_param: [0.0039, 0.0039]
   ws_a: [0.15, 0.15]
   ws_V0: [200.0, 200.0]
-  box_anisotropy: [1.0, 1.15] # High anisotropy squishes the lattice into 1D zig-zags
+  box_anisotropy: [1.0, 1.15]
   width: [1.0, 1.0]
   x0: [0.0, 0.0]
   y0: [0.0, 0.0]
@@ -56,4 +59,4 @@ parameters_range:
   spoon_speed: [0.0, 0.0]
   spoon_width: [0.18, 0.18]
   spoon_radius: [1.5, 1.5]
-  Omega: [0.65, 1.25] # Over 1.0 can expect supersonic rotation and giant vortex rings
+  Omega: [0.65, 1.25]

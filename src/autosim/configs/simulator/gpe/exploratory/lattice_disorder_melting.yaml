@@ -2,14 +2,17 @@
 #
 # Simulates vortex pinning and lattice melting in a rotating BEC.
 # Phase 1: Imaginary-time evolution converges to the rotating ground state
-#   (an ordered Abrikosov vortex lattice) at angular velocity Omega.
+#   (an ordered vortex lattice) at angular velocity Omega.
+#   In a circular trap, boundary shells are expected; interior ordering can
+#   approach triangular Abrikosov structure.
 # Phase 2: Real-time evolution with exact_trap_rotation=1 (no interpolation).
 #   The lattice rotates rigidly but scrapes against a stationary optical speckle
 #   field, which pins individual vortices and tears apart the crystalline order.
 #   Combined with mild trap anisotropy, this drives the lattice into a disordered
-#   "vortex liquid" state — sustained 2D quantum turbulence.
+#   "vortex liquid" state and sustained 2D turbulent dynamics.
 #
-# This setup directly mirrors the Tung et al. (2006) experiment at JILA/Colorado.
+# This setup is conceptually related to the Tung et al. (2006) pinning experiment,
+# while using a simplified 2D mean-field box-trap model.
 #
 # References:
 #   Tung, S., et al. "Observation of vortex pinning in Bose-Einstein condensates."

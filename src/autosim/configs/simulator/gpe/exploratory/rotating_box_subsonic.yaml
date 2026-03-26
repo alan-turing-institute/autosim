@@ -1,14 +1,14 @@
 # Two-phase GPE: imaginary-time ground state → real-time dynamics, subsonic regime.
 #
 # Phase 1 (imaginary_time_steps): converges to the rotating ground state.
-#   4000 steps × dt=0.005 = 20 imaginary time units; sufficient for g~80-100, low Ω.
-#   The ground state has no vortices (Ω < Ω_c); density is a smooth disk.
+#   8000 steps × imaginary_time_dt=0.05 = 400 imaginary-time units.
+#   In this low-Ω window, outcomes are mostly vortex-free or very low-vortex states.
 # Phase 2 (T real-time steps): free evolution from the prepared state.
 #   Residual noise (~0.05) left from phase 1 excites quadrupole/breathing modes,
 #   giving non-trivial dynamics even in the absence of vortices.
 #
-# Regime: Ω ∈ [0.05, 0.35] — below the critical rotation for first-vortex entry.
-# Approximate Ω_c1 ≈ 0.35–0.45 for box_param=0.2, g~80–100.
+# Regime: Ω ∈ [0.05, 0.25] — typically below first-vortex entry for this setup.
+# The precise threshold depends on geometry and interaction strength.
 #
 # References:
 #   Fetter, A. L. "Rotating trapped Bose-Einstein condensates."

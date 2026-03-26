@@ -1,22 +1,18 @@
 # Turbulence Decay in a Uniform Box Trap
 #
 # Simulates free decay of 2D quantum turbulence following vortex injection.
-# Phase 1 (The Quench): We apply massive initial quantum noise and use only a VERY 
-#   brief imaginary-time cooling phase. This mimics the Kibble-Zurek mechanism, 
-#   rapidly quenching the gas across the transition to leave behind a dense, highly 
-#   populated tangle of both vortices AND antivortices (+ and - charges).
+# Phase 1 (The Quench): large initial noise and minimal imaginary-time cooling
+#   create a dense initial field of vortices and antivortices.
 # Phase 2 (Free Decay): Real-time evolution in a perfectly circular, rigid box 
 #   with zero rotation and zero forcing. The conservative GPE physics takes over.
-#   Opposite-sign vortices act like matter and antimatter—they attract and annihilate,
-#   emitting blasts of sound. Meanwhile, like-sign vortices slowly group together 
-#   (the inverse energy cascade) and the turbulence visually "decays."
+#   Opposite-sign vortices attract and annihilate, emitting sound; like-sign
+#   vortices can cluster (inverse-cascade phenomenology) as turbulence decays.
 #
 # The key open question: does the decay follow classical Kolmogorov scaling, or
 # a distinct quantum point-vortex mechanism? This is actively debated.
 #
-# Emulator advantage: an AI surrogate enables fast gradient-based inverse problems
-# (reconstructing initial vortex configurations from late-time snapshots) and rapid
-# parameter sweeps over g and initial Omega to map out scaling exponents.
+# Emulator advantage: fast surrogate runs support inverse problems and broad
+# parameter sweeps for decay-statistics studies.
 #
 # References:
 #   Gauthier, G., et al. "Giant vortex clusters in a two-dimensional quantum fluid."

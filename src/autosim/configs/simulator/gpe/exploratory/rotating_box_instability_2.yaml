@@ -4,12 +4,12 @@
 #   giant vortex or hollow annulus) due to extreme rotational and geometric stress.
 #
 # Phase 2: Under perfectly unitary real-time evolution (exact_trap_rotation=1), the
-#   lattice is allowed to obey its physical saddle-point instability and explodes.
+#   prepared state is evolved forward and can undergo rapid instability growth.
 #
 # Regime 1: Quadrupole Instability. High anisotropy causes the trap walls to geometrically
-#   crush the rotating lattice, parametrically driving it to chaos.
+#   deform the rotating state and can drive strong mode growth.
 # Regime 2: Centrifugal Instability. Omega > 1.0 causes the centrifugal potential
-#   to overcome the bulk pressure, violently throwing the fluid against the optical Box Trap.
+#   to compete strongly with confinement, often producing annular or edge-loaded states.
 # 
 # References:
 #   Sinha, S., & Castin, Y. "Dynamic instability of a rotating Bose-Einstein condensate."

@@ -1,3 +1,5 @@
+# Exploratory speckle-only regime:
+# stationary disorder drives spatially inhomogeneous dynamics without obstacle forcing.
 _target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
 return_timeseries: true
 log_level: warning

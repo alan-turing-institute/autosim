@@ -4,7 +4,8 @@
 #
 # A focused laser beam obstacle oscillates back and forth (sinusoidally)
 # through a stationary BEC confined in a flat-bottomed optical box trap,
-# matching the protocol of Raman et al. (1999). When the instantaneous
+# in a setup conceptually aligned with obstacle-stirring experiments
+# (e.g. Raman et al. 1999). When the instantaneous
 # obstacle speed exceeds the critical velocity v_c, the superfluid response
 # transitions from laminar potential flow to periodic vortex-antivortex pair
 # shedding (a quantum von Kármán street), and at higher speeds to disordered
@@ -12,32 +13,19 @@
 # obstacle is fastest at the centre and slowest at turnaround, so a single
 # sweep can exhibit both sub- and super-critical regimes.
 #
-# The obstacle width (1.5–3.0 spatial units, ~4–7 healing lengths) places the
-# simulation in the mesoscopic regime studied numerically by Reeves et al.
-# (2015) and Sasaki et al. (2010). The superfluid Reynolds number
-# Re_s = (v - v_c)*D/kappa (Reeves et al. 2015) governs the laminar-to-
-# turbulent transition. Speeds span sub-critical to moderately supersonic
-# (v/c_s ~ 0.8–2.5), covering laminar flow, periodic shedding, and the
-# onset of disordered wakes.
-#
-# Applications:
-#   1. Quantum Sensing — the wake pattern encodes the local condensate density
-#      and interaction strength. An AI surrogate inverting "observed wake →
-#      local parameters" provides a fast experimental diagnostic pipeline.
-#   2. Superfluid Reynolds Number — Reeves et al. (2015) identified Re_s as
-#      the governing dimensionless parameter; Kwon et al. (2016) confirmed
-#      experimentally. Mapping Re_s over (g, speed, obstacle size) requires
-#      extensive simulations ideal for emulator acceleration.
-#   3. Atomtronics — superfluid flow past obstacles is central to quantum
-#      circuit design (Amico et al. 2022).
+# This parameterization targets the mesoscopic shedding regime discussed in
+# Sasaki et al. (2010), Reeves et al. (2015), and Kwon et al. (2016), covering
+# laminar flow, periodic shedding, and onset of disordered wakes.
 #
 # Phase 1: Imaginary-time evolution converges to a clean, vortex-free ground
 #   state inside the uniform box trap. The stationary obstacle sits inside
 #   the condensate as a density dip.
 # Phase 2: Real-time evolution. The obstacle begins sweeping. Omega=0
-#   throughout — zero grid rotation, perfectly clean unitary PDE dynamics.
+#   throughout, so dynamics arise from obstacle forcing rather than frame rotation.
 #
 # References:
+#   Raman, C., et al. "Evidence for a critical velocity in a Bose-Einstein condensed gas."
+#     Phys. Rev. Lett. 83, 2502 (1999). DOI: 10.1103/PhysRevLett.83.2502
 #   Frisch, T., Pomeau, Y. & Rica, S. "Transition to dissipation in a model
 #     of superflow." Phys. Rev. Lett. 69, 1644 (1992).
 #     DOI: 10.1103/PhysRevLett.69.1644
@@ -95,10 +83,7 @@ parameters_range:
   initial_noise: [0.0, 0.0]          # No noise needed — obstacle seeds all dynamics
 
   # --- Interaction strength ---
-  # g sets the speed of sound c_s = sqrt(g * n_peak).
-  # With box radius R~4.0, condensate area A~50, n_peak ~ 1/A ~ 0.02:
-  #   g=80  → c_s ~ 1.3    g=200 → c_s ~ 2.0
-  # The spoon_speed range below spans both sub- and super-critical regimes.
+  # Interaction range spans moderate to strong nonlinearity for wake formation.
   g: [80.0, 200.0]
 
   # --- Disorder (off) ---
@@ -108,32 +93,21 @@ parameters_range:
 
   # --- Moving obstacle (sinusoidal linear sweep) ---
   # spoon_type: linear gives x(t) = R*sin(omega*t), y(t) = 0.
-  # This is an oscillating laser beam along the x-axis, matching the protocol
-  # in Raman et al. (1999). spoon_speed is the angular frequency omega, NOT
+  # This is an oscillating laser obstacle along the x-axis. Raman et al. (1999)
+  # is a core critical-velocity reference in a related obstacle-flow setting.
+  # spoon_speed is the angular frequency omega, NOT
   # the physical velocity. The peak physical velocity is:
   #   v_max = spoon_radius * spoon_speed
   #
-  # Healing length xi = 1/sqrt(2*g*n) ~ 0.35-0.56 for our g and n ranges.
-  # Obstacle diameter D = 2*spoon_width ~ 3-6 spatial units ~ 5-17 xi.
-  # Reeves et al. (2015) studied D = 4-24 xi numerically; we sit in that range.
+  # Mesoscopic obstacle sizes and strengths target laminar -> shedding -> turbulent wakes.
   #
-  # spoon_strength V0/mu: with mu = g*n ~ 1.6-4.0, strength 3-8 gives
-  #   V0/mu ~ 1-5. Experiments use V0/mu ~ 0.2-2.0 (Kwon 2016, Lim 2022);
-  #   we use somewhat stronger to ensure clear shedding on this grid.
   spoon_strength: [3.0, 8.0]
 
   # spoon_speed (angular frequency omega):
-  #   v_max = R * omega. With R ~ 2.5-3.0 and omega ~ 0.5-2.0:
-  #   v_max ~ 1.25-6.0. With c_s ~ 1.3-2.0, this gives v_max/c_s ~ 0.6-4.6.
-  #   Spans sub-critical (laminar) through moderately supersonic (turbulent).
-  #   Period T_osc = 2*pi/omega ~ 3.1-12.6, giving 1-5 full sweeps in T=16.
+  #   v_max = spoon_radius * spoon_speed; this range spans subcritical and supercritical motion.
   spoon_speed: [0.5, 2.0]
 
-  # spoon_width: Gaussian 1/e radius. The selected interval [0.8, 2.5] 
-  #   ensures the simulation safely samples across a highly stable, mesoscopic physical spectrum:
-  #   D ~ 0.8-1.5: Forms a cleanly distinguishable von Kármán vortex street.
-  #   D ~ 1.5-2.5: Transitions into Dispersive Shock Waves and wave interference
-  #                (ideal for FNOs) while avoiding extreme outliers.
+  # spoon_width: Gaussian 1/e radius.
   spoon_width: [0.8, 2.5]
 
   # spoon_radius: oscillation amplitude. x(t) sweeps from -R to +R.

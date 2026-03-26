@@ -1,3 +1,5 @@
+# Exploratory rotating-trap vortex regime (harmonic + soft box contribution).
+# This config targets early-to-intermediate vortex lattice formation.
 # References for rotating traps and vortex lattices:
 # Madison, K. W., et al. "Vortex formation in a stirred Bose-Einstein condensate." 
 # Physical Review Letters 84, 806 (2000). DOI: 10.1103/PhysRevLett.84.806

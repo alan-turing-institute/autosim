@@ -1,14 +1,15 @@
 # Two-phase GPE: imaginary-time ground state → real-time dynamics, few-vortex regime.
 #
 # Phase 1 (imaginary_time_steps): converges to the rotating ground state.
-#   4000 steps × dt=0.005 = 20 imaginary time units; sufficient for g~80-100, mid Ω.
-#   Ground state contains 1–5 vortices depending on Ω and g.
+#   8000 steps × imaginary_time_dt=0.05 = 400 imaginary-time units.
+#   Typical outcomes are low vortex counts (often a few vortices), depending on Ω and g.
 # Phase 2 (T real-time steps): free evolution from the vortex ground state.
 #   Vortices precess in the lab frame and interact; excitations from residual noise
 #   produce Tkachenko-like oscillations and vortex-core dynamics.
 #
 # Regime: Ω ∈ [0.35, 0.55] — spanning first-vortex entry through a few-vortex state.
-# Approximate Ω_c1 ≈ 0.35–0.45 for box_param=0.2, g~80–100.
+# Ω_c1 is geometry- and interaction-dependent; this range straddles the onset region
+# for the configured circular Woods-Saxon box.
 #
 # References:
 #   Madison, K. W., et al. "Vortex formation in a stirred Bose-Einstein condensate."
