@@ -62,13 +62,7 @@ Available simulator config names include:
 
 Additional exploratory GPE configs are available under `gpe/exploratory/` for
 reference and in-progress work (note: `high_complexity` and `low_complexity`
-start from an arbitrary Gaussian, not a physical ground state):
-`gpe/exploratory/high_complexity`, `gpe/exploratory/laser_only`,
-`gpe/exploratory/lattice_disorder_melting`, `gpe/exploratory/low_complexity`,
-`gpe/exploratory/moire_lattice`, `gpe/exploratory/rotating_box_few_vortex`,
-`gpe/exploratory/rotating_box_instability`, `gpe/exploratory/rotating_box_instability_2`,
-`gpe/exploratory/rotating_box_subsonic`, `gpe/exploratory/speckle_only`,
-`gpe/exploratory/turbulence_decay`, `gpe/exploratory/vortex_lattice`.
+start from an arbitrary Gaussian, not a physical ground state).
 
 Override simulator and dataset settings from the command line via Hydra:
 
