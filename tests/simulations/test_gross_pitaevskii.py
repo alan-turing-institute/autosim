@@ -1,6 +1,7 @@
 import pytest
 import torch
 
+import autosim.experimental.simulations.gross_pitaevskii as gpe_module
 from autosim.experimental.simulations import GrossPitaevskiiEquation2D
 
 
@@ -87,3 +88,62 @@ def test_invalid_parameters():
     """Test initialization parameter validation."""
     with pytest.raises(ValueError, match="Unsupported parameters"):
         GrossPitaevskiiEquation2D(parameters_range={"invalid_param": (0, 1)})
+
+
+def test_fringe_score_distinguishes_fringing_from_smooth():
+    """Fringed fields should score higher than smooth fields."""
+    sim = GrossPitaevskiiEquation2D(
+        n=64,
+        L=10.0,
+        T=0.1,
+        dt=0.01,
+        return_timeseries=False,
+        log_level="error",
+    )
+
+    x = torch.linspace(-1.0, 1.0, 64)
+    X, Y = torch.meshgrid(x, x, indexing="ij")
+    smooth = torch.exp(-4.0 * (X**2 + Y**2))
+    stripes = smooth + 0.2 * torch.sin(2.0 * torch.pi * 20.0 * X)
+
+    smooth_score = sim._fringe_score_density(smooth)
+    stripes_score = sim._fringe_score_density(stripes)
+
+    assert stripes_score > smooth_score
+
+
+def test_artifact_validation_rejects_high_fringe_score_trajectory(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Artifact validation should reject trajectories with strong fringing."""
+
+    def _fake_simulate_gpe_2d(**kwargs):
+        n = int(kwargs["n"])
+        t = 6
+        x = torch.linspace(-1.0, 1.0, n)
+        X, _Y = torch.meshgrid(x, x, indexing="ij")
+        density = 0.1 + 0.05 * torch.sin(2.0 * torch.pi * 18.0 * X)
+        density = density.clamp(min=1e-6)
+        real = torch.sqrt(density)
+        imag = torch.zeros_like(real)
+        frame = torch.stack([density, real, imag], dim=-1)
+        return torch.stack([frame] * t, dim=0)
+
+    monkeypatch.setattr(gpe_module, "simulate_gpe_2d", _fake_simulate_gpe_2d)
+
+    sim = GrossPitaevskiiEquation2D(
+        n=64,
+        L=10.0,
+        T=0.1,
+        dt=0.01,
+        return_timeseries=True,
+        log_level="error",
+        artifact_validation_enabled=True,
+        artifact_validation_threshold=0.01,
+        artifact_validation_warmup_frames=0,
+        artifact_validation_tail_frames=6,
+    )
+
+    x = sim.sample_inputs(1, random_seed=0)
+    with pytest.raises(ValueError, match="fringe artifact score"):
+        sim._forward(x)

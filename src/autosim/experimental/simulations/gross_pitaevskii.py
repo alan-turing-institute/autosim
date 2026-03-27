@@ -585,6 +585,20 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "imaginary_time_steps": lambda v: round(v),
     }
 
+    @staticmethod
+    def _validate_artifact_config(
+        threshold: float, warmup_frames: int, tail_frames: int
+    ) -> None:
+        if threshold <= 0:
+            msg = "artifact_validation_threshold must be positive"
+            raise ValueError(msg)
+        if warmup_frames < 0:
+            msg = "artifact_validation_warmup_frames must be non-negative"
+            raise ValueError(msg)
+        if tail_frames < 1:
+            msg = "artifact_validation_tail_frames must be at least 1"
+            raise ValueError(msg)
+
     def __init__(
         self,
         parameters_range: dict[str, tuple[float, float]] | None = None,
@@ -600,6 +614,10 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         random_seed: int | None = None,
         box_type: str = "woods_saxon",
         spoon_type: Literal["orbit", "linear"] = "orbit",
+        artifact_validation_enabled: bool = False,
+        artifact_validation_threshold: float = 0.12,
+        artifact_validation_warmup_frames: int = 8,
+        artifact_validation_tail_frames: int = 12,
     ) -> None:
         if parameters_range is None:
             # Provide some sensible defaults for complexity knobs
@@ -642,6 +660,11 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         if snapshot_dt is not None and snapshot_dt <= 0:
             msg = "snapshot_dt must be positive when provided"
             raise ValueError(msg)
+        self._validate_artifact_config(
+            threshold=artifact_validation_threshold,
+            warmup_frames=artifact_validation_warmup_frames,
+            tail_frames=artifact_validation_tail_frames,
+        )
 
         self.return_timeseries = return_timeseries
         self.n = n
@@ -653,11 +676,90 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         self.random_seed = random_seed
         self.box_type = box_type
         self.spoon_type = spoon_type
+        self.artifact_validation_enabled = artifact_validation_enabled
+        self.artifact_validation_threshold = artifact_validation_threshold
+        self.artifact_validation_warmup_frames = artifact_validation_warmup_frames
+        self.artifact_validation_tail_frames = artifact_validation_tail_frames
         self._rng = (
             torch.Generator().manual_seed(random_seed)
             if random_seed is not None
             else None
         )
+
+    @staticmethod
+    def _fringe_score_density(density: torch.Tensor) -> float:
+        """Estimate fringe artifact strength in a single density frame.
+
+        The score increases when high-frequency power concentrates near spectral
+        axes, a common signature of grid-aligned fringe artifacts.
+        """
+        if density.ndim != 2:
+            msg = "density must be a 2D tensor"
+            raise ValueError(msg)
+
+        frame = density.float()
+        if not torch.isfinite(frame).all():
+            return float("inf")
+
+        # Remove low-frequency background before spectral analysis.
+        smoothed = (
+            F.avg_pool2d(
+                frame.unsqueeze(0).unsqueeze(0),
+                kernel_size=5,
+                stride=1,
+                padding=2,
+            )
+            .squeeze(0)
+            .squeeze(0)
+        )
+        detrended = frame - smoothed
+
+        spectrum = torch.abs(torch.fft.fft2(detrended)) ** 2
+
+        n, m = frame.shape
+        fx = torch.fft.fftfreq(n, d=1.0, device=frame.device)
+        fy = torch.fft.fftfreq(m, d=1.0, device=frame.device)
+        kx, ky = torch.meshgrid(fx, fy, indexing="ij")
+        kr = torch.sqrt(kx**2 + ky**2)
+        k_nyq = 0.5
+        eps = 1e-12
+
+        hi_mask = kr > (0.6 * k_nyq)
+        mid_mask = kr > (0.1 * k_nyq)
+        axis_shell = kr > (0.2 * k_nyq)
+        axis_band = 0.08 * k_nyq
+
+        hi_power = spectrum[hi_mask].sum()
+        mid_power = spectrum[mid_mask].sum()
+        r_hi = hi_power / (mid_power + eps)
+
+        shell_power = spectrum[axis_shell].sum()
+        x_axis_power = spectrum[axis_shell & (torch.abs(kx) < axis_band)].sum()
+        y_axis_power = spectrum[axis_shell & (torch.abs(ky) < axis_band)].sum()
+        r_axis = torch.maximum(
+            x_axis_power / (shell_power + eps), y_axis_power / (shell_power + eps)
+        )
+
+        score = float((r_hi * r_axis).item())
+        return score
+
+    def _max_fringe_score(self, sol: torch.Tensor) -> float:
+        """Return max fringe artifact score over selected trajectory frames."""
+        if sol.ndim == 4:
+            # (T, X, Y, C)
+            densities = sol[..., 0]
+            n_time = densities.shape[0]
+            start = min(self.artifact_validation_warmup_frames, n_time - 1)
+            tail = max(1, min(self.artifact_validation_tail_frames, n_time - start))
+            frame_indices = list(range(max(start, n_time - tail), n_time))
+            return max(self._fringe_score_density(densities[t]) for t in frame_indices)
+
+        if sol.ndim == 3:
+            # (X, Y, C)
+            return self._fringe_score_density(sol[..., 0])
+
+        msg = "Unexpected simulation output shape for artifact validation"
+        raise ValueError(msg)
 
     def _extract_run_parameters(self, x: torch.Tensor) -> dict[str, Any]:
         param_values = {}
@@ -695,6 +797,15 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
             random_seed=seed,
             device=x.device,  # use same device as input tensor
         )
+
+        if self.artifact_validation_enabled:
+            fringe_score = self._max_fringe_score(sol)
+            if fringe_score > self.artifact_validation_threshold:
+                raise ValueError(
+                    "Rejected GPE trajectory: fringe artifact score "
+                    f"{fringe_score:.4f} > {self.artifact_validation_threshold:.4f}"
+                )
+
         return sol.flatten().unsqueeze(0)
 
     def forward_samples_spatiotemporal(
