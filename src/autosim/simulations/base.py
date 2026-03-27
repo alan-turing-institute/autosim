@@ -535,10 +535,30 @@ class SpatioTemporalSimulator(Simulator, abc.ABC):
         x_parts = [x_valid] if x_valid.shape[0] > 0 else []
         successful = y.shape[0]
 
+        self.logger.info(
+            "Retrying failed simulations to reach n=%d: currently %d successful,"
+            "%d remaining.",
+            n,
+            successful,
+            n - successful,
+        )
+
         for retry_round in range(1, self._retry_budget(n) + 1):
             remaining = n - successful
             retry_seed = None if random_seed is None else random_seed + retry_round
             y_b, x_b = self.forward_batch(self.sample_inputs(remaining, retry_seed))
+            recovered = y_b.shape[0]
+            failed = remaining - recovered
+
+            self.logger.info(
+                "Retry round %d/%d: requested=%d recovered=%d failed=%d",
+                retry_round,
+                self._retry_budget(n),
+                remaining,
+                recovered,
+                failed,
+            )
+
             if y_b.shape[0] > 0:
                 y_parts.append(y_b)
                 x_parts.append(x_b)

@@ -1,0 +1,42 @@
+# GPE generation: normalization mean/std computed from real+imag only, then
+# the same stats applied to density, real, and imag (for correct phase reconstruction).
+# Override simulator if needed: e.g. simulator=gpe/laser_only_wake or
+# simulator=gpe/rotating_box_lattice.
+defaults:
+  - simulator: gpe/laser_only_wake
+  - _self_
+
+dataset:
+  output_dir: outputs/${now:%Y-%m-%d}/${hydra:runtime.choices.simulator}_${shortuuid:7}
+  n_train: 200
+  n_valid: 20
+  n_test: 20
+  ensure_exact_n: true
+
+seed: null
+overwrite: false
+
+stratify:
+  enabled: false
+  key: null
+  values: []
+
+visualize:
+  enabled: true
+  split: train
+  batch_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  fps: 5
+  file_ext: mp4  # gif (no extra deps) or mp4 (requires ffmpeg)
+  overwrite: true
+  preserve_aspect: true
+
+normalization:
+  shared_core_field_groups:
+    - apply_to: [real, imag]
+      pool_from: [real, imag]
+    - apply_to: [density]
+      pool_from: [density]
+
+hydra:
+  run:
+    dir: ${dataset.output_dir}

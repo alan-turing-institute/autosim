@@ -26,6 +26,12 @@ visualize:
   overwrite: true
   preserve_aspect: true
 
+normalization:
+  # Optional channel groups that share identical stats in stats.yml.
+  # List of: [name, ...] (pool and apply to same) or {apply_to: [...], pool_from: [...]}
+  # (compute from pool_from only, apply to apply_to). For GPE use --config-name=generate_data_gpe.
+  shared_core_field_groups: []
+
 hydra:
   run:
     dir: ${dataset.output_dir}

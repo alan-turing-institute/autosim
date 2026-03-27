@@ -1,6 +1,6 @@
 import math
 from collections.abc import Callable
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 import torch
 import torch.nn.functional as F
@@ -9,7 +9,7 @@ from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
 
-def generate_complex_potential(
+def generate_complex_potential(  # noqa: PLR0915
     X: torch.Tensor,
     Y: torch.Tensor,
     config: dict[str, Any],
@@ -27,13 +27,57 @@ def generate_complex_potential(
         static_disorder: Optional precomputed stationary disorder field.
         rng: Random number generator for spatial disorder.
     """
+    trap_Omega = float(config.get("trap_Omega", 0.0))
+    X_trap, Y_trap = X, Y
+    if trap_Omega != 0.0:
+        theta = trap_Omega * t
+        cos_t = math.cos(theta)
+        sin_t = math.sin(theta)
+        X_trap = X * cos_t + Y * sin_t
+        Y_trap = -X * sin_t + Y * cos_t
+
     # 1. Base Geometry (Anisotropic Trap)
-    # wx, wy control the "squish", box_param adds steep walls
+    # wx, wy control the "squish", box_param adds steep walls.
     wx = config.get("wx", 1.0)
     wy = config.get("wy", 1.0)
-    box_param = config.get("box_param", 0.0)
 
-    V_base = 0.5 * (wx**2 * X**2 + wy**2 * Y**2) + box_param * (X**4 + Y**4)
+    V_base = 0.5 * (wx**2 * X_trap**2 + wy**2 * Y_trap**2)
+
+    box_param = float(config.get("box_param", 0.0))
+    if box_param > 0:
+        box_power = float(config.get("box_power", 4.0))
+        box_anisotropy = float(config.get("box_anisotropy", 1.0))
+        box_type = str(config.get("box_type", "woods_saxon"))
+
+        R_wall = (1.0 / box_param) ** 0.25
+
+        if box_type == "power":
+            term_x = (X_trap / R_wall) ** box_power
+            term_y = (Y_trap / (R_wall * box_anisotropy)) ** box_power
+            V_base += term_x + term_y
+        elif box_type == "woods_saxon":
+            ws_a = float(config.get("ws_a", 0.1))
+            ws_V0 = float(config.get("ws_V0", 100.0))
+            r_eff = torch.sqrt(X_trap**2 + (Y_trap / box_anisotropy) ** 2)
+            V_base += ws_V0 / (1.0 + torch.exp(-(r_eff - R_wall) / ws_a))
+
+    # 1.5 Add Moiré Optical Lattice
+    moire_strength = float(config.get("moire_strength", 0.0))
+    if moire_strength > 0:
+        moire_k = float(config.get("moire_k", 2.0 * math.pi))
+        moire_angle = float(config.get("moire_angle", 0.1))  # Twist angle
+
+        # Lattice 1 (Aligned)
+        V_lat1 = torch.cos(moire_k * X_trap) ** 2 + torch.cos(moire_k * Y_trap) ** 2
+
+        # Lattice 2 (Twisted)
+        cos_m = math.cos(moire_angle)
+        sin_m = math.sin(moire_angle)
+        X_twist = X_trap * cos_m + Y_trap * sin_m
+        Y_twist = -X_trap * sin_m + Y_trap * cos_m
+        V_lat2 = torch.cos(moire_k * X_twist) ** 2 + torch.cos(moire_k * Y_twist) ** 2
+
+        V_base += moire_strength * (V_lat1 + V_lat2)
 
     # 2. Add Spatial Disorder (Optical Speckle)
     V_disorder = torch.zeros_like(X)
@@ -64,8 +108,13 @@ def generate_complex_potential(
         speed = config.get("spoon_speed", 1.0)
         spoon_width = config.get("spoon_width", 0.5)
 
-        xs = R * math.cos(speed * t)
-        ys = R * math.sin(speed * t)
+        spoon_type = str(config.get("spoon_type", "orbit"))
+        if spoon_type == "linear":
+            xs = R * math.sin(speed * t)
+            ys = 0.0
+        else:
+            xs = R * math.cos(speed * t)
+            ys = R * math.sin(speed * t)
 
         # Gaussian obstacle
         r2 = (X - xs) ** 2 + (Y - ys) ** 2
@@ -169,12 +218,16 @@ class GPESimulator2D:
             torch.exp(-kinetic_energy * self.dt).to(self.device).to(torch.complex64)
         )
 
+        # Store momentum grids for spectral Lz computation
+        self.KX = KX.to(torch.complex64)
+        self.KY = KY.to(torch.complex64)
+
         # Cache for the rotation sampling grid (recomputed only when angle changes)
         self._cached_rot_angle: float | None = None
         self._cached_rot_grid: torch.Tensor | None = None
 
     def _apply_rotation(self, psi: torch.Tensor, angle: float) -> torch.Tensor:
-        """Rotate the wavefunction by `angle` radians via bilinear interpolation.
+        """Rotate the wavefunction by `angle` radians via bicubic interpolation.
 
         Implements exp(i * angle * Lz) as a coordinate rotation
         psi'(r) = psi(R_{-angle} r).
@@ -207,14 +260,14 @@ class GPESimulator2D:
         psi_r = F.grid_sample(
             psi.real.unsqueeze(0).unsqueeze(0).float(),
             grid,
-            mode="bilinear",
+            mode="bicubic",
             padding_mode="zeros",
             align_corners=False,
         ).squeeze()
         psi_i = F.grid_sample(
             psi.imag.unsqueeze(0).unsqueeze(0).float(),
             grid,
-            mode="bilinear",
+            mode="bicubic",
             padding_mode="zeros",
             align_corners=False,
         ).squeeze()
@@ -229,6 +282,27 @@ class GPESimulator2D:
         """
         density = torch.abs(psi) ** 2
         return psi * torch.exp(-1j * (V + g * density) * half_dt)
+
+    def _apply_Lz_exp(self, psi: torch.Tensor, alpha: float) -> torch.Tensor:
+        """Apply exp(alpha * Lz) for imaginary-time rotation steps.
+
+        For imaginary time the correct sub-step is exp(Ω·dτ·Lz), which is a
+        *non-unitary* operator that amplifies positive-angular-momentum modes and
+        thereby drives vortex nucleation.  A unitary coordinate rotation (used for
+        real time) leaves the density unchanged and cannot form a vortex lattice.
+
+        Lz = -i(x ∂/∂y - y ∂/∂x) is evaluated spectrally:
+            ∂ψ/∂x = IFFT(i kx ψ̂)   ∂ψ/∂y = IFFT(i ky ψ̂)
+
+        exp(alpha * Lz) is approximated to first order (I + alpha*Lz); with the
+        small sub-step alpha = Ω·dt/2 ≈ 5x10⁻⁴ the truncation error is negligible
+        and the caller's renormalisation keeps the norm bounded.
+        """
+        psi_hat = torch.fft.fftn(psi)
+        dpsi_dx = torch.fft.ifftn(1j * self.KX * psi_hat)
+        dpsi_dy = torch.fft.ifftn(1j * self.KY * psi_hat)
+        Lz_psi = -1j * (self.X * dpsi_dy - self.Y * dpsi_dx)
+        return (psi + alpha * Lz_psi).to(torch.complex64)
 
     def initialize_state(self, x0=0.0, y0=0.0, width=1.0, kx0=0.0, ky0=0.0):
         """Create a meaningful initial condition: a moving Gaussian wavepacket."""
@@ -264,16 +338,27 @@ class GPESimulator2D:
         # 1. Potential + nonlinear half-step
         psi = self._apply_V_half(psi, V, g, half_dt)
 
-        # 2. Rotation half-step (unitary coordinate rotation)
+        # 2. Rotation half-step
+        # Real time:      exp(i Ω dt/2 Lz) — unitary coordinate rotation
+        # Imaginary time: exp(Ω dτ/2 Lz)  — non-unitary amplifier, required for
+        #                 vortex nucleation (a coordinate rotation only shifts phases
+        #                 and cannot change the density toward a vortex lattice).
         if Omega != 0.0:
-            psi = self._apply_rotation(psi, Omega * self.dt / 2.0)
+            rot_angle = Omega * self.dt / 2.0
+            if imaginary_time:
+                psi = self._apply_Lz_exp(psi, rot_angle)
+            else:
+                psi = self._apply_rotation(psi, rot_angle)
 
         # 3. Kinetic full-step in momentum space
         psi = torch.fft.ifftn(torch.fft.fftn(psi) * exp_K)
 
         # 4. Rotation half-step (symmetric)
         if Omega != 0.0:
-            psi = self._apply_rotation(psi, Omega * self.dt / 2.0)
+            if imaginary_time:
+                psi = self._apply_Lz_exp(psi, rot_angle)  # pyright: ignore[reportPossiblyUnboundVariable] since set above in block with same condition
+            else:
+                psi = self._apply_rotation(psi, rot_angle)  # pyright: ignore[reportPossiblyUnboundVariable] since set above in block with same condition
 
         # 5. Potential + nonlinear half-step
         psi = self._apply_V_half(psi, V, g, half_dt)
@@ -336,6 +421,17 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
         ky0=config.get("ky0", 0.0),
     )
 
+    imaginary_time = config.get("imaginary_time", False)
+    if imaginary_time or config.get("imaginary_time_steps", 0) > 0:
+        # Seed initial state with tiny noise to break symmetry, which is required
+        # for vortex lattices to nucleate during imaginary time evolution.
+        noise_amp = config.get("initial_noise", 0.05)
+        if noise_amp > 0:
+            noise_real = torch.empty_like(psi.real).normal_(generator=rng)
+            noise_imag = torch.empty_like(psi.imag).normal_(generator=rng)
+            psi = psi + noise_amp * torch.complex(noise_real, noise_imag)
+            psi = psi / torch.sqrt(torch.sum(torch.abs(psi) ** 2) * simulator.dx**2)
+
     g = config.get("g", 10.0)
 
     # Pre-calculate spatial disorder once (stationary speckle) unless explicitly
@@ -349,12 +445,14 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
         )
 
     history_density = []
-    history_phase = []
+    history_real = []
+    history_imag = []
 
     def _snapshot(p) -> torch.Tensor:
         density = torch.abs(p) ** 2
-        phase = torch.angle(p)
-        return torch.stack([density, phase], dim=-1)
+        real = p.real
+        imag = p.imag
+        return torch.stack([density, real, imag], dim=-1)
 
     with torch.no_grad():
         next_snapshot_t = float(snapshot_dt)
@@ -362,12 +460,46 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
 
         if return_timeseries:
             history_density.append(torch.abs(psi) ** 2)
-            history_phase.append(torch.angle(psi))
+            history_real.append(psi.real)
+            history_imag.append(psi.imag)
 
         t = 0.0
 
-        Omega = config.get("Omega", 0.0)
-        imaginary_time = config.get("imaginary_time", False)
+        Omega = float(config.get("Omega", 0.0))
+        exact_trap_rotation = bool(config.get("exact_trap_rotation", False))
+
+        real_time_Omega = Omega
+        if exact_trap_rotation:
+            config["trap_Omega"] = Omega
+            real_time_Omega = 0.0
+
+        imaginary_time = bool(config.get("imaginary_time", False))
+        imaginary_time_steps = int(config.get("imaginary_time_steps", 0))
+
+        if imaginary_time_steps > 0:
+            imaginary_time_dt = float(config.get("imaginary_time_dt", dt))
+            if imaginary_time_dt != dt:
+                simulator.dt = imaginary_time_dt
+                # Recompute imaginary-time kinetic propagator with new dt
+                kin_E = 0.5 * (simulator.KX.real**2 + simulator.KY.real**2)
+                simulator.exp_K_it = torch.exp(-kin_E * simulator.dt).to(
+                    torch.complex64
+                )
+
+            for _ in range(imaginary_time_steps):
+                V_init = generate_complex_potential(
+                    simulator.X,
+                    simulator.Y,
+                    config,
+                    0.0,
+                    static_disorder=static_disorder,
+                    rng=rng,
+                )
+                psi = simulator.step(psi, V_init, g, Omega=Omega, imaginary_time=True)
+
+            if imaginary_time_dt != dt:
+                # Restore original real-time dt (real-time exp_K was untouched)
+                simulator.dt = dt
 
         while t < T - 1e-12:
             t_mid = t + 0.5 * dt
@@ -379,25 +511,30 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
                 static_disorder=static_disorder,
                 rng=rng,
             )
-            psi = simulator.step(psi, V, g, Omega=Omega, imaginary_time=imaginary_time)
+            psi = simulator.step(
+                psi, V, g, Omega=real_time_Omega, imaginary_time=imaginary_time
+            )
             t += dt
 
             if return_timeseries:
                 while next_snapshot_t <= t + 1e-12:
                     history_density.append(torch.abs(psi) ** 2)
-                    history_phase.append(torch.angle(psi))
+                    history_real.append(psi.real)
+                    history_imag.append(psi.imag)
                     last_snapshot_t = next_snapshot_t
                     next_snapshot_t += snapshot_dt
 
         if return_timeseries and T - last_snapshot_t > 1e-9:
             history_density.append(torch.abs(psi) ** 2)
-            history_phase.append(torch.angle(psi))
+            history_real.append(psi.real)
+            history_imag.append(psi.imag)
 
     if return_timeseries:
         densities = torch.stack(history_density, dim=0)
-        phases = torch.stack(history_phase, dim=0)
+        real_parts = torch.stack(history_real, dim=0)
+        imag_parts = torch.stack(history_imag, dim=0)
         # return shape: (T, X, Y, Channels)
-        return torch.stack([densities, phases], dim=-1)
+        return torch.stack([densities, real_parts, imag_parts], dim=-1)
 
     return _snapshot(psi)
 
@@ -409,6 +546,9 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "wx": 1.0,
         "wy": 1.0,
         "box_param": 0.0,
+        "box_anisotropy": 1.0,
+        "ws_a": 0.1,
+        "ws_V0": 100.0,
         "disorder_strength": 0.0,
         "disorder_time_dependent": False,
         "disorder_radius": 0.0,  # 0.0 -> auto (2/sqrt(wx*wy))
@@ -423,7 +563,14 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "kx0": 0.0,
         "ky0": 0.0,
         "Omega": 0.0,
+        "exact_trap_rotation": False,
         "imaginary_time": False,
+        "imaginary_time_steps": 0,
+        "imaginary_time_dt": 0.005,
+        "initial_noise": 0.05,
+        "moire_strength": 0.0,
+        "moire_k": 6.2831853,
+        "moire_angle": 0.1,
     }
 
     _ALLOWED_PARAMETER_NAMES: ClassVar[tuple[str, ...]] = tuple(
@@ -433,8 +580,24 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
     # Per-parameter post-processors applied after float sampling.
     # Parameters not listed here are kept as plain floats.
     _PARAM_CONVERTERS: ClassVar[dict[str, Callable[[float], Any]]] = {
+        "exact_trap_rotation": lambda v: bool(round(v)),
         "imaginary_time": lambda v: bool(round(v)),
+        "imaginary_time_steps": lambda v: round(v),
     }
+
+    @staticmethod
+    def _validate_artifact_config(
+        threshold: float, warmup_frames: int, tail_frames: int
+    ) -> None:
+        if threshold <= 0:
+            msg = "artifact_validation_threshold must be positive"
+            raise ValueError(msg)
+        if warmup_frames < 0:
+            msg = "artifact_validation_warmup_frames must be non-negative"
+            raise ValueError(msg)
+        if tail_frames < 1:
+            msg = "artifact_validation_tail_frames must be at least 1"
+            raise ValueError(msg)
 
     def __init__(
         self,
@@ -449,6 +612,12 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         snapshot_dt: float | None = None,
         skip_nt: int = 0,
         random_seed: int | None = None,
+        box_type: str = "woods_saxon",
+        spoon_type: Literal["orbit", "linear"] = "orbit",
+        artifact_validation_enabled: bool = False,
+        artifact_validation_threshold: float = 0.12,
+        artifact_validation_warmup_frames: int = 8,
+        artifact_validation_tail_frames: int = 12,
     ) -> None:
         if parameters_range is None:
             # Provide some sensible defaults for complexity knobs
@@ -460,7 +629,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
                 "wy": (0.5, 2.0),
             }
         if output_names is None:
-            output_names = ["density", "phase"]
+            output_names = ["density", "real", "imag"]
 
         unknown_parameters = set(parameters_range) - set(self._ALLOWED_PARAMETER_NAMES)
         if unknown_parameters:
@@ -491,6 +660,11 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         if snapshot_dt is not None and snapshot_dt <= 0:
             msg = "snapshot_dt must be positive when provided"
             raise ValueError(msg)
+        self._validate_artifact_config(
+            threshold=artifact_validation_threshold,
+            warmup_frames=artifact_validation_warmup_frames,
+            tail_frames=artifact_validation_tail_frames,
+        )
 
         self.return_timeseries = return_timeseries
         self.n = n
@@ -500,11 +674,92 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         self.snapshot_dt = snapshot_dt
         self.skip_nt = skip_nt
         self.random_seed = random_seed
+        self.box_type = box_type
+        self.spoon_type = spoon_type
+        self.artifact_validation_enabled = artifact_validation_enabled
+        self.artifact_validation_threshold = artifact_validation_threshold
+        self.artifact_validation_warmup_frames = artifact_validation_warmup_frames
+        self.artifact_validation_tail_frames = artifact_validation_tail_frames
         self._rng = (
             torch.Generator().manual_seed(random_seed)
             if random_seed is not None
             else None
         )
+
+    @staticmethod
+    def _fringe_score_density(density: torch.Tensor) -> float:
+        """Estimate fringe artifact strength in a single density frame.
+
+        The score increases when high-frequency power concentrates near spectral
+        axes, a common signature of grid-aligned fringe artifacts.
+        """
+        if density.ndim != 2:
+            msg = "density must be a 2D tensor"
+            raise ValueError(msg)
+
+        frame = density.float()
+        if not torch.isfinite(frame).all():
+            return float("inf")
+
+        # Remove low-frequency background before spectral analysis.
+        smoothed = (
+            F.avg_pool2d(
+                frame.unsqueeze(0).unsqueeze(0),
+                kernel_size=5,
+                stride=1,
+                padding=2,
+            )
+            .squeeze(0)
+            .squeeze(0)
+        )
+        detrended = frame - smoothed
+
+        spectrum = torch.abs(torch.fft.fft2(detrended)) ** 2
+
+        n, m = frame.shape
+        fx = torch.fft.fftfreq(n, d=1.0, device=frame.device)
+        fy = torch.fft.fftfreq(m, d=1.0, device=frame.device)
+        kx, ky = torch.meshgrid(fx, fy, indexing="ij")
+        kr = torch.sqrt(kx**2 + ky**2)
+        k_nyq = 0.5
+        eps = 1e-12
+
+        hi_mask = kr > (0.6 * k_nyq)
+        mid_mask = kr > (0.1 * k_nyq)
+        axis_shell = kr > (0.2 * k_nyq)
+        axis_band = 0.08 * k_nyq
+
+        hi_power = spectrum[hi_mask].sum()
+        mid_power = spectrum[mid_mask].sum()
+        r_hi = hi_power / (mid_power + eps)
+
+        shell_power = spectrum[axis_shell].sum()
+        x_axis_power = spectrum[axis_shell & (torch.abs(kx) < axis_band)].sum()
+        y_axis_power = spectrum[axis_shell & (torch.abs(ky) < axis_band)].sum()
+        r_axis = torch.maximum(
+            x_axis_power / (shell_power + eps), y_axis_power / (shell_power + eps)
+        )
+
+        score = float((r_hi * r_axis).item())
+        return score
+
+    def _max_fringe_score(self, sol: torch.Tensor) -> float:
+        """Return max fringe artifact score over selected trajectory frames."""
+        if sol.ndim == 4:
+            # (T, X, Y, C)
+            densities = sol[..., 0]
+            n_time = densities.shape[0]
+            start = min(self.artifact_validation_warmup_frames, n_time - 1)
+            tail = max(1, min(self.artifact_validation_tail_frames, n_time - start))
+            frame_indices = list(range(max(start, n_time - tail), n_time))
+            return max(self._fringe_score_density(densities[t]) for t in frame_indices)
+
+        if sol.ndim == 3:
+            # (X, Y, C)
+            return self._fringe_score_density(sol[..., 0])
+
+        msg = "Unexpected simulation output shape for artifact validation"
+        raise ValueError(msg)
 
     def _extract_run_parameters(self, x: torch.Tensor) -> dict[str, Any]:
         param_values = {}
@@ -515,6 +770,8 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
 
         config = self._DEFAULT_SIM_PARAMS.copy()
         config.update(param_values)
+        config["box_type"] = self.box_type
+        config["spoon_type"] = self.spoon_type
         return config
 
     def _forward(self, x: TensorLike) -> TensorLike:
@@ -540,6 +797,15 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
             random_seed=seed,
             device=x.device,  # use same device as input tensor
         )
+
+        if self.artifact_validation_enabled:
+            fringe_score = self._max_fringe_score(sol)
+            if fringe_score > self.artifact_validation_threshold:
+                raise ValueError(
+                    "Rejected GPE trajectory: fringe artifact score "
+                    f"{fringe_score:.4f} > {self.artifact_validation_threshold:.4f}"
+                )
+
         return sol.flatten().unsqueeze(0)
 
     def forward_samples_spatiotemporal(
@@ -555,7 +821,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
             ensure_exact_n=ensure_exact_n,
         )
 
-        channels = 2  # density, phase
+        channels = 3  # density, real, imag
         features_per_step = self.n * self.n * channels
 
         if self.return_timeseries:

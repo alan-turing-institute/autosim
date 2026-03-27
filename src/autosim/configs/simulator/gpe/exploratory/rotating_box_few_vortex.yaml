@@ -1,0 +1,53 @@
+# Two-phase GPE: imaginary-time ground state → real-time dynamics, few-vortex regime.
+#
+# Phase 1 (imaginary_time_steps): converges to the rotating ground state.
+#   8000 steps × imaginary_time_dt=0.05 = 400 imaginary-time units.
+#   Typical outcomes are low vortex counts (often a few vortices), depending on Ω and g.
+# Phase 2 (T real-time steps): free evolution from the vortex ground state.
+#   Vortices precess in the lab frame and interact; excitations from residual noise
+#   produce Tkachenko-like oscillations and vortex-core dynamics.
+#
+# Regime: Ω ∈ [0.35, 0.55] — spanning first-vortex entry through a few-vortex state.
+# Ω_c1 is geometry- and interaction-dependent; this range straddles the onset region
+# for the configured circular Woods-Saxon box.
+#
+# References:
+#   Madison, K. W., et al. "Vortex formation in a stirred Bose-Einstein condensate."
+#   Phys. Rev. Lett. 84, 806 (2000). DOI: 10.1103/PhysRevLett.84.806
+_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+return_timeseries: true
+log_level: warning
+output_names: [density, real, imag]
+n: 64
+L: 10.0
+T: 16.05
+dt: 0.005
+snapshot_dt: 0.05
+skip_nt: 0
+random_seed: 42
+box_type: woods_saxon
+parameters_range:
+  wx: [0.0, 0.0]
+  wy: [0.0, 0.0]
+  box_param: [0.0039, 0.0039]
+  ws_a: [0.15, 0.15]
+  ws_V0: [200.0, 200.0]
+  box_anisotropy: [1.02, 1.06]
+  width: [0.8, 1.2]
+  x0: [0.0, 0.0]
+  y0: [0.0, 0.0]
+  kx0: [0.0, 0.0]
+  ky0: [0.0, 0.0]
+  imaginary_time: [0, 0]
+  imaginary_time_steps: [8000, 8000]
+  imaginary_time_dt: [0.05, 0.05]
+  initial_noise: [0.05, 0.05]
+  g: [100.0, 300.0]
+  disorder_strength: [0.0, 0.0]
+  disorder_radius: [1.0, 1.0]
+  disorder_time_dependent: [0, 0]
+  spoon_strength: [0.0, 0.0]
+  spoon_speed: [0.0, 0.0]
+  spoon_width: [0.18, 0.18]
+  spoon_radius: [1.5, 1.5]
+  Omega: [0.35, 0.55]

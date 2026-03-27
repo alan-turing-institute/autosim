@@ -1,0 +1,52 @@
+# Two-phase GPE: imaginary-time ground state → real-time dynamics, subsonic regime.
+#
+# Phase 1 (imaginary_time_steps): converges to the rotating ground state.
+#   8000 steps × imaginary_time_dt=0.05 = 400 imaginary-time units.
+#   In this low-Ω window, outcomes are mostly vortex-free or very low-vortex states.
+# Phase 2 (T real-time steps): free evolution from the prepared state.
+#   Residual noise (~0.05) left from phase 1 excites quadrupole/breathing modes,
+#   giving non-trivial dynamics even in the absence of vortices.
+#
+# Regime: Ω ∈ [0.05, 0.25] — typically below first-vortex entry for this setup.
+# The precise threshold depends on geometry and interaction strength.
+#
+# References:
+#   Fetter, A. L. "Rotating trapped Bose-Einstein condensates."
+#   Rev. Mod. Phys. 81, 647 (2009). DOI: 10.1103/RevModPhys.81.647
+_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+return_timeseries: true
+log_level: warning
+output_names: [density, real, imag]
+n: 64
+L: 10.0
+T: 16.05
+dt: 0.005
+snapshot_dt: 0.05
+skip_nt: 0
+random_seed: 42
+box_type: woods_saxon
+parameters_range:
+  wx: [0.0, 0.0]
+  wy: [0.0, 0.0]
+  box_param: [0.0039, 0.0039]
+  ws_a: [0.15, 0.15]
+  ws_V0: [200.0, 200.0]
+  box_anisotropy: [1.02, 1.06]
+  width: [0.8, 1.2]
+  x0: [0.0, 0.0]
+  y0: [0.0, 0.0]
+  kx0: [0.0, 0.0]
+  ky0: [0.0, 0.0]
+  imaginary_time: [0, 0]
+  imaginary_time_steps: [8000, 8000]
+  imaginary_time_dt: [0.05, 0.05]
+  initial_noise: [0.05, 0.05]
+  g: [100.0, 300.0]
+  disorder_strength: [0.0, 0.0]
+  disorder_radius: [1.0, 1.0]
+  disorder_time_dependent: [0, 0]
+  spoon_strength: [0.0, 0.0]
+  spoon_speed: [0.0, 0.0]
+  spoon_width: [0.18, 0.18]
+  spoon_radius: [1.5, 1.5]
+  Omega: [0.05, 0.25]

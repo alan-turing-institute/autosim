@@ -214,3 +214,10 @@ outputs
 
 # core
 core
+
+# Docs
+docs
+
+# Examples
+examples/
+datasets

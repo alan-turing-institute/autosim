@@ -1,0 +1,122 @@
+# =============================================================================
+# Vortex Shedding and Wake Dynamics from a Moving Obstacle in a 2D BEC
+# =============================================================================
+#
+# A focused laser beam obstacle oscillates back and forth (sinusoidally)
+# through a stationary BEC confined in a flat-bottomed optical box trap,
+# in a setup conceptually aligned with obstacle-stirring experiments
+# (e.g. Raman et al. 1999). When the instantaneous
+# obstacle speed exceeds the critical velocity v_c, the superfluid response
+# transitions from laminar potential flow to periodic vortex-antivortex pair
+# shedding (a quantum von Kármán street), and at higher speeds to disordered
+# turbulent wakes with sound emission. The sinusoidal motion means the
+# obstacle is fastest at the centre and slowest at turnaround, so a single
+# sweep can exhibit both sub- and super-critical regimes.
+#
+# This parameterization targets the mesoscopic shedding regime discussed in
+# Sasaki et al. (2010), Reeves et al. (2015), and Kwon et al. (2016), covering
+# laminar flow, periodic shedding, and onset of disordered wakes.
+#
+# Phase 1: Imaginary-time evolution converges to a clean, vortex-free ground
+#   state inside the uniform box trap. The stationary obstacle sits inside
+#   the condensate as a density dip.
+# Phase 2: Real-time evolution. The obstacle begins sweeping. Omega=0
+#   throughout, so dynamics arise from obstacle forcing rather than frame rotation.
+#
+# References:
+#   Raman, C., et al. "Evidence for a critical velocity in a Bose-Einstein condensed gas."
+#     Phys. Rev. Lett. 83, 2502 (1999). DOI: 10.1103/PhysRevLett.83.2502
+#   Frisch, T., Pomeau, Y. & Rica, S. "Transition to dissipation in a model
+#     of superflow." Phys. Rev. Lett. 69, 1644 (1992).
+#     DOI: 10.1103/PhysRevLett.69.1644
+#   Neely, T. W., et al. "Observation of vortex dipoles in an oblate
+#     Bose-Einstein condensate." Phys. Rev. Lett. 104, 160401 (2010).
+#     DOI: 10.1103/PhysRevLett.104.160401
+#   Sasaki, K., Suzuki, N. & Saito, H. "Bénard–von Kármán vortex street in
+#     a Bose-Einstein condensate." Phys. Rev. Lett. 104, 150404 (2010).
+#     DOI: 10.1103/PhysRevLett.104.150404
+#   Reeves, M. T., et al. "Identifying a superfluid Reynolds number via
+#     dynamical similarity." Phys. Rev. Lett. 114, 155302 (2015).
+#     DOI: 10.1103/PhysRevLett.114.155302
+#   Kwon, W. J., et al. "Observation of von Kármán vortex street in an atomic
+#     superfluid gas." Phys. Rev. Lett. 117, 245301 (2016).
+#     DOI: 10.1103/PhysRevLett.117.245301
+#   Lim, Y., et al. "Vortex shedding frequency of a moving obstacle in a
+#     Bose-Einstein condensate." New J. Phys. 24, 083020 (2022).
+#     DOI: 10.1088/1367-2630/ac8656
+#
+# =============================================================================
+_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+return_timeseries: true
+log_level: warning
+output_names: [density, real, imag]
+n: 64
+L: 10.0
+T: 17.55
+dt: 0.005
+snapshot_dt: 0.05
+skip_nt: 30  # Skip first 1.5 time units — obstacle is well into first sweep
+random_seed: 42
+box_type: woods_saxon
+spoon_type: linear
+artifact_validation_enabled: true
+artifact_validation_threshold: 0.12
+artifact_validation_warmup_frames: 8
+artifact_validation_tail_frames: 12
+parameters_range:
+  # --- Trap geometry ---
+  wx: [0.0, 0.0]           # No harmonic component — flat box only
+  wy: [0.0, 0.0]
+  # box_param: [0.0039, 0.0039]  # box_param>0 activates Woods-Saxon walls
+  box_param: [0.002, 0.002]  # box_param>0 activates Woods-Saxon walls
+  ws_a: [0.15, 0.15]           # Wall steepness (smaller = sharper wall)
+  ws_V0: [200.0, 200.0]        # Wall height (must be >> chemical potential mu=g*n)
+  box_anisotropy: [1.0, 1.0]   # Perfectly circular trap
+
+  # --- Initial wavefunction ---
+  width: [1.5, 2.0]    # Broad Gaussian fills the box uniformly after cooling
+  x0: [0.0, 0.0]
+  y0: [0.0, 0.0]
+  kx0: [0.0, 0.0]
+  ky0: [0.0, 0.0]
+
+  # --- Phase 1: imaginary-time cooling ---
+  imaginary_time: [0, 0]
+  imaginary_time_steps: [4000, 4000]  # Long enough for clean ground state
+  imaginary_time_dt: [0.01, 0.01]
+  initial_noise: [0.0, 0.0]          # No noise needed — obstacle seeds all dynamics
+
+  # --- Interaction strength ---
+  # Interaction range spans moderate to strong nonlinearity for wake formation.
+  g: [80.0, 200.0]
+
+  # --- Disorder (off) ---
+  disorder_strength: [0.0, 0.0]
+  disorder_radius: [1.0, 1.0]
+  disorder_time_dependent: [0, 0]
+
+  # --- Moving obstacle (sinusoidal linear sweep) ---
+  # spoon_type: linear gives x(t) = R*sin(omega*t), y(t) = 0.
+  # This is an oscillating laser obstacle along the x-axis. Raman et al. (1999)
+  # is a core critical-velocity reference in a related obstacle-flow setting.
+  # spoon_speed is the angular frequency omega, NOT
+  # the physical velocity. The peak physical velocity is:
+  #   v_max = spoon_radius * spoon_speed
+  #
+  # Mesoscopic obstacle sizes and strengths target laminar -> shedding -> turbulent wakes.
+  #
+  spoon_strength: [3.0, 8.0]
+
+  # spoon_speed (angular frequency omega):
+  #   v_max = spoon_radius * spoon_speed; this range spans subcritical and supercritical motion.
+  spoon_speed: [0.5, 2.0]
+
+  # spoon_width: Gaussian 1/e radius.
+  spoon_width: [0.8, 2.5]
+
+  # spoon_radius: oscillation amplitude. x(t) sweeps from -R to +R.
+  #   Box radius ~ 5 (L=10). Keep R < 3.5 to avoid wall interactions.
+  spoon_radius: [2.0, 3.0]
+
+  # --- Rotation (off) ---
+  Omega: [0.0, 0.0]  # No rotation: perfectly clean, no interpolation artifacts
