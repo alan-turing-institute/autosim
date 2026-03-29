@@ -91,7 +91,7 @@ def test_invalid_parameters():
 
 
 def test_fringe_score_distinguishes_fringing_from_smooth():
-    """Fringed fields should score higher than smooth fields."""
+    """Fringed box-trapped fields should score higher than clean ones."""
     sim = GrossPitaevskiiEquation2D(
         n=64,
         L=10.0,
@@ -103,13 +103,15 @@ def test_fringe_score_distinguishes_fringing_from_smooth():
 
     x = torch.linspace(-1.0, 1.0, 64)
     X, Y = torch.meshgrid(x, x, indexing="ij")
-    smooth = torch.exp(-4.0 * (X**2 + Y**2))
-    stripes = smooth + 0.2 * torch.sin(2.0 * torch.pi * 20.0 * X)
+    r = torch.sqrt(X**2 + Y**2)
+    # Box-trapped BEC: flat interior, sharp wall, dead zone outside
+    bec = 1.0 / (1.0 + torch.exp((r - 0.8) / 0.03))
+    fringed = bec + 0.03 * torch.sin(2.0 * torch.pi * 6.0 * X)
 
-    smooth_score = sim._fringe_score_density(smooth)
-    stripes_score = sim._fringe_score_density(stripes)
+    clean_score = sim._fringe_score_density(bec)
+    fringed_score = sim._fringe_score_density(fringed)
 
-    assert stripes_score > smooth_score
+    assert fringed_score > clean_score
 
 
 def test_artifact_validation_rejects_high_fringe_score_trajectory(
@@ -122,8 +124,10 @@ def test_artifact_validation_rejects_high_fringe_score_trajectory(
         t = 6
         x = torch.linspace(-1.0, 1.0, n)
         X, _Y = torch.meshgrid(x, x, indexing="ij")
-        density = 0.1 + 0.05 * torch.sin(2.0 * torch.pi * 18.0 * X)
-        density = density.clamp(min=1e-6)
+        r = torch.sqrt(X**2 + _Y**2)
+        # Box-trapped BEC with fringing that leaks into the exterior
+        bec = 1.0 / (1.0 + torch.exp((r - 0.8) / 0.03))
+        density = (bec + 0.05 * torch.sin(2.0 * torch.pi * 8.0 * X)).clamp(min=1e-6)
         real = torch.sqrt(density)
         imag = torch.zeros_like(real)
         frame = torch.stack([density, real, imag], dim=-1)
@@ -139,7 +143,7 @@ def test_artifact_validation_rejects_high_fringe_score_trajectory(
         return_timeseries=True,
         log_level="error",
         artifact_validation_enabled=True,
-        artifact_validation_threshold=0.01,
+        artifact_validation_threshold=0.005,
         artifact_validation_warmup_frames=0,
         artifact_validation_tail_frames=6,
     )

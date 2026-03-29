@@ -60,7 +60,7 @@ random_seed: 42
 box_type: woods_saxon
 spoon_type: linear
 artifact_validation_enabled: true
-artifact_validation_threshold: 0.12
+artifact_validation_threshold: 0.0005
 artifact_validation_warmup_frames: 8
 artifact_validation_tail_frames: 12
 parameters_range:

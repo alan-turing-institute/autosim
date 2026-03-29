@@ -615,7 +615,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         box_type: str = "woods_saxon",
         spoon_type: Literal["orbit", "linear"] = "orbit",
         artifact_validation_enabled: bool = False,
-        artifact_validation_threshold: float = 0.12,
+        artifact_validation_threshold: float = 0.0005,
         artifact_validation_warmup_frames: int = 8,
         artifact_validation_tail_frames: int = 12,
     ) -> None:
@@ -690,8 +690,17 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
     def _fringe_score_density(density: torch.Tensor) -> float:
         """Estimate fringe artifact strength in a single density frame.
 
-        The score increases when high-frequency power concentrates near spectral
-        axes, a common signature of grid-aligned fringe artifacts.
+        Detects numerical artifacts by measuring spurious density in the
+        exterior "dead zone" of the trap, where physical density should be
+        ~0.  The dead zone is identified automatically from the density
+        field: pixels whose heavily-smoothed density falls below 5% of
+        the field maximum.
+
+        Score = std(density in dead zone) / mean(density in interior).
+        Clean frames score ~0; frames with fringing in the exterior score
+        higher in proportion to the artifact amplitude.
+
+        Falls back to 0 if no clear dead zone exists (e.g. untrapped fields).
         """
         if density.ndim != 2:
             msg = "density must be a 2D tensor"
@@ -701,47 +710,38 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         if not torch.isfinite(frame).all():
             return float("inf")
 
-        # Remove low-frequency background before spectral analysis.
-        smoothed = (
-            F.avg_pool2d(
-                frame.unsqueeze(0).unsqueeze(0),
-                kernel_size=5,
-                stride=1,
-                padding=2,
-            )
-            .squeeze(0)
-            .squeeze(0)
-        )
-        detrended = frame - smoothed
+        # Heavy smoothing to identify the trap envelope (ignores fine
+        # structure like vortices or mild fringing).
+        k = max(5, min(frame.shape) // 4) | 1  # odd kernel, ~25% of grid
+        pad = k // 2
+        envelope = F.avg_pool2d(
+            frame.unsqueeze(0).unsqueeze(0), kernel_size=k, stride=1, padding=pad
+        ).squeeze()
+        # avg_pool2d may produce shape off-by-one; trim to match.
+        envelope = envelope[: frame.shape[0], : frame.shape[1]]
 
-        spectrum = torch.abs(torch.fft.fft2(detrended)) ** 2
+        peak = envelope.max()
+        if peak <= 0:
+            return 0.0
 
-        n, m = frame.shape
-        fx = torch.fft.fftfreq(n, d=1.0, device=frame.device)
-        fy = torch.fft.fftfreq(m, d=1.0, device=frame.device)
-        kx, ky = torch.meshgrid(fx, fy, indexing="ij")
-        kr = torch.sqrt(kx**2 + ky**2)
-        k_nyq = 0.5
+        # Dead zone: smoothed density < 5% of peak.
+        exterior_mask = envelope < (0.05 * peak)
+        # Interior: smoothed density >= 20% of peak (well inside the trap).
+        interior_mask = envelope >= (0.20 * peak)
+
+        n_exterior = int(exterior_mask.sum().item())
+        n_interior = int(interior_mask.sum().item())
+
+        # Need enough pixels in both regions for a meaningful measurement.
+        min_pixels = max(8, frame.numel() // 50)
+        if n_exterior < min_pixels or n_interior < min_pixels:
+            return 0.0
+
+        exterior_std = frame[exterior_mask].std()
+        interior_mean = frame[interior_mask].mean()
         eps = 1e-12
 
-        hi_mask = kr > (0.6 * k_nyq)
-        mid_mask = kr > (0.1 * k_nyq)
-        axis_shell = kr > (0.2 * k_nyq)
-        axis_band = 0.08 * k_nyq
-
-        hi_power = spectrum[hi_mask].sum()
-        mid_power = spectrum[mid_mask].sum()
-        r_hi = hi_power / (mid_power + eps)
-
-        shell_power = spectrum[axis_shell].sum()
-        x_axis_power = spectrum[axis_shell & (torch.abs(kx) < axis_band)].sum()
-        y_axis_power = spectrum[axis_shell & (torch.abs(ky) < axis_band)].sum()
-        r_axis = torch.maximum(
-            x_axis_power / (shell_power + eps), y_axis_power / (shell_power + eps)
-        )
-
-        score = float((r_hi * r_axis).item())
-        return score
+        return float((exterior_std / (interior_mean + eps)).item())
 
     def _max_fringe_score(self, sol: torch.Tensor) -> float:
         """Return max fringe artifact score over selected trajectory frames."""
