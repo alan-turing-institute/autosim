@@ -125,9 +125,9 @@ def test_artifact_validation_rejects_high_fringe_score_trajectory(
         x = torch.linspace(-1.0, 1.0, n)
         X, _Y = torch.meshgrid(x, x, indexing="ij")
         r = torch.sqrt(X**2 + _Y**2)
-        # Box-trapped BEC with fringing that leaks into the exterior
+        # Box-trapped BEC with high-frequency grid aliasing noise (near Nyquist)
         bec = 1.0 / (1.0 + torch.exp((r - 0.8) / 0.03))
-        density = (bec + 0.05 * torch.sin(2.0 * torch.pi * 8.0 * X)).clamp(min=1e-6)
+        density = (bec + 0.5 * torch.sin(2.0 * torch.pi * 15.0 * X)).clamp(min=1e-6)
         real = torch.sqrt(density)
         imag = torch.zeros_like(real)
         frame = torch.stack([density, real, imag], dim=-1)
