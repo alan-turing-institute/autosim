@@ -218,6 +218,14 @@ class GPESimulator2D:
             torch.exp(-kinetic_energy * self.dt).to(self.device).to(torch.complex64)
         )
 
+        # Anti-aliasing mask (Orszag 2/3 rule) to eliminate high-freq grid artifacts
+        # We zero out the highest third of the momentum spectrum.
+        k_max = math.pi / self.dx
+        K_mag = torch.sqrt(KX**2 + KY**2)
+        # Smooth or sharp cutoff: typical pseudo-spectral uses a sharp spherical cutoff.
+        mask = K_mag < (2.0 / 3.0) * k_max
+        self.dealias_mask = mask.to(self.device).to(torch.complex64)
+
         # Store momentum grids for spectral Lz computation
         self.KX = KX.to(torch.complex64)
         self.KY = KY.to(torch.complex64)
@@ -350,8 +358,10 @@ class GPESimulator2D:
             else:
                 psi = self._apply_rotation(psi, rot_angle)
 
-        # 3. Kinetic full-step in momentum space
-        psi = torch.fft.ifftn(torch.fft.fftn(psi) * exp_K)
+        # 3. Kinetic full-step in momentum space with anti-aliasing (2/3 rule)
+        # Mask stops energy pooling at the highest grid frequencies (checkerboarding)
+        psi_hat = torch.fft.fftn(psi) * exp_K * getattr(self, "dealias_mask", 1.0)
+        psi = torch.fft.ifftn(psi_hat)
 
         # 4. Rotation half-step (symmetric)
         if Omega != 0.0:
@@ -615,7 +625,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         box_type: str = "woods_saxon",
         spoon_type: Literal["orbit", "linear"] = "orbit",
         artifact_validation_enabled: bool = False,
-        artifact_validation_threshold: float = 0.12,
+        artifact_validation_threshold: float = 0.0005,
         artifact_validation_warmup_frames: int = 8,
         artifact_validation_tail_frames: int = 12,
     ) -> None:
@@ -688,10 +698,17 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
 
     @staticmethod
     def _fringe_score_density(density: torch.Tensor) -> float:
-        """Estimate fringe artifact strength in a single density frame.
+        """Estimate fringe artifact strength via spectral analysis.
 
-        The score increases when high-frequency power concentrates near spectral
-        axes, a common signature of grid-aligned fringe artifacts.
+        Detects numerical aliasing (horizontal/vertical stripes) by measuring
+        the spectral energy in the highest spatial frequencies (near Nyquist limit).
+        Grid aliasing inevitably pools massive energy into these modes compared to
+        typical physical flows like vortices or sound waves.
+
+        Score = High-frequency spectral energy / Total spectral energy.
+        Clean frames score extremely low; frames with fringing spike immensely.
+
+        Returns 0.0 on completely degenerate input.
         """
         if density.ndim != 2:
             msg = "density must be a 2D tensor"
@@ -701,47 +718,32 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         if not torch.isfinite(frame).all():
             return float("inf")
 
-        # Remove low-frequency background before spectral analysis.
-        smoothed = (
-            F.avg_pool2d(
-                frame.unsqueeze(0).unsqueeze(0),
-                kernel_size=5,
-                stride=1,
-                padding=2,
-            )
-            .squeeze(0)
-            .squeeze(0)
-        )
-        detrended = frame - smoothed
+        # Measure 2D power spectrum
+        # Remove mean to ignore the huge DC component, making variance the baseline
+        frame_centered = frame - frame.mean()
+        fft_density = torch.fft.fftn(frame_centered)
+        power_spectrum = torch.abs(fft_density) ** 2
 
-        spectrum = torch.abs(torch.fft.fft2(detrended)) ** 2
+        # Shift zero-frequency to the center
+        power_spectrum = torch.fft.fftshift(power_spectrum)
 
-        n, m = frame.shape
-        fx = torch.fft.fftfreq(n, d=1.0, device=frame.device)
-        fy = torch.fft.fftfreq(m, d=1.0, device=frame.device)
-        kx, ky = torch.meshgrid(fx, fy, indexing="ij")
-        kr = torch.sqrt(kx**2 + ky**2)
-        k_nyq = 0.5
-        eps = 1e-12
+        # Create normalized radial frequency grid [-1, 1] for x and y
+        N, M = power_spectrum.shape
+        y = torch.linspace(-1, 1, N, device=frame.device)
+        x = torch.linspace(-1, 1, M, device=frame.device)
+        Y, X = torch.meshgrid(y, x, indexing="ij")
+        R = torch.sqrt(X**2 + Y**2)
 
-        hi_mask = kr > (0.6 * k_nyq)
-        mid_mask = kr > (0.1 * k_nyq)
-        axis_shell = kr > (0.2 * k_nyq)
-        axis_band = 0.08 * k_nyq
+        total_energy = power_spectrum.sum()
+        if total_energy <= 1e-12:
+            return 0.0
 
-        hi_power = spectrum[hi_mask].sum()
-        mid_power = spectrum[mid_mask].sum()
-        r_hi = hi_power / (mid_power + eps)
+        # Calculate energy fraction in the highest frequencies (|k| > 0.8 * k_nyquist).
+        # Aliasing (fringes) heavily populates R > 0.8
+        high_freq_mask = R > 0.8
+        high_freq_energy = power_spectrum[high_freq_mask].sum()
 
-        shell_power = spectrum[axis_shell].sum()
-        x_axis_power = spectrum[axis_shell & (torch.abs(kx) < axis_band)].sum()
-        y_axis_power = spectrum[axis_shell & (torch.abs(ky) < axis_band)].sum()
-        r_axis = torch.maximum(
-            x_axis_power / (shell_power + eps), y_axis_power / (shell_power + eps)
-        )
-
-        score = float((r_hi * r_axis).item())
-        return score
+        return float((high_freq_energy / total_energy).item())
 
     def _max_fringe_score(self, sol: torch.Tensor) -> float:
         """Return max fringe artifact score over selected trajectory frames."""
