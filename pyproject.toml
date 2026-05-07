@@ -4,9 +4,7 @@ version = "0.0.1"
 description = "A package to generate simulation data easily"
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [
-    { name = "AI for Physical Systems Team at The Alan Turing Institute", email = "ai4physics@turing.ac.uk" },
-]
+authors = [{ name = "Anonymous Authors" }]
 requires-python = ">=3.10,<3.13"
 
 dependencies = [
@@ -114,8 +112,8 @@ explicit = true
 [tool.uv.sources]
 autoemulate = { git = "https://github.com/alan-turing-institute/autoemulate.git" }
 torch = [
-  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
 torchvision = [
-  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+    { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
