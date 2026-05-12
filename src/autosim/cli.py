@@ -4,7 +4,7 @@ import argparse
 import sys
 import uuid
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import hydra
 import torch
@@ -157,6 +157,11 @@ def save_example_videos(
 
     overwrite = bool(visualize_cfg.get("overwrite", True))
     preserve_aspect = bool(visualize_cfg.get("preserve_aspect", False))
+    projection_raw = str(visualize_cfg.get("projection", "plane"))
+    if projection_raw not in {"plane", "sphere"}:
+        msg = "visualize.projection must be one of ['plane', 'sphere']."
+        raise ValueError(msg)
+    projection = cast(Literal["plane", "sphere"], projection_raw)
 
     configured_channel_names = visualize_cfg.get("channel_names", None)
     resolved_channel_names = channel_names
@@ -174,6 +179,7 @@ def save_example_videos(
             save_path=str(save_path),
             channel_names=resolved_channel_names,
             preserve_aspect=preserve_aspect,
+            projection=projection,
         )
 
 
@@ -320,7 +326,7 @@ def _parse_shared_core_field_groups(
                     str(n)
                     for n in (
                         pool_from
-                        if isinstance(pool_from, (list, tuple))
+                        if isinstance(pool_from, list | tuple)
                         else [pool_from]
                     )
                 ]
