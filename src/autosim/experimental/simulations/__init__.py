@@ -6,6 +6,7 @@ from .lattice_boltzmann import LatticeBoltzmann
 from .navier_stokes_conditioned import ConditionedNavierStokes2D
 from .reaction_diffusion import ReactionDiffusion
 from .shallow_water import ShallowWater2D
+from .shallow_water_sphere_dedalus import ShallowWaterSphereDedalus
 
 ALL_SIMULATORS = [
     ReactionDiffusion,
@@ -25,6 +26,7 @@ __all__ = [
     "LatticeBoltzmann",
     "ReactionDiffusion",
     "ShallowWater2D",
+    "ShallowWaterSphereDedalus",
 ]
 
 SIMULATOR_REGISTRY = dict(zip(__all__, ALL_SIMULATORS, strict=False))

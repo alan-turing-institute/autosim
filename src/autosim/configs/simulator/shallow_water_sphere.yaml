@@ -1,0 +1,19 @@
+# Spherical shallow-water (Dedalus). Requires the optional `spherical` extra:
+#   uv sync --extra spherical
+# Galewsky barotropic-instability test: balanced mid-latitude jet + localized bump.
+# T = 144 h is roughly when the jet rolls up; the canonical Dedalus example runs
+# 360 h at 256 x 128. Keep hyperviscosity_match_mode ~ nlat // 2.
+_target_: autosim.experimental.simulations.ShallowWaterSphereDedalus
+return_timeseries: true
+log_level: warning
+nlon: 128
+nlat: 64
+T: 144.0
+dt_save: 2.0
+skip_nt: 0
+timestep_seconds: 600.0
+ic_mode: galewsky
+hyperviscosity_match_mode: 32
+forcing: false
+parameters_range:
+  height_perturbation_m: [80.0, 160.0]

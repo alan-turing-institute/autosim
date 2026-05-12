@@ -1,0 +1,24 @@
+# Spherical shallow-water (Dedalus) with PlanetSWE-style diurnal + seasonal
+# forcing of the height field. Requires the optional `spherical` extra:
+#   uv sync --extra spherical
+# The continuous forcing keeps the flow active over long runs, so use a long T
+# (PlanetSWE itself runs several model "years") and optionally discard a spin-up
+# with skip_nt.
+_target_: autosim.experimental.simulations.ShallowWaterSphereDedalus
+return_timeseries: true
+log_level: warning
+nlon: 128
+nlat: 64
+T: 240.0
+dt_save: 3.0
+skip_nt: 0
+timestep_seconds: 600.0
+ic_mode: galewsky
+hyperviscosity_match_mode: 32
+forcing: true
+forcing_rate_m_per_hour: 2.0  # height-equation tendency amplitude [m/hour]
+forcing_day_hours: 24.0
+forcing_year_hours: 1008.0
+forcing_declination_rad: 0.4
+parameters_range:
+  height_perturbation_m: [120.0, 120.0]

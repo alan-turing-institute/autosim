@@ -24,6 +24,9 @@ dependencies = [
 autosim = "autosim.cli:main"
 
 [project.optional-dependencies]
+spherical = [
+    "dedalus>=3.0.5",
+]
 dev = [
     "ipykernel>=7.1.0",
     "pytest>=9.0.1",
