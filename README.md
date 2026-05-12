@@ -23,6 +23,42 @@ uv pip install -e .
 uv sync --extra dev
 ```
 
+### Optional spherical shallow-water backend
+
+The experimental `ShallowWaterSphereDedalus` simulator uses
+[Dedalus](https://dedalus-project.readthedocs.io/) for spherical geometry.
+Dedalus is a compiled PDE framework and needs MPI, FFTW, HDF5, and an
+OpenMP-capable compiler before the Python package can build.
+
+It supports the Galewsky barotropic-instability test (`ic_mode="galewsky"`,
+default), a random-jet ensemble inspired by PDEArena's `shallowwater`
+(`ic_mode="random_jet"`), and an optional PlanetSWE-style diurnal + seasonal
+height-tendency forcing (`forcing=True`). This is not a full PlanetSWE
+reproduction: the dataset also uses ERA5-derived initial conditions, topography,
+256x512 output, CFL-controlled timestepping, and other dataset-specific choices.
+See `examples/experimental/01_03_spherical_shallow_water_dedalus.ipynb` for
+separate Dedalus, PDEArena-inspired, and PlanetSWE-inspired demos with caveats,
+and the `shallow_water_sphere` / `shallow_water_sphere_forced` simulator configs.
+
+The Python dependency is declared as an optional extra:
+
+```bash
+uv sync --extra spherical
+```
+
+On macOS this can fail if the build uses Apple clang, which does not support
+`-fopenmp`, or if MPI/FFTW paths are not discoverable. Install the native
+Dedalus stack first and expose it to the build environment. The Dedalus
+project recommends conda-forge for the full native stack, especially on macOS;
+if building from source with `uv`, set `CC=mpicc`, `MPI_PATH`, and `FFTW_PATH`
+to the prefixes for your MPI and FFTW installations.
+
+For a Homebrew + `uv` source build on macOS, run:
+
+```bash
+bash scripts/install_dedalus_macos_uv.sh
+```
+
 ## Running tests
 
 Once dev dependencies are installed:
