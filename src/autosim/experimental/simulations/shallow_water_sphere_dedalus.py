@@ -58,7 +58,11 @@ class ShallowWaterSphereDedalus(SpatioTemporalSimulator):
     ``[h, u_phi, u_theta]`` on a longitude/colatitude grid, where ``h`` is the
     height perturbation in metres and the velocity components are in m/s.
     ``u_theta`` is the colatitude component and is positive southward; use
-    ``-u_theta`` for northward meridional velocity.
+    ``-u_theta`` for northward meridional velocity. With ``include_vorticity=True``
+    a fourth channel ``zeta`` (relative vorticity in 1/s) is appended, computed
+    spectrally inside Dedalus as ``-div(skew(u))`` -- the same diagnostic the
+    Dedalus example writes -- which is the natural field for seeing eddies,
+    Rossby waves, and the Galewsky wave-breaking.
 
     Two initial-condition recipes are supported via ``ic_mode``:
 
@@ -122,6 +126,7 @@ class ShallowWaterSphereDedalus(SpatioTemporalSimulator):
         forcing_declination_rad: float = DEFAULT_FORCING_DECLINATION_RAD,
         forcing_sigma_rad: float = DEFAULT_FORCING_SIGMA_RAD,
         forcing_rate_m_per_hour: float = DEFAULT_FORCING_RATE_M_PER_HOUR,
+        include_vorticity: bool = False,
         dtype: type[np.floating[Any]] = np.float64,
     ) -> None:
         if parameters_range is None:
@@ -130,6 +135,8 @@ class ShallowWaterSphereDedalus(SpatioTemporalSimulator):
             }
         if output_names is None:
             output_names = ["h", "u_phi", "u_theta"]
+            if include_vorticity:
+                output_names = [*output_names, "zeta"]
 
         super().__init__(parameters_range, output_names, log_level)
         _validate_constructor_settings(
@@ -168,6 +175,7 @@ class ShallowWaterSphereDedalus(SpatioTemporalSimulator):
         self.forcing_year_hours = forcing_year_hours
         self.forcing_declination_rad = forcing_declination_rad
         self.forcing_sigma_rad = forcing_sigma_rad
+        self.include_vorticity = include_vorticity
         self.dtype = dtype
 
     def _get_parameter_or_default(
@@ -230,6 +238,7 @@ class ShallowWaterSphereDedalus(SpatioTemporalSimulator):
             forcing_year_hours=self.forcing_year_hours,
             forcing_declination_rad=self.forcing_declination_rad,
             forcing_sigma_rad=self.forcing_sigma_rad,
+            include_vorticity=self.include_vorticity,
             dtype=self.dtype,
         )
         return y.flatten().unsqueeze(0)
@@ -247,7 +256,7 @@ class ShallowWaterSphereDedalus(SpatioTemporalSimulator):
             ensure_exact_n=ensure_exact_n,
         )
         n_valid = y.shape[0]
-        channels = 3
+        channels = 4 if self.include_vorticity else 3
         features_per_step = self.nlon * self.nlat * channels
 
         if self.return_timeseries:
@@ -362,6 +371,7 @@ def simulate_swe_sphere_dedalus(  # noqa: PLR0912, PLR0915
     forcing_declination_rad: float = DEFAULT_FORCING_DECLINATION_RAD,
     forcing_sigma_rad: float = DEFAULT_FORCING_SIGMA_RAD,
     forcing_rate_m_per_hour: float = DEFAULT_FORCING_RATE_M_PER_HOUR,
+    include_vorticity: bool = False,
     dtype: type[np.floating[Any]] = np.float64,
     skip_nt: int = 0,
 ) -> torch.Tensor:
@@ -370,6 +380,8 @@ def simulate_swe_sphere_dedalus(  # noqa: PLR0912, PLR0915
     Time is configured in hours for ``T`` and ``dt_save``; physical constants and
     output fields are expressed in SI units. With ``forcing=True`` a PlanetSWE-
     style diurnal + seasonal heating tendency is added to the height equation.
+    With ``include_vorticity=True`` a fourth output channel ``zeta`` (relative
+    vorticity in 1/s) is appended, evaluated as ``-div(skew(u))``.
     """
     if nlon <= 0 or nlat <= 0:
         msg = "nlon and nlat must be positive"
@@ -525,6 +537,8 @@ def simulate_swe_sphere_dedalus(  # noqa: PLR0912, PLR0915
     solver.stop_sim_time = stop_sim_time
 
     velocity_unit = meter / second
+    vorticity_unit = 1.0 / second
+    vorticity_op = -d3.div(d3.skew(u)) if include_vorticity else None
 
     def snapshot() -> torch.Tensor:
         h.change_scales(1)
@@ -532,7 +546,12 @@ def simulate_swe_sphere_dedalus(  # noqa: PLR0912, PLR0915
         h_m = np.asarray(h["g"] / meter)
         u_phi_mps = np.asarray(u["g"][0] / velocity_unit)
         u_theta_mps = np.asarray(u["g"][1] / velocity_unit)
-        data = np.stack([h_m, u_phi_mps, u_theta_mps], axis=-1)
+        fields = [h_m, u_phi_mps, u_theta_mps]
+        if vorticity_op is not None:
+            zeta = vorticity_op.evaluate()
+            zeta.change_scales(1)
+            fields.append(np.asarray(zeta["g"] / vorticity_unit))
+        data = np.stack(fields, axis=-1)
         data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
         return torch.from_numpy(np.ascontiguousarray(data)).float()
 

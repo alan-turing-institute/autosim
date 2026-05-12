@@ -33,9 +33,11 @@ OpenMP-capable compiler before the Python package can build.
 It supports the Galewsky barotropic-instability test (`ic_mode="galewsky"`,
 default), a random-jet ensemble inspired by PDEArena's `shallowwater`
 (`ic_mode="random_jet"`), and an optional PlanetSWE-style diurnal + seasonal
-height-tendency forcing (`forcing=True`). This is not a full PlanetSWE
-reproduction: the dataset also uses ERA5-derived initial conditions, topography,
-256x512 output, CFL-controlled timestepping, and other dataset-specific choices.
+height-tendency forcing (`forcing=True`). Outputs are `[h, u_phi, u_theta]`;
+pass `include_vorticity=True` to append a `zeta` channel (relative vorticity in
+1/s, evaluated as `-div(skew(u))`). This is not a full PlanetSWE reproduction:
+the dataset also uses ERA5-derived initial conditions, topography, 256x512
+output, CFL-controlled timestepping, and other dataset-specific choices.
 See `examples/experimental/01_03_spherical_shallow_water_dedalus.ipynb` for
 separate Dedalus, PDEArena-inspired, and PlanetSWE-inspired demos with caveats,
 and the `shallow_water_sphere` / `shallow_water_sphere_forced` simulator configs.

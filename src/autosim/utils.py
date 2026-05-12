@@ -134,6 +134,53 @@ def _resolve_diff_norm(diff_batch: np.ndarray | None) -> Normalize | None:
     return TwoSlopeNorm(vmin=-diff_span, vcenter=0, vmax=diff_span)
 
 
+def _apply_video_downsampling(
+    true: Tensor,
+    pred: Tensor | None,
+    pred_uq: Tensor | None,
+    time_stride: int,
+    spatial_stride: int | tuple[int, ...],
+) -> tuple[Tensor, Tensor | None, Tensor | None]:
+    """Subsample video tensors along the time and spatial axes.
+
+    Tensors are ``(batch, time, *spatial, channels)``. ``time_stride=2`` keeps
+    every other frame; ``spatial_stride=2`` keeps every other grid point in each
+    spatial dimension (pass a tuple for a per-dimension stride). This is the
+    cheap way to keep animation rendering -- the spherical 3D view in particular
+    -- tractable: ``to_jshtml`` rasterises every frame, so halving each axis is
+    roughly an 8x speedup.
+    """
+    n_spatial = true.ndim - 3
+    if isinstance(spatial_stride, int):
+        spatial_strides: tuple[int, ...] = (spatial_stride,) * n_spatial
+    else:
+        spatial_strides = tuple(int(s) for s in spatial_stride)
+        if len(spatial_strides) != n_spatial:
+            msg = (
+                f"spatial_stride must have {n_spatial} entries to match the "
+                f"spatial dimensions, got {len(spatial_strides)}."
+            )
+            raise ValueError(msg)
+    for label, value in (
+        ("time_stride", time_stride),
+        *((f"spatial_stride entry {i}", s) for i, s in enumerate(spatial_strides)),
+    ):
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            msg = f"{label} must be a positive integer, got {value!r}."
+            raise ValueError(msg)
+    if time_stride == 1 and all(s == 1 for s in spatial_strides):
+        return true, pred, pred_uq
+    index = (
+        slice(None),
+        slice(None, None, time_stride),
+        *(slice(None, None, s) for s in spatial_strides),
+        slice(None),
+    )
+    pred_ds = None if pred is None else pred[index]
+    pred_uq_ds = None if pred_uq is None else pred_uq[index]
+    return true[index], pred_ds, pred_uq_ds
+
+
 def _prepare_video_plot_data(
     true: Tensor,
     pred: Tensor | None,
@@ -249,6 +296,9 @@ def plot_spatiotemporal_video(  # noqa: PLR0915
     channel_names: list[str] | None = None,
     preserve_aspect: bool = False,
     projection: Literal["plane", "sphere"] = "plane",
+    transpose_spatial: bool = False,
+    time_stride: int = 1,
+    spatial_stride: int | tuple[int, int] = 1,
 ):
     """Create a video comparing ground truth and predicted spatiotemporal time series.
 
@@ -288,6 +338,18 @@ def plot_spatiotemporal_video(  # noqa: PLR0915
     projection: {"plane", "sphere"}
         Render the spatial grid as a planar image or as a sphere. Spherical
         rendering assumes the spatial dimensions are ``[longitude, colatitude]``.
+    transpose_spatial: bool
+        If True, swap the two spatial axes before rendering planar images. This is
+        useful for data stored as ``[longitude, latitude]`` when you want longitude
+        on the horizontal axis. Has no effect for ``projection='sphere'``.
+    time_stride: int
+        Keep only every ``time_stride``-th frame before rendering (default 1 = all
+        frames). Larger values make the animation much cheaper to build.
+    spatial_stride: int | tuple[int, int]
+        Keep only every ``spatial_stride``-th grid point in each spatial dimension
+        (default 1 = full resolution); pass a tuple for a per-dimension stride.
+        The ``projection='sphere'`` view in particular gets dramatically faster
+        at, e.g., ``spatial_stride=2`` (a quarter of the polygons per frame).
 
     Returns
     -------
@@ -311,8 +373,13 @@ def plot_spatiotemporal_video(  # noqa: PLR0915
             colorbar_mode=colorbar_mode,
             colorbar_mode_uq=colorbar_mode_uq,
             channel_names=channel_names,
+            time_stride=time_stride,
+            spatial_stride=spatial_stride,
         )
 
+    true, pred, pred_uq = _apply_video_downsampling(
+        true, pred, pred_uq, time_stride, spatial_stride
+    )
     colorbar_mode_str = _validate_mode(
         "colorbar_mode", colorbar_mode, {"none", "row", "column", "all"}
     )
@@ -337,12 +404,13 @@ def plot_spatiotemporal_video(  # noqa: PLR0915
 
     _base = 4.0
     if preserve_aspect and len(plot_data.spatial) == 2:
-        W, H = plot_data.spatial
-        # _to_imshow_frame does NOT transpose by default, so imshow receives (W, H):
-        # rows = W (figure height), cols = H (figure width).
+        nrows, ncols = plot_data.spatial
+        if transpose_spatial:
+            nrows, ncols = ncols, nrows
+        # imshow receives (nrows, ncols) after any optional transpose.
         # Scale the smaller base dimension and cap to avoid excessively large figures.
-        if H > 0 and W > 0:
-            ratio = W / H  # rows / cols
+        if ncols > 0 and nrows > 0:
+            ratio = nrows / ncols
             if ratio >= 1:  # taller than wide
                 panel_width = _base
                 panel_height = min(_base * ratio, 3 * _base)
@@ -377,7 +445,7 @@ def plot_spatiotemporal_video(  # noqa: PLR0915
         for ch in range(C):
             ax = fig.add_subplot(gs[row_idx, ch])
 
-            frame0 = _to_imshow_frame(data[0, :, :, ch])
+            frame0 = _to_imshow_frame(data[0, :, :, ch], transpose=transpose_spatial)
 
             norm = _resolve_row_norm(plot_data, row_idx, ch, colorbar_mode_uq_str)
             aspect = "equal" if preserve_aspect else "auto"
@@ -411,7 +479,9 @@ def plot_spatiotemporal_video(  # noqa: PLR0915
     def update(frame):
         for row_idx, (data, _row_label, _row_cmap) in enumerate(plot_data.rows_to_plot):
             for ch in range(C):
-                images[row_idx][ch].set_array(_to_imshow_frame(data[frame, :, :, ch]))
+                images[row_idx][ch].set_array(
+                    _to_imshow_frame(data[frame, :, :, ch], transpose=transpose_spatial)
+                )
         suptitle_text.set_text(
             f"{title} - Batch {batch_idx} - Time Step: {frame}/{T - 1}"
         )
@@ -443,6 +513,8 @@ def plot_spatiotemporal_sphere_video(  # noqa: PLR0915
     colorbar_mode_uq: Literal["none", "row"] = "none",
     channel_names: list[str] | None = None,
     radius: float = 1.0,
+    time_stride: int = 1,
+    spatial_stride: int | tuple[int, int] = 1,
 ):
     """Create a spherical video for data on a longitude/colatitude grid.
 
@@ -478,6 +550,13 @@ def plot_spatiotemporal_sphere_video(  # noqa: PLR0915
         Optional list of channel names for titles.
     radius: float
         Sphere radius used for rendering.
+    time_stride: int
+        Keep only every ``time_stride``-th frame before rendering (default 1).
+    spatial_stride: int | tuple[int, int]
+        Keep only every ``spatial_stride``-th grid point in each spatial
+        dimension (default 1); pass a tuple for a per-dimension stride. The 3D
+        sphere is expensive to rasterise per frame, so ``spatial_stride=2`` (a
+        quarter of the polygons) is a cheap, large speedup.
 
     Returns
     -------
@@ -489,6 +568,9 @@ def plot_spatiotemporal_sphere_video(  # noqa: PLR0915
     )
     colorbar_mode_uq_str = _validate_mode(
         "colorbar_mode_uq", colorbar_mode_uq, {"none", "row"}
+    )
+    true, pred, pred_uq = _apply_video_downsampling(
+        true, pred, pred_uq, time_stride, spatial_stride
     )
     plot_data = _prepare_video_plot_data(
         true=true,
@@ -605,19 +687,13 @@ def plot_spatiotemporal_sphere_video(  # noqa: PLR0915
     def update(frame):
         for row_idx, (data, _row_label, row_cmap) in enumerate(plot_data.rows_to_plot):
             for ch in range(C):
-                surfaces[row_idx][ch].remove()
                 norm = surface_norms[row_idx][ch]
-
-                surfaces[row_idx][ch] = axes[row_idx][ch].plot_surface(
-                    x_sphere,
-                    y_sphere,
-                    z_sphere,
-                    facecolors=_surface_colors(data[frame, :, :, ch], row_cmap, norm),
-                    rstride=1,
-                    cstride=1,
-                    linewidth=0,
-                    antialiased=False,
-                    shade=False,
+                new_colors = _surface_colors(data[frame, :, :, ch], row_cmap, norm)
+                # Reuse the existing Poly3DCollection geometry; only update face colors.
+                # Faces for an (nlon+1)x(ncolat+2) vertex grid with rstride=cstride=1
+                # are nlon*(ncolat+1), indexed [:nlon, :ncolat+1].
+                surfaces[row_idx][ch].set_facecolors(
+                    new_colors[:nlon, : ncolat + 1, :].reshape(-1, 4)
                 )
 
         suptitle_text.set_text(

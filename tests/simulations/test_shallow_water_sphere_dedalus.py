@@ -54,6 +54,31 @@ def test_spherical_swe_final_frame_shape_with_mocked_solver(monkeypatch) -> None
     assert out["data"].shape == (1, 1, 8, 4, 3)
 
 
+def test_spherical_swe_include_vorticity_adds_channel(monkeypatch) -> None:
+    captured: dict = {}
+
+    def fake_solver(**kwargs) -> torch.Tensor:
+        captured.update(kwargs)
+        channels = 4 if kwargs["include_vorticity"] else 3
+        return torch.zeros(kwargs["nlon"], kwargs["nlat"], channels).unsqueeze(0)
+
+    monkeypatch.setattr(sws, "simulate_swe_sphere_dedalus", fake_solver)
+    sim = ShallowWaterSphereDedalus(
+        return_timeseries=False,
+        log_level="warning",
+        nlon=8,
+        nlat=4,
+        include_vorticity=True,
+        parameters_range={"height_perturbation_m": (120.0, 120.0)},
+    )
+
+    out = sim.forward_samples_spatiotemporal(n=1, random_seed=0)
+
+    assert captured["include_vorticity"] is True
+    assert sim.output_names == ["h", "u_phi", "u_theta", "zeta"]
+    assert out["data"].shape == (1, 1, 8, 4, 4)
+
+
 def test_spherical_swe_skip_nt_too_large_raises_before_importing_dedalus() -> None:
     with pytest.raises(ValueError, match="skip_nt is too large"):
         sws.simulate_swe_sphere_dedalus(
@@ -193,10 +218,16 @@ def test_save_times_include_terminal_time_for_noninteger_ratio() -> None:
 
 
 @pytest.mark.parametrize(
-    ("ic_mode", "forcing", "perturbation_zonal_mode"),
-    [("galewsky", False, 0), ("random_jet", False, 6), ("galewsky", True, 0)],
+    ("ic_mode", "forcing", "perturbation_zonal_mode", "include_vorticity"),
+    [
+        ("galewsky", False, 0, True),
+        ("random_jet", False, 6, False),
+        ("galewsky", True, 0, False),
+    ],
 )
-def test_real_dedalus_smoke_run(ic_mode, forcing, perturbation_zonal_mode) -> None:
+def test_real_dedalus_smoke_run(
+    ic_mode, forcing, perturbation_zonal_mode, include_vorticity
+) -> None:
     pytest.importorskip("dedalus")
     np.random.seed(0)
     y = sws.simulate_swe_sphere_dedalus(
@@ -224,6 +255,10 @@ def test_real_dedalus_smoke_run(ic_mode, forcing, perturbation_zonal_mode) -> No
         hyperviscosity_match_mode=4,
         forcing=forcing,
         forcing_rate_m_per_hour=2.0,
+        include_vorticity=include_vorticity,
     )
-    assert y.shape == (3, 16, 8, 3)
+    expected_channels = 4 if include_vorticity else 3
+    assert y.shape == (3, 16, 8, expected_channels)
     assert torch.isfinite(y).all()
+    if include_vorticity:
+        assert torch.any(y[..., 3] != 0.0)
