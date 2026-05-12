@@ -486,6 +486,7 @@ def test_save_example_videos_uses_batch_indices_and_split(
             "fps": 7,
             "file_ext": "gif",
             "overwrite": True,
+            "projection": "sphere",
         }
     )
 
@@ -498,6 +499,7 @@ def test_save_example_videos_uses_batch_indices_and_split(
 
     assert len(calls) == 2
     assert all(call["channel_names"] == ["h", "u"] for call in calls)
+    assert all(call["projection"] == "sphere" for call in calls)
     saved_paths = sorted(Path(str(call["save_path"])) for call in calls)
     assert saved_paths[0] == tmp_path / "examples" / "train" / "batch_0.gif"
     assert saved_paths[1] == tmp_path / "examples" / "train" / "batch_2.gif"
