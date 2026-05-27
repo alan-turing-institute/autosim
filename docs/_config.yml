@@ -1,0 +1,52 @@
+title: "AutoSim: simulation data generation"
+author: The Alan Turing Institute
+logo: ../AS.png
+
+execute:
+  execute_notebooks: cache
+  allow_errors: false
+  timeout: 3600
+
+only_build_toc_files: true
+
+repository:
+  url: https://github.com/alan-turing-institute/autosim
+  path_to_book: docs
+  branch: main
+
+html:
+  use_issues_button: true
+  use_repository_button: true
+  default_mode: dark
+  extra_footer: |
+    Copyright &copy; 2026
+
+sphinx:
+  extra_extensions:
+    - sphinx.ext.autodoc
+    - sphinx.ext.napoleon
+    - sphinx.ext.viewcode
+    - sphinx_copybutton
+  config:
+    add_module_names: false
+    autoclass_content: class
+    autodoc_member_order: bysource
+    autodoc_typehints: none
+    html_show_copyright: false
+    language: en
+    napoleon_google_docstring: true
+    napoleon_numpy_docstring: false
+    copybutton_prompt_text: "$"
+    intersphinx_mapping:
+      python:
+        - https://docs.python.org/3
+        - null
+      numpy:
+        - https://numpy.org/doc/stable/
+        - null
+      scipy:
+        - https://docs.scipy.org/doc/scipy/
+        - null
+      torch:
+        - https://docs.pytorch.org/docs/stable/
+        - null

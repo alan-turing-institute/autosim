@@ -23,6 +23,12 @@ uv pip install -e .
 uv sync --extra dev
 ```
 
+### Install documentation dependencies
+
+```bash
+uv sync --extra dev --extra docs
+```
+
 ## Running tests
 
 Once dev dependencies are installed:
@@ -30,6 +36,16 @@ Once dev dependencies are installed:
 ```bash
 uv run pytest
 ```
+
+## Building the documentation
+
+Build the local documentation site with:
+
+```bash
+uv run jupyter-book build docs --all
+```
+
+Preview the generated site by opening `docs/_build/html/index.html`.
 
 ## Generate training data (Hydra CLI)
 

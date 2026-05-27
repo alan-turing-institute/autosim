@@ -1,0 +1,41 @@
+# Table of contents
+
+format: jb-book
+root: index
+chapters:
+  - file: installation
+  - file: tutorials/index
+    sections:
+      - file: tutorials/quickstart
+      - file: tutorials/custom_simulator
+  - file: reference/index
+    sections:
+      - file: reference/core/index
+        sections:
+          - file: reference/core/cli
+          - file: reference/core/device
+          - file: reference/core/logging
+          - file: reference/core/types
+          - file: reference/core/utils
+          - file: reference/core/validation
+      - file: reference/simulations/index
+        sections:
+          - file: reference/simulations/base
+          - file: reference/simulations/advection_diffusion
+          - file: reference/simulations/advection_diffusion_multichannel
+          - file: reference/simulations/double_pendulum
+          - file: reference/simulations/epidemic
+          - file: reference/simulations/flow_problem
+          - file: reference/simulations/projectile
+          - file: reference/simulations/reaction_diffusion
+          - file: reference/simulations/seir
+      - file: reference/experimental/index
+        sections:
+          - file: reference/experimental/compressible_fluid
+          - file: reference/experimental/gray_scott
+          - file: reference/experimental/gross_pitaevskii
+          - file: reference/experimental/hydrodynamics_2d
+          - file: reference/experimental/lattice_boltzmann
+          - file: reference/experimental/navier_stokes_conditioned
+          - file: reference/experimental/reaction_diffusion
+          - file: reference/experimental/shallow_water
