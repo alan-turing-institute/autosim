@@ -1,3 +1,5 @@
+"""Torch device helpers for AutoSim simulators."""
+
 import logging
 import os
 
@@ -21,28 +23,25 @@ class TorchDeviceError(NotImplementedError):
     """Exception raised when the device is not implemented in torch."""
 
     def __init__(self, device: str):
+        """Initialize the error for an unsupported torch backend."""
         msg = f"Backend ({device}) not implemented."
         super().__init__(msg)
 
 
 def get_torch_device(device: DeviceLike | None) -> torch.device:
-    """
-    Get the device returning the torch default device if None.
+    """Get the device returning the torch default device if None.
 
-    Parameters
-    ----------
-    device: DeviceLike | None
-        The device to get. If None, the default torch device is returned.
+    Args:
+        device: DeviceLike | None
+            The device to get. If None, the default torch device is returned.
 
-    Returns
-    -------
-    torch.device
-        The device.
+    Returns:
+        torch.device
+            The device.
 
-    Raises
-    ------
-    TorchDeviceError
-        If the device is not a valid torch device.
+    Raises:
+        TorchDeviceError
+            If the device is not a valid torch device.
     """
     if isinstance(device, torch.device):
         return device
@@ -56,43 +55,36 @@ def get_torch_device(device: DeviceLike | None) -> torch.device:
 def move_tensors_to_device(
     *args: TensorLike, device: torch.device
 ) -> tuple[TensorLike, ...]:
-    """
-    Move the given tensor to the device.
+    """Move the given tensor to the device.
 
-    Parameters
-    ----------
-    *args: TensorLike
-        The tensors to move.
-    device: torch.device
-        The device to move the tensors to.
+    Args:
+        *args: TensorLike
+            The tensors to move.
+        device: torch.device
+            The device to move the tensors to.
 
-    Returns
-    -------
-    tuple[TensorLike, ...]
-        The tensors on the device.
+    Returns:
+        tuple[TensorLike, ...]
+            The tensors on the device.
     """
     return tuple(tensor.to(device) for tensor in args)
 
 
 # ruff: noqa: PLR0911
 def check_torch_device_is_available(device: DeviceLike) -> bool:
-    """
-    Check if the given device type is available.
+    """Check if the given device type is available.
 
-    Parameters
-    ----------
-    device: DeviceLike
-        The device to check.
+    Args:
+        device: DeviceLike
+            The device to check.
 
-    Returns
-    -------
-    bool
-        True if the device is available, False otherwise.
+    Returns:
+        bool
+            True if the device is available, False otherwise.
 
-    Raises
-    ------
-    TorchDeviceError
-        If the device is not a valid torch device.
+    Raises:
+        TorchDeviceError
+            If the device is not a valid torch device.
     """
     if device == "cpu" or (
         isinstance(device, torch.device) and device.type == torch.device("cpu").type
@@ -118,21 +110,18 @@ def check_torch_device_is_available(device: DeviceLike) -> bool:
 
 
 def check_model_device(model: nn.Module, expected_device: str) -> bool:
-    """
-    Check if the model is on the expected device.
+    """Check if the model is on the expected device.
 
-    Parameters
-    ----------
-    model: nn.Module
-        The model to check.
-    expected_device: str
-        The expected device.
+    Args:
+        model: nn.Module
+            The model to check.
+        expected_device: str
+            The expected device.
 
-    Returns
-    -------
-    bool
-        True if the model is on the expected device (ignoring device index), False
-        otherwise.
+    Returns:
+        bool
+            True if the model is on the expected device (ignoring device index), False
+            otherwise.
     """
     return (
         str(next(model.parameters()).device).split(":")[0]
@@ -141,21 +130,19 @@ def check_model_device(model: nn.Module, expected_device: str) -> bool:
 
 
 class TorchDeviceMixin:
-    """
-    Mixin class to add device management to a PyTorch model.
+    """Mixin class to add device management to a PyTorch model.
 
-    Attributes
-    ----------
-    device: torch.device
-        The device to use. If None, the default torch device is used.
+    Attributes:
+        device: torch.device
+            The device to use. If None, the default torch device is used.
 
-    Raises
-    ------
-    TorchDeviceError
-        If the device is not a valid torch device.
+    Raises:
+        TorchDeviceError
+            If the device is not a valid torch device.
     """
 
     def __init__(self, device: DeviceLike | None = None, cpu_only: bool = False):
+        """Initialize device handling for a torch-backed object."""
         # Warn if given device not CPU and cpu_only
         # TODO: check handling
         if cpu_only and (
@@ -175,17 +162,14 @@ class TorchDeviceMixin:
             raise TorchDeviceError(str(self.device))
 
     def _move_tensors_to_device(self, *args: TensorLike) -> tuple[TensorLike, ...]:
-        """
-        Move the given tensor to the device.
+        """Move the given tensor to the device.
 
-        Parameters
-        ----------
-        *args: TensorLike
-            The tensors to move.
+        Args:
+            *args: TensorLike
+                The tensors to move.
 
-        Returns
-        -------
-        tuple[TensorLike, ...]
-            The tensors on the device.
+        Returns:
+            tuple[TensorLike, ...]
+                The tensors on the device.
         """
         return move_tensors_to_device(*args, device=self.device)

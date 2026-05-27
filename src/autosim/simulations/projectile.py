@@ -1,3 +1,5 @@
+"""Projectile motion simulators with drag."""
+
 # from https://github.com/alan-turing-institute/mogp-emulator/blob/main/mogp_emulator/demos/projectile.py
 import numpy as np
 import torch
@@ -8,8 +10,7 @@ from autosim.types import NumpyLike, TensorLike
 
 
 class Projectile(Simulator):
-    """
-    Simulator of projectile motion.
+    """Simulator of projectile motion.
 
     A projectile is launched from an initial height of 2 meters at an  angle of 45
     degrees and falls under the influence of gravity and air resistance. Drag is
@@ -24,6 +25,7 @@ class Projectile(Simulator):
         output_names: list[str] | None = None,
         log_level: str = "progress_bar",
     ):
+        """Initialize the single-output projectile simulator."""
         if parameters_range is None:
             parameters_range = {"c": (-5.0, 1.0), "v0": (0.0, 1000)}
         if output_names is None:
@@ -31,20 +33,17 @@ class Projectile(Simulator):
         super().__init__(parameters_range, output_names, log_level)
 
     def _forward(self, x: TensorLike) -> TensorLike:
-        """
-        Simulate the projectile motion and return the distance travelled.
+        """Simulate the projectile motion and return the distance travelled.
 
-        Parameters
-        ----------
-        x: TensorLike
-            Dictionary of input parameter values to simulate:
-            - `c`: the drag coefficient on a log scale
-            - `v0`: velocity
+        Args:
+            x: TensorLike
+                Dictionary of input parameter values to simulate:
+                - `c`: the drag coefficient on a log scale
+                - `v0`: velocity
 
-        Returns
-        -------
-        TensorLike
-            Distance travelled by projectile.
+        Returns:
+            TensorLike
+                Distance travelled by projectile.
         """
         assert x.shape[0] == 1, (
             f"Simulator._forward expects a single input, got {x.shape[0]}"
@@ -54,8 +53,7 @@ class Projectile(Simulator):
 
 
 class ProjectileMultioutput(Simulator):
-    """
-    Multi-output simulator of projectile motion.
+    """Multi-output simulator of projectile motion.
 
     Simulator of projectile motion that outputs both the distance travelled by the
     projectile and its velocity on impact.
@@ -67,6 +65,7 @@ class ProjectileMultioutput(Simulator):
         output_names: list[str] | None = None,
         log_level: str = "progress_bar",
     ):
+        """Initialize the multi-output projectile simulator."""
         if parameters_range is None:
             parameters_range = {"c": (-5.0, 1.0), "v0": (0.0, 1000)}
         if output_names is None:
@@ -74,23 +73,20 @@ class ProjectileMultioutput(Simulator):
         super().__init__(parameters_range, output_names, log_level)
 
     def _forward(self, x: TensorLike) -> TensorLike:
-        """
-        Simulate the projectile motion with multiple outputs.
+        """Simulate the projectile motion with multiple outputs.
 
         Simulate projectile motion and return the distance travelled and impact
         velocity.
 
-        Parameters
-        ----------
-        x: TensorLike
-            Dictionary of input parameter values to simulate:
-            - `c`: the drag coefficient on a log scale
-            - `v0`: velocity
+        Args:
+            x: TensorLike
+                Dictionary of input parameter values to simulate:
+                - `c`: the drag coefficient on a log scale
+                - `v0`: velocity
 
-        Returns
-        -------
-        TensorLike
-            Distance travelled by projectile and impact velocity.
+        Returns:
+            TensorLike
+                Distance travelled by projectile and impact velocity.
         """
         assert x.shape[0] == 1, (
             f"Simulator._forward expects a single input, got {x.shape[0]}"
@@ -100,17 +96,22 @@ class ProjectileMultioutput(Simulator):
 
 
 def f(t: float, y: NumpyLike, c: float):  # noqa: ARG001
-    """
-    Compute RHS of system of differential equations, returning vector derivative.
+    r"""Compute RHS of system of differential equations, returning vector derivative.
 
-    Parameters
-    ----------
-    t: float
-        Time variable (not used).
-    y: array
-        Array of dependent variables (vx, vy, x, y).
-    c: float
-        Drag coefficient (non-negative).
+    The state is ``(v_x, v_y, x, y)`` and the drag model is:
+
+    .. math::
+
+        \frac{dv_x}{dt} &= -c v_x \sqrt{v_x^2 + v_y^2} \\
+        \frac{dv_y}{dt} &= -g - c v_y \sqrt{v_x^2 + v_y^2}
+
+    Args:
+        t: float
+            Time variable (not used).
+        y: array
+            Array of dependent variables (vx, vy, x, y).
+        c: float
+            Drag coefficient (non-negative).
     """
     # check inputs and extract
     assert len(y) == 4
@@ -131,22 +132,19 @@ def f(t: float, y: NumpyLike, c: float):  # noqa: ARG001
 
 
 def event(t: float, y: NumpyLike, c: float) -> float:  # noqa: ARG001
-    """
-    Event to trigger end of integration. Stops when projectile hits ground.
+    """Event to trigger end of integration. Stops when projectile hits ground.
 
-    Parameters
-    ----------
-    t: float
-        Time variable (not used).
-    y: array
-        Array of dependent variables (vx, vy, x, y).
-    c: float
-        Drag coefficient (non-negative).
+    Args:
+        t: float
+            Time variable (not used).
+        y: array
+            Array of dependent variables (vx, vy, x, y).
+        c: float
+            Drag coefficient (non-negative).
 
-    Returns
-    -------
-    float
-        The height of the projectile.
+    Returns:
+        float
+            The height of the projectile.
     """
     assert len(y) == 4
     assert c >= 0.0
@@ -159,20 +157,17 @@ event.terminal = True  # pyright: ignore[reportFunctionMemberAccess]
 
 
 def simulator_base(x: NumpyLike):
-    """
-    Simulate ODE system for projectile motion with drag.
+    """Simulate ODE system for projectile motion with drag.
 
     Returns distance projectile travels.
 
-    Parameters
-    ----------
-    x: NumpyLike
-        Array of input parameters (c, v0).
+    Args:
+        x: NumpyLike
+            Array of input parameters (c, v0).
 
-    Returns
-    -------
-    results: scipy.integrate.OdeResult
-        Results of ODE integration.
+    Returns:
+        results: scipy.integrate.OdeResult
+            Results of ODE integration.
     """
     # unpack values
 
@@ -195,20 +190,17 @@ def simulator_base(x: NumpyLike):
 
 
 def simulate_projectile(x: NumpyLike) -> float:
-    """
-    Return the distance travelled by the projectile.
+    """Return the distance travelled by the projectile.
 
     Distance is obtained by solving the ODE system for projectile motion with drag.
 
-    Parameters
-    ----------
-    x: NumpyLike
-        Array of input parameters (c, v0).
+    Args:
+        x: NumpyLike
+            Array of input parameters (c, v0).
 
-    Returns
-    -------
-    distance: float
-        Distance travelled by projectile.
+    Returns:
+        distance: float
+            Distance travelled by projectile.
     """
     results = simulator_base(x)
 
@@ -216,20 +208,17 @@ def simulate_projectile(x: NumpyLike) -> float:
 
 
 def simulate_projectile_multioutput(x: NumpyLike) -> tuple[float, float]:
-    """
-    Return the distance travelled by the projectile and its impact velocity.
+    """Return the distance travelled by the projectile and its impact velocity.
 
     Simulator to solve ODE system with multiple outputs.
 
-    Parameters
-    ----------
-    x: NumpyLike
-        Array of input parameters (c, v0).
+    Args:
+        x: NumpyLike
+            Array of input parameters (c, v0).
 
-    Returns
-    -------
-    float, float
-        Distance travelled by projectile and its velocity on impact.
+    Returns:
+        float, float
+            Distance travelled by projectile and its velocity on impact.
     """
     results = simulator_base(x)
 

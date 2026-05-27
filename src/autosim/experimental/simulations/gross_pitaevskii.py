@@ -1,3 +1,5 @@
+"""Gross-Pitaevskii equation simulator."""
+
 import math
 from collections.abc import Callable
 from typing import Any, ClassVar, Literal
@@ -629,6 +631,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         artifact_validation_warmup_frames: int = 8,
         artifact_validation_tail_frames: int = 12,
     ) -> None:
+        """Initialize the Gross-Pitaevskii simulator."""
         if parameters_range is None:
             # Provide some sensible defaults for complexity knobs
             parameters_range = {

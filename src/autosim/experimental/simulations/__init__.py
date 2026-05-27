@@ -1,3 +1,5 @@
+"""Experimental simulator implementations."""
+
 from .compressible_fluid import CompressibleFluid2D
 from .gray_scott import GrayScott
 from .gross_pitaevskii import GrossPitaevskiiEquation2D

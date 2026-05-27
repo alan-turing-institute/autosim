@@ -1,3 +1,5 @@
+"""SIR epidemic simulator and ODE helper functions."""
+
 import numpy as np
 import torch
 from scipy.integrate import solve_ivp
@@ -15,6 +17,7 @@ class Epidemic(Simulator):
         output_names=None,
         log_level: str = "progress_bar",
     ):
+        """Initialize the SIR epidemic simulator."""
         if parameters_range is None:
             parameters_range = {"beta": (0.1, 0.5), "gamma": (0.01, 0.2)}
         if output_names is None:
@@ -22,20 +25,17 @@ class Epidemic(Simulator):
         super().__init__(parameters_range, output_names, log_level)
 
     def _forward(self, x: TensorLike) -> TensorLike:
-        """
-        Simulate the epidemic using the SIR model.
+        """Simulate the epidemic using the SIR model.
 
-        Parameters
-        ----------
-        x: TensorLike
-            input parameter values to simulate [beta, gamma]:
-            - `beta`: the transimission rate per day
-            - `gamma`: the recovery rate per day
+        Args:
+            x: TensorLike
+                input parameter values to simulate [beta, gamma]:
+                - `beta`: the transimission rate per day
+                - `gamma`: the recovery rate per day
 
-        Returns
-        -------
-        TensorLike
-            Peak infection rate.
+        Returns:
+            TensorLike
+                Peak infection rate.
         """
         assert x.shape[0] == 1, (
             f"Simulator._forward expects a single input, got {x.shape[0]}"
@@ -46,23 +46,28 @@ class Epidemic(Simulator):
 
 
 def simulate_epidemic(x: NumpyLike, N: int = 1000, I0: int = 1) -> float:
-    """
-    Simulate an epidemic using the SIR model.
+    r"""Simulate an epidemic using the SIR model.
 
-    Parameters
-    ----------
-    x: NumpyLike
-        The parameters of the SIR model. The first element is the transmission rate
-        (beta) and the second element is the recovery rate (gamma).
-    N: int
-        The total population size. Defaults to 1000.
-    I0: int
-        The initial number of infected individuals. Defaults to 1.
+    The compartment dynamics are:
 
-    Returns
-    -------
-    peak_infection_rate: float
-        The peak infection rate as a fraction of the total population.
+    .. math::
+
+        \frac{dS}{dt} &= -\beta S I / N \\
+        \frac{dI}{dt} &= \beta S I / N - \gamma I \\
+        \frac{dR}{dt} &= \gamma I
+
+    Args:
+        x: NumpyLike
+            The parameters of the SIR model. The first element is the transmission rate
+            (beta) and the second element is the recovery rate (gamma).
+        N: int
+            The total population size. Defaults to 1000.
+        I0: int
+            The initial number of infected individuals. Defaults to 1.
+
+    Returns:
+        peak_infection_rate: float
+            The peak infection rate as a fraction of the total population.
     """
     # check inputs
     assert len(x) == 2

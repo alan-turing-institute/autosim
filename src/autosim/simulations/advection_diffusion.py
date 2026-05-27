@@ -1,3 +1,5 @@
+"""Advection-diffusion simulator and finite-difference solver helpers."""
+
 import numpy as np
 import scipy.sparse as sp
 import torch
@@ -27,27 +29,25 @@ class AdvectionDiffusion(SpatioTemporalSimulator):
         T: float = 80.0,
         dt: float = 0.25,
     ):
-        """
-        Initialize the AdvectionDiffusion simulator.
+        """Initialize the AdvectionDiffusion simulator.
 
-        Parameters
-        ----------
-        parameters_range: dict[str, tuple[float, float]]
-            Mapping of input parameter names to (min, max) ranges.
-        output_names: list[str]
-            List of output parameter names.
-        log_level: str
-            Logging level for the simulator.
-        return_timeseries: bool
-            Whether to return the full timeseries or just the final snapshot.
-        n: int
-            Number of spatial points per direction.
-        L: float
-            Domain size in X and Y directions.
-        T: float
-            Total simulation time.
-        dt: float
-            Time step size.
+        Args:
+            parameters_range: dict[str, tuple[float, float]]
+                Mapping of input parameter names to (min, max) ranges.
+            output_names: list[str]
+                List of output parameter names.
+            log_level: str
+                Logging level for the simulator.
+            return_timeseries: bool
+                Whether to return the full timeseries or just the final snapshot.
+            n: int
+                Number of spatial points per direction.
+            L: float
+                Domain size in X and Y directions.
+            T: float
+                Total simulation time.
+            dt: float
+                Time step size.
         """
         if parameters_range is None:
             parameters_range = {
@@ -152,27 +152,38 @@ def advection_diffusion(
     K3: NumpyLike,
     mu: float,
 ) -> NumpyLike:
-    """
-    Define the advection-diffusion RHS used by the ODE integrator.
+    r"""Define the advection-diffusion RHS used by the ODE integrator.
 
-    Parameters
-    ----------
-    _t: float
-        Current time (unused).
-    w2: NumpyLike
-        Flattened vorticity field.
-    A, Dx, Dy: sp.csr_matrix
-        Sparse differential operators.
-    nu: float
-        Viscosity coefficient.
-    dx: float
-        Spatial step.
-    n, N: int
-        Grid sizes.
-    K3: NumpyLike
-        Inverse Laplacian in Fourier space.
-    mu: float
-        Advection strength.
+    The vorticity equation is approximated as:
+
+    .. math::
+
+        \partial_t \omega = \nu \nabla^2 \omega
+        - \mu (u \partial_x \omega + v \partial_y \omega)
+
+    Args:
+        _t: float
+            Current time (unused).
+        w2: NumpyLike
+            Flattened vorticity field.
+        A: sp.csr_matrix
+            Sparse Laplacian operator.
+        Dx: sp.csr_matrix
+            Sparse derivative operator in the x direction.
+        Dy: sp.csr_matrix
+            Sparse derivative operator in the y direction.
+        nu: float
+            Viscosity coefficient.
+        dx: float
+            Spatial step.
+        n: int
+            Number of spatial points per direction.
+        N: int
+            Total number of spatial grid points.
+        K3: NumpyLike
+            Inverse Laplacian in Fourier space.
+        mu: float
+            Advection strength.
     """
     w_2d = w2.reshape(n, n)
 
@@ -196,15 +207,21 @@ def simulate_advection_diffusion(
     T: float = 80.0,
     dt: float = 0.25,
 ) -> NumpyLike:
-    """
-    Simulate the 2D vorticity equation (advection-diffusion).
+    """Simulate the 2D vorticity equation (advection-diffusion).
 
-    Parameters
-    ----------
-    x: NumpyLike
-        [nu, mu] parameters.
-    return_timeseries: bool
-        Whether to return full timeseries or only final snapshot.
+    Args:
+        x: NumpyLike
+            [nu, mu] parameters.
+        return_timeseries: bool
+            Whether to return full timeseries or only final snapshot.
+        n: int
+            Number of spatial points per direction.
+        L: float
+            Domain length in each spatial direction.
+        T: float
+            Total simulation time.
+        dt: float
+            Time step for saved solver outputs.
     """
     nu, mu = x
 

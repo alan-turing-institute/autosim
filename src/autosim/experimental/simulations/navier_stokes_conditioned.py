@@ -1,3 +1,5 @@
+"""Conditioned Navier-Stokes smoke simulator."""
+
 from __future__ import annotations
 
 import math
@@ -230,10 +232,24 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
     drives buoyancy forcing in the vertical velocity equation.
 
     Args:
+        params: One-dimensional tensor containing sampled simulator parameters. The
+            first value is interpreted as the vertical buoyancy coefficient.
+        return_timeseries: Whether to return all saved snapshots or the final state.
+        n: Number of grid points in each spatial direction.
+        L: Domain length in each spatial direction.
+        T: Total simulation time.
+        dt: Base integration step.
+        snapshot_dt: Time between saved snapshots. If ``None``, uses ``dt``.
+        nu: Kinematic viscosity for velocity diffusion.
+        smoke_diffusivity: Diffusion coefficient for the smoke scalar.
+        cfl: CFL factor used to limit the adaptive integration step.
+        smoothness: Smoothness scale used for the initial smoke field.
+        noise_scale: Amplitude scale used for the initial smoke field.
         bc_mode: ``"periodic"`` (default) wraps all fields; ``"neumann"`` uses
             zero-gradient BCs for smoke and no-slip BCs for velocity.
         buoyancy_mode: ``"anomaly"`` (default, Boussinesq) forces with
             ``smoke - mean(smoke)``; ``"raw"`` forces with raw smoke values.
+        random_seed: Optional seed for reproducible initial conditions.
     """
     buoyancy_y = float(params[0].item())
 
@@ -387,7 +403,7 @@ class ConditionedNavierStokes2D(SpatioTemporalSimulator):
         "smoke_diffusivity",
     )
 
-    def __init__(
+    def __init__(  # noqa: PLR0915
         self,
         parameters_range: dict[str, tuple[float, float]] | None = None,
         output_names: list[str] | None = None,
@@ -405,6 +421,7 @@ class ConditionedNavierStokes2D(SpatioTemporalSimulator):
         skip_nt: int = 0,
         random_seed: int | None = None,
     ) -> None:
+        """Initialize the conditioned Navier-Stokes simulator."""
         if parameters_range is None:
             parameters_range = {
                 "buoyancy_y": (0.2, 0.5),

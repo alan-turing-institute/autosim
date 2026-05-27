@@ -1,3 +1,5 @@
+"""Gray-Scott reaction-diffusion simulator."""
+
 import numpy as np
 import torch
 from numpy.fft import fft2, ifft2
@@ -443,6 +445,7 @@ class GrayScott(SpatioTemporalSimulator):
         fixed_parameters_given_pattern: bool = True,
         min_std: float | None = None,
     ) -> None:
+        """Initialize the Gray-Scott simulator."""
         if parameters_range is not None:
             parameters_range = dict(parameters_range)
         elif pattern is not None:

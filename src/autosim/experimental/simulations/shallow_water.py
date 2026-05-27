@@ -1,3 +1,5 @@
+"""Shallow-water equation simulator."""
+
 from __future__ import annotations
 
 import math
@@ -33,24 +35,25 @@ MIN_WAVE_SPEED_CFL = 1e-8  # floor for CFL dt; keep conservative to avoid instab
 class ShallowWater2D(SpatioTemporalSimulator):
     """Full 2D shallow-water simulator with prognostic [h, u, v].
 
-    Parameters
-    ----------
-    parameters_range : dict, optional
-        Input parameter (min, max) ranges. Supported keys:
-        - ``amp`` (required): initial-condition amplitude scale.
-                - ``h_mean``: mean layer depth (scalar) around which spatial
-          variations are generated (default 1.0 if omitted).
-        - ``drag``: linear drag coefficient (default 2e-3).
-        - ``nu``: Laplacian viscosity (default 5e-4).
-        If None, uses ``{"amp": (0.05, 0.14)}`` only.
-    output_names, return_timeseries, log_level
-        Passed to base. Default outputs: ["h", "u", "v"].
-    nx, ny, Lx, Ly, T, dt_save, skip_nt, cfl
-        Grid, domain, time and CFL settings.
-    g, h_mean, nu, drag
-        Physics constants (used when not in parameters_range).
-    dtype
-        torch.float32 or torch.float64.
+    Args:
+        parameters_range : dict, optional
+            Input parameter (min, max) ranges. Supported keys:
+
+            - ``amp`` (required): initial-condition amplitude scale.
+            - ``h_mean``: mean layer depth (scalar) around which spatial
+              variations are generated (default 1.0 if omitted).
+            - ``drag``: linear drag coefficient (default 2e-3).
+            - ``nu``: Laplacian viscosity (default 5e-4).
+
+            If None, uses ``{"amp": (0.05, 0.14)}`` only.
+        output_names, return_timeseries, log_level
+            Passed to base. Default outputs: ["h", "u", "v"].
+        nx, ny, Lx, Ly, T, dt_save, skip_nt, cfl
+            Grid, domain, time and CFL settings.
+        g, h_mean, nu, drag
+            Physics constants (used when not in parameters_range).
+        dtype
+            torch.float32 or torch.float64.
     """
 
     def __init__(
@@ -73,6 +76,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
         drag: float = 2e-3,
         dtype: torch.dtype = torch.float64,
     ) -> None:
+        """Initialize the spherical shallow-water simulator."""
         if parameters_range is None:
             parameters_range = {"amp": DEFAULT_AMP_RANGE}
         if output_names is None:

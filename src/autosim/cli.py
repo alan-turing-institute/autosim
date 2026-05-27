@@ -1,3 +1,5 @@
+"""Command-line interface for generating and inspecting AutoSim datasets."""
+
 from __future__ import annotations
 
 import argparse
@@ -320,7 +322,7 @@ def _parse_shared_core_field_groups(
                     str(n)
                     for n in (
                         pool_from
-                        if isinstance(pool_from, (list, tuple))
+                        if isinstance(pool_from, list | tuple)
                         else [pool_from]
                     )
                 ]

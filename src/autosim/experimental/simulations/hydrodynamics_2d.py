@@ -1,5 +1,4 @@
-"""
-Simplified 2D hydrodynamics simulator (velocity + pressure only).
+"""Simplified 2D hydrodynamics simulator (velocity + pressure only).
 
 This module provides an MHD-style spatiotemporal generator without magnetic fields.
 It evolves incompressible 2D flow with a pressure-projection method on a periodic grid.
@@ -20,32 +19,30 @@ from autosim.types import TensorLike
 class Hydrodynamics2D(SpatioTemporalSimulator):
     r"""Simplified 2D hydrodynamics simulator with no magnetic field.
 
-    Parameters
-    ----------
-    parameters_range: dict[str, tuple[float, float]], optional
-        Bounds on sampled parameters:
-        - ``nu``: kinematic viscosity
-        - ``force``: forcing amplitude
-    output_names: list[str], optional
-        Names for output channels. Defaults to ``["u", "v", "p"]``.
-    return_timeseries: bool, default=False
-        If True, returns full trajectory; otherwise final frame only.
-    log_level: str, default="progress_bar"
-        Logging level passed to base Simulator.
-    n: int, default=64
-        Grid resolution per axis.
-    L: float, default=1.0
-        Domain size in each direction.
-    T: float, default=1.0
-        Total simulation time.
-    dt: float, default=0.01
-        Fixed integration step.
+    Args:
+        parameters_range: dict[str, tuple[float, float]], optional
+            Bounds on sampled parameters:
+            - ``nu``: kinematic viscosity
+            - ``force``: forcing amplitude
+        output_names: list[str], optional
+            Names for output channels. Defaults to ``["u", "v", "p"]``.
+        return_timeseries: bool, default=False
+            If True, returns full trajectory; otherwise final frame only.
+        log_level: str, default="progress_bar"
+            Logging level passed to base Simulator.
+        n: int, default=64
+            Grid resolution per axis.
+        L: float, default=1.0
+            Domain size in each direction.
+        T: float, default=1.0
+            Total simulation time.
+        dt: float, default=0.01
+            Fixed integration step.
 
-    Notes
-    -----
-    Output shape before flattening:
-    - timeseries: ``(nt, n, n, 3)``
-    - final only: ``(n, n, 3)``
+    Notes:
+        Output shape before flattening:
+        - timeseries: ``(nt, n, n, 3)``
+        - final only: ``(n, n, 3)``
     """
 
     def __init__(
@@ -60,6 +57,7 @@ class Hydrodynamics2D(SpatioTemporalSimulator):
         dt: float = 0.01,
         cfl: float = 0.35,
     ) -> None:
+        """Initialize the 2D hydrodynamics simulator."""
         if parameters_range is None:
             parameters_range = {
                 "nu": (1e-3, 8e-3),
@@ -235,20 +233,28 @@ def simulate_hydrodynamics_2d(
 ) -> TensorLike:
     """Simulate a simplified 2D incompressible flow with forcing.
 
-    Parameters
-    ----------
-    params: TensorLike
-        ``[nu, force]`` where
-        - ``nu``: kinematic viscosity
-        - ``force``: forcing amplitude
-    return_timeseries: bool
-        Return full trajectory if True, final frame otherwise.
+    Args:
+        params: TensorLike
+            ``[nu, force]`` where
+            - ``nu``: kinematic viscosity
+            - ``force``: forcing amplitude
+        return_timeseries: bool
+            Return full trajectory if True, final frame otherwise.
+        n: int
+            Number of grid points in each spatial direction.
+        L: float
+            Domain length in each spatial direction.
+        T: float
+            Total simulation time.
+        dt: float
+            Base integration step.
+        cfl: float
+            CFL factor used to limit the adaptive integration step.
 
-    Returns
-    -------
-    TensorLike
-        Timeseries ``(nt, n, n, 3)`` or final snapshot ``(n, n, 3)`` with
-        channels ``[u, v, p]``.
+    Returns:
+        TensorLike
+            Timeseries ``(nt, n, n, 3)`` or final snapshot ``(n, n, 3)`` with
+            channels ``[u, v, p]``.
     """
     nu = float(params[0].item())
     force_amp = float(params[1].item())

@@ -1,3 +1,5 @@
+"""Double-pendulum simulator and ODE helpers."""
+
 import numpy as np
 import torch
 from scipy.integrate import solve_ivp
@@ -7,8 +9,7 @@ from autosim.types import NumpyLike, TensorLike
 
 
 class DoublePendulum(Simulator):
-    """
-    Simulator of double pendulum motion.
+    """Simulator of double pendulum motion.
 
     A double pendulum consists of two pendulums attached end to end. The motion
     is chaotic and highly sensitive to initial conditions. This simulator computes
@@ -24,23 +25,21 @@ class DoublePendulum(Simulator):
         n_time_points: int = 500,
         g: float = 9.81,
     ):
-        """
-        Initialize the double pendulum simulator.
+        """Initialize the double pendulum simulator.
 
-        Parameters
-        ----------
-        parameters_range : dict[str, tuple[float, float]] | None
-            Parameter ranges for m1, m2, l1, l2, theta1_0, theta2_0
-        output_names : list[str] | None
-            Names of output variables
-        log_level : str
-            Logging level
-        t_span : tuple[float, float]
-            Time span for simulation (start, end)
-        n_time_points : int
-            Number of time points to output
-        g : float
-            Gravitational acceleration
+        Args:
+            parameters_range : dict[str, tuple[float, float]] | None
+                Parameter ranges for m1, m2, l1, l2, theta1_0, theta2_0
+            output_names : list[str] | None
+                Names of output variables
+            log_level : str
+                Logging level
+            t_span : tuple[float, float]
+                Time span for simulation (start, end)
+            n_time_points : int
+                Number of time points to output
+            g : float
+                Gravitational acceleration
         """
         if parameters_range is None:
             parameters_range = {
@@ -70,18 +69,15 @@ class DoublePendulum(Simulator):
         self.time_points = np.linspace(t_span[0], t_span[1], n_time_points)
 
     def _forward(self, x: TensorLike) -> TensorLike | None:
-        """
-        Simulate the double pendulum motion and return time series.
+        """Simulate the double pendulum motion and return time series.
 
-        Parameters
-        ----------
-        x : TensorLike
-            Input parameters [m1, m2, l1, l2, theta1_0, theta2_0]
+        Args:
+            x : TensorLike
+                Input parameters [m1, m2, l1, l2, theta1_0, theta2_0]
 
-        Returns
-        -------
-        TensorLike | None
-            Time series data: [theta1_series, theta2_series, kinetic_energy_series]
+        Returns:
+            TensorLike | None
+                Time series data: [theta1_series, theta2_series, kinetic_energy_series]
         """
         assert x.shape[0] == 1, (
             f"Simulator._forward expects a single input, got {x.shape[0]}"
@@ -108,8 +104,7 @@ class DoublePendulum(Simulator):
 
 
 def double_pendulum_equations(y, m1, m2, l1, l2, g):
-    """
-    Solve double pendulum equations of motion.
+    """Solve double pendulum equations of motion.
 
     y = [theta1, z1, theta2, z2] where z1 = theta1_dot, z2 = theta2_dot.
     """
