@@ -28,18 +28,13 @@ def simulate_seir_epidemic(
         \frac{dR}{dt} &= \gamma I
 
     Args:
-        x : NumpyLike
-            SEIR parameters [beta, gamma, sigma].
-        N : int
-            Total population.
-        I0 : int
-            Initial infected.
-        E0 : int
-            Initial exposed.
+        x: SEIR parameters [beta, gamma, sigma].
+        N: Total population.
+        I0: Initial infected.
+        E0: Initial exposed.
 
     Returns:
-        peak_infection_rate : float
-            Peak infection fraction I_max / N.
+        Peak infection fraction I_max / N.
     """
     if len(x) != 3:
         raise ValueError(f"Expected 3 parameters [beta, gamma, sigma], got {len(x)}")
@@ -100,12 +95,10 @@ class SEIRSimulator(Simulator):
         """Simulate the epidemic using the SEIR model.
 
         Args:
-            x : TensorLike
-                Input parameter values [beta, gamma, sigma].
+            x: Input parameter values [beta, gamma, sigma].
 
         Returns:
-            TensorLike
-                Peak infection rate (fraction of population).
+            Peak infection rate (fraction of population).
         """
         if x.shape[0] != 1:
             raise ValueError(

@@ -28,29 +28,22 @@ class ReactionDiffusion(SpatioTemporalSimulator):
         """Initialize the ReactionDiffusion simulator.
 
         Args:
-            parameters_range: dict[str, tuple[float, float]]
-                Dictionary mapping input parameter names to their (min, max) ranges.
-            output_names: list[str]
-                List of output parameters' names.
-            log_level: str
-                Logging level for the simulator. Can be one of:
+            parameters_range: Dictionary mapping input parameter names to their (min,
+                max) ranges.
+            output_names: List of output parameters' names.
+            log_level: Logging level for the simulator. Can be one of:
                 - "progress_bar": shows a progress bar during batch simulations
                 - "debug": shows debug messages
                 - "info": shows informational messages
                 - "warning": shows warning messages
                 - "error": shows error messages
                 - "critical": shows critical messages
-            return_timeseries: bool
-                Whether to return the full timeseries or just the spatial solution
-                at the final time step. Defaults to False.
-            n: int
-                Number of spatial points in each direction.
-            L: int
-                Domain size in X and Y directions.
-            T: float
-                Total time to simulate.
-            dt: float
-                Time step size.
+            return_timeseries: Whether to return the full timeseries or just the spatial
+                solution at the final time step. Defaults to False.
+            n: Number of spatial points in each direction.
+            L: Domain size in X and Y directions.
+            T: Total time to simulate.
+            dt: Time step size.
         """
         if parameters_range is None:
             parameters_range = {"beta": (1.0, 2.0), "d": (0.05, 0.3)}
@@ -86,17 +79,14 @@ class ReactionDiffusion(SpatioTemporalSimulator):
         """Reshape to spatiotemporal format.
 
         Args:
-            n: int
-                Number of samples to generate.
-            random_seed: int | None
-                Random seed for reproducibility. Defaults to None.
-            ensure_exact_n: bool
-                Whether to resample failed trajectories until exactly ``n`` succeed.
+            n: Number of samples to generate.
+            random_seed: Random seed for reproducibility. Defaults to None.
+            ensure_exact_n: Whether to resample failed trajectories until exactly ``n``
+                succeed.
 
         Returns:
-            dict
-                A dictionary containing the reshaped spatiotemporal data, constant
-                scalars, and constant fields.
+            A dictionary containing the reshaped spatiotemporal data, constant
+            scalars, and constant fields.
         """
         # Run simulation and optionally resample failed trajectories
         y, x = self._forward_batch_with_optional_retries(
@@ -130,22 +120,14 @@ def reaction_diffusion(
     """Define the reaction-diffusion PDE in the Fourier (kx, ky) space.
 
     Args:
-        t: float
-            The current time step (not used).
-        uvt: NumpyLike
-            Fourier transformed solution vector at current time step (length 2*N, 1-D).
-        K22: NumpyLike
-            Squared Fourier wavenumbers, shape (N,).
-        d1: float
-            The diffusion coefficient for species 1.
-        d2: float
-            The diffusion coefficient for species 2.
-        beta: float
-            The reaction coefficient controlling reaction between the two species.
-        n: int
-            Number of spatial points in each direction.
-        N: int
-            Total number of spatial grid points (n*n).
+        t: The current time step (not used).
+        uvt: Fourier transformed solution vector at current time step (length 2*N, 1-D).
+        K22: Squared Fourier wavenumbers, shape (N,).
+        d1: The diffusion coefficient for species 1.
+        d2: The diffusion coefficient for species 2.
+        beta: The reaction coefficient controlling reaction between the two species.
+        n: Number of spatial points in each direction.
+        N: Total number of spatial grid points (n*n).
     """
     u = np.real(ifft2(uvt[:N].reshape(n, n)))
     v = np.real(ifft2(uvt[N:].reshape(n, n)))
@@ -168,27 +150,20 @@ def simulate_reaction_diffusion(
     """Simulate the reaction-diffusion PDE for a given set of parameters.
 
     Args:
-        x: NumpyLike
-            The parameters of the reaction-diffusion model. The first element is the
+        x: The parameters of the reaction-diffusion model. The first element is the
             reaction coefficient (beta) and the second element is the diffusion
             coefficient (d).
-        return_timeseries: bool
-            Whether to return the full timeseries or just the spatial solution at the
-            final time step. Defaults to False.
-        n: int
-            Number of spatial points in each direction. Defaults to 32.
-        L: int
-            Domain size in X and Y directions. Defaults to 20.
-        T: float
-            Total time to simulate. Defaults to 10.0.
-        dt: float
-            Time step size. Defaults to 0.1.
+        return_timeseries: Whether to return the full timeseries or just the spatial
+            solution at the final time step. Defaults to False.
+        n: Number of spatial points in each direction. Defaults to 32.
+        L: Domain size in X and Y directions. Defaults to 20.
+        T: Total time to simulate. Defaults to 10.0.
+        dt: Time step size. Defaults to 0.1.
 
     Returns:
-        tuple[NumpyLike, NumpyLike]
-            [u_sol, v_sol], the spatial solution of the reaction-diffusion PDE,
-            either as a timeseries or at the final time point of
-            `return_timeseries` is False.
+        [u_sol, v_sol], the spatial solution of the reaction-diffusion PDE,
+        either as a timeseries or at the final time point of
+        `return_timeseries` is False.
     """
     beta, d = x
     d1 = d2 = d

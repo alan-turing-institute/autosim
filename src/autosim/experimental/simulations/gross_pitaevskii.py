@@ -22,12 +22,13 @@ def generate_complex_potential(  # noqa: PLR0915
     """Generate a highly controllable 2D potential landscape.
 
     Args:
-        X: Meshgrid X coordinates.
-        Y: Meshgrid Y coordinates.
-        config: Dictionary containing all complexity parameters.
-        t: Current simulation time.
-        static_disorder: Optional precomputed stationary disorder field.
-        rng: Random number generator for spatial disorder.
+        X: X-coordinate grid for evaluating the potential.
+        Y: Y-coordinate grid for evaluating the potential.
+        config: Potential configuration values controlling traps, lattices, and
+            disorder.
+        t: Current simulation time used for rotating or time-varying terms.
+        static_disorder: Precomputed disorder field to add to the potential.
+        rng: Random number generator used when sampling disorder terms.
     """
     trap_Omega = float(config.get("trap_Omega", 0.0))
     X_trap, Y_trap = X, Y

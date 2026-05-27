@@ -29,22 +29,18 @@ class FlowProblem(Simulator):
         """Initialize the FlowProblem simulator.
 
         Args:
-            parameters_range: dict[str, tuple[float, float]]
-                Dictionary mapping input parameter names to their (min, max) ranges.
-            output_names: list[str]
-                List of output parameters' names.
-            log_level: str
-                Logging level for the simulator. Can be one of:
+            parameters_range: Dictionary mapping input parameter names to their (min,
+                max) ranges.
+            output_names: List of output parameters' names.
+            log_level: Logging level for the simulator. Can be one of:
                 - "progress_bar": shows a progress bar during batch simulations
                 - "debug": shows debug messages
                 - "info": shows informational messages
                 - "warning": shows warning messages
                 - "error": shows error messages
                 - "critical": shows critical messages
-            ncycles: int
-                Number of cycles to simulate.
-            ncomp: int
-                Number of compartments in the tube.
+            ncycles: Number of cycles to simulate.
+            ncomp: Number of compartments in the tube.
         """
         if parameters_range is None:
             parameters_range = {
@@ -77,8 +73,7 @@ class FlowProblem(Simulator):
         """Calculate the pressure and flow rate in the tube compartments.
 
         Args:
-            x: TensorLike
-                Tensor of input parameter values to simulate. Will be converted to a
+            x: Tensor of input parameter values to simulate. Will be converted to a
                 dictionary internally.
                     - `T` (float): cycle length
                     - `td` (float): pulse duration, make sure to make this less than T
@@ -91,8 +86,7 @@ class FlowProblem(Simulator):
                     - `p_o` (float) : outflow pressure
 
         Returns:
-            TensorLike
-                Presssure in the tube compartments at the end of the simulation.
+            Presssure in the tube compartments at the end of the simulation.
         """
         # Convert tensor input to dictionary
         x_values = x.squeeze().tolist() if hasattr(x, "squeeze") else x

@@ -32,22 +32,15 @@ class AdvectionDiffusion(SpatioTemporalSimulator):
         """Initialize the AdvectionDiffusion simulator.
 
         Args:
-            parameters_range: dict[str, tuple[float, float]]
-                Mapping of input parameter names to (min, max) ranges.
-            output_names: list[str]
-                List of output parameter names.
-            log_level: str
-                Logging level for the simulator.
-            return_timeseries: bool
-                Whether to return the full timeseries or just the final snapshot.
-            n: int
-                Number of spatial points per direction.
-            L: float
-                Domain size in X and Y directions.
-            T: float
-                Total simulation time.
-            dt: float
-                Time step size.
+            parameters_range: Mapping of input parameter names to (min, max) ranges.
+            output_names: List of output parameter names.
+            log_level: Logging level for the simulator.
+            return_timeseries: Whether to return the full timeseries or just the final
+                snapshot.
+            n: Number of spatial points per direction.
+            L: Domain size in X and Y directions.
+            T: Total simulation time.
+            dt: Time step size.
         """
         if parameters_range is None:
             parameters_range = {
@@ -162,28 +155,17 @@ def advection_diffusion(
         - \mu (u \partial_x \omega + v \partial_y \omega)
 
     Args:
-        _t: float
-            Current time (unused).
-        w2: NumpyLike
-            Flattened vorticity field.
-        A: sp.csr_matrix
-            Sparse Laplacian operator.
-        Dx: sp.csr_matrix
-            Sparse derivative operator in the x direction.
-        Dy: sp.csr_matrix
-            Sparse derivative operator in the y direction.
-        nu: float
-            Viscosity coefficient.
-        dx: float
-            Spatial step.
-        n: int
-            Number of spatial points per direction.
-        N: int
-            Total number of spatial grid points.
-        K3: NumpyLike
-            Inverse Laplacian in Fourier space.
-        mu: float
-            Advection strength.
+        _t: Current time (unused).
+        w2: Flattened vorticity field.
+        A: Sparse Laplacian operator.
+        Dx: Sparse derivative operator in the x direction.
+        Dy: Sparse derivative operator in the y direction.
+        nu: Viscosity coefficient.
+        dx: Spatial step.
+        n: Number of spatial points per direction.
+        N: Total number of spatial grid points.
+        K3: Inverse Laplacian in Fourier space.
+        mu: Advection strength.
     """
     w_2d = w2.reshape(n, n)
 
@@ -210,18 +192,12 @@ def simulate_advection_diffusion(
     """Simulate the 2D vorticity equation (advection-diffusion).
 
     Args:
-        x: NumpyLike
-            [nu, mu] parameters.
-        return_timeseries: bool
-            Whether to return full timeseries or only final snapshot.
-        n: int
-            Number of spatial points per direction.
-        L: float
-            Domain length in each spatial direction.
-        T: float
-            Total simulation time.
-        dt: float
-            Time step for saved solver outputs.
+        x: [nu, mu] parameters.
+        return_timeseries: Whether to return full timeseries or only final snapshot.
+        n: Number of spatial points per direction.
+        L: Domain length in each spatial direction.
+        T: Total simulation time.
+        dt: Time step for saved solver outputs.
     """
     nu, mu = x
 

@@ -28,14 +28,12 @@ class Epidemic(Simulator):
         """Simulate the epidemic using the SIR model.
 
         Args:
-            x: TensorLike
-                input parameter values to simulate [beta, gamma]:
+            x: input parameter values to simulate [beta, gamma]:
                 - `beta`: the transimission rate per day
                 - `gamma`: the recovery rate per day
 
         Returns:
-            TensorLike
-                Peak infection rate.
+            Peak infection rate.
         """
         assert x.shape[0] == 1, (
             f"Simulator._forward expects a single input, got {x.shape[0]}"
@@ -57,17 +55,13 @@ def simulate_epidemic(x: NumpyLike, N: int = 1000, I0: int = 1) -> float:
         \frac{dR}{dt} &= \gamma I
 
     Args:
-        x: NumpyLike
-            The parameters of the SIR model. The first element is the transmission rate
+        x: The parameters of the SIR model. The first element is the transmission rate
             (beta) and the second element is the recovery rate (gamma).
-        N: int
-            The total population size. Defaults to 1000.
-        I0: int
-            The initial number of infected individuals. Defaults to 1.
+        N: The total population size. Defaults to 1000.
+        I0: The initial number of infected individuals. Defaults to 1.
 
     Returns:
-        peak_infection_rate: float
-            The peak infection rate as a fraction of the total population.
+        The peak infection rate as a fraction of the total population.
     """
     # check inputs
     assert len(x) == 2

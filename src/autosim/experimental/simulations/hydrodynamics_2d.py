@@ -20,24 +20,16 @@ class Hydrodynamics2D(SpatioTemporalSimulator):
     r"""Simplified 2D hydrodynamics simulator with no magnetic field.
 
     Args:
-        parameters_range: dict[str, tuple[float, float]], optional
-            Bounds on sampled parameters:
+        parameters_range: Bounds on sampled parameters:
             - ``nu``: kinematic viscosity
             - ``force``: forcing amplitude
-        output_names: list[str], optional
-            Names for output channels. Defaults to ``["u", "v", "p"]``.
-        return_timeseries: bool, default=False
-            If True, returns full trajectory; otherwise final frame only.
-        log_level: str, default="progress_bar"
-            Logging level passed to base Simulator.
-        n: int, default=64
-            Grid resolution per axis.
-        L: float, default=1.0
-            Domain size in each direction.
-        T: float, default=1.0
-            Total simulation time.
-        dt: float, default=0.01
-            Fixed integration step.
+        output_names: Names for output channels. Defaults to ``["u", "v", "p"]``.
+        return_timeseries: If True, returns full trajectory; otherwise final frame only.
+        log_level: Logging level passed to base Simulator.
+        n: Grid resolution per axis.
+        L: Domain size in each direction.
+        T: Total simulation time.
+        dt: Fixed integration step.
 
     Notes:
         Output shape before flattening:
@@ -234,27 +226,19 @@ def simulate_hydrodynamics_2d(
     """Simulate a simplified 2D incompressible flow with forcing.
 
     Args:
-        params: TensorLike
-            ``[nu, force]`` where
+        params: ``[nu, force]`` where
             - ``nu``: kinematic viscosity
             - ``force``: forcing amplitude
-        return_timeseries: bool
-            Return full trajectory if True, final frame otherwise.
-        n: int
-            Number of grid points in each spatial direction.
-        L: float
-            Domain length in each spatial direction.
-        T: float
-            Total simulation time.
-        dt: float
-            Base integration step.
-        cfl: float
-            CFL factor used to limit the adaptive integration step.
+        return_timeseries: Return full trajectory if True, final frame otherwise.
+        n: Number of grid points in each spatial direction.
+        L: Domain length in each spatial direction.
+        T: Total simulation time.
+        dt: Base integration step.
+        cfl: CFL factor used to limit the adaptive integration step.
 
     Returns:
-        TensorLike
-            Timeseries ``(nt, n, n, 3)`` or final snapshot ``(n, n, 3)`` with
-            channels ``[u, v, p]``.
+        Timeseries ``(nt, n, n, 3)`` or final snapshot ``(n, n, 3)`` with
+        channels ``[u, v, p]``.
     """
     nu = float(params[0].item())
     force_amp = float(params[1].item())

@@ -36,14 +36,12 @@ class Projectile(Simulator):
         """Simulate the projectile motion and return the distance travelled.
 
         Args:
-            x: TensorLike
-                Dictionary of input parameter values to simulate:
+            x: Dictionary of input parameter values to simulate:
                 - `c`: the drag coefficient on a log scale
                 - `v0`: velocity
 
         Returns:
-            TensorLike
-                Distance travelled by projectile.
+            Distance travelled by projectile.
         """
         assert x.shape[0] == 1, (
             f"Simulator._forward expects a single input, got {x.shape[0]}"
@@ -79,14 +77,12 @@ class ProjectileMultioutput(Simulator):
         velocity.
 
         Args:
-            x: TensorLike
-                Dictionary of input parameter values to simulate:
+            x: Dictionary of input parameter values to simulate:
                 - `c`: the drag coefficient on a log scale
                 - `v0`: velocity
 
         Returns:
-            TensorLike
-                Distance travelled by projectile and impact velocity.
+            Distance travelled by projectile and impact velocity.
         """
         assert x.shape[0] == 1, (
             f"Simulator._forward expects a single input, got {x.shape[0]}"
@@ -106,12 +102,9 @@ def f(t: float, y: NumpyLike, c: float):  # noqa: ARG001
         \frac{dv_y}{dt} &= -g - c v_y \sqrt{v_x^2 + v_y^2}
 
     Args:
-        t: float
-            Time variable (not used).
-        y: array
-            Array of dependent variables (vx, vy, x, y).
-        c: float
-            Drag coefficient (non-negative).
+        t: Time variable (not used).
+        y: Array of dependent variables (vx, vy, x, y).
+        c: Drag coefficient (non-negative).
     """
     # check inputs and extract
     assert len(y) == 4
@@ -135,16 +128,12 @@ def event(t: float, y: NumpyLike, c: float) -> float:  # noqa: ARG001
     """Event to trigger end of integration. Stops when projectile hits ground.
 
     Args:
-        t: float
-            Time variable (not used).
-        y: array
-            Array of dependent variables (vx, vy, x, y).
-        c: float
-            Drag coefficient (non-negative).
+        t: Time variable (not used).
+        y: Array of dependent variables (vx, vy, x, y).
+        c: Drag coefficient (non-negative).
 
     Returns:
-        float
-            The height of the projectile.
+        The height of the projectile.
     """
     assert len(y) == 4
     assert c >= 0.0
@@ -162,12 +151,10 @@ def simulator_base(x: NumpyLike):
     Returns distance projectile travels.
 
     Args:
-        x: NumpyLike
-            Array of input parameters (c, v0).
+        x: Array of input parameters (c, v0).
 
     Returns:
-        results: scipy.integrate.OdeResult
-            Results of ODE integration.
+        Results of ODE integration.
     """
     # unpack values
 
@@ -195,12 +182,10 @@ def simulate_projectile(x: NumpyLike) -> float:
     Distance is obtained by solving the ODE system for projectile motion with drag.
 
     Args:
-        x: NumpyLike
-            Array of input parameters (c, v0).
+        x: Array of input parameters (c, v0).
 
     Returns:
-        distance: float
-            Distance travelled by projectile.
+        Distance travelled by projectile.
     """
     results = simulator_base(x)
 
@@ -213,8 +198,7 @@ def simulate_projectile_multioutput(x: NumpyLike) -> tuple[float, float]:
     Simulator to solve ODE system with multiple outputs.
 
     Args:
-        x: NumpyLike
-            Array of input parameters (c, v0).
+        x: Array of input parameters (c, v0).
 
     Returns:
         float, float

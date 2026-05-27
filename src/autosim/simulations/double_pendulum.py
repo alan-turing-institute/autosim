@@ -28,18 +28,12 @@ class DoublePendulum(Simulator):
         """Initialize the double pendulum simulator.
 
         Args:
-            parameters_range : dict[str, tuple[float, float]] | None
-                Parameter ranges for m1, m2, l1, l2, theta1_0, theta2_0
-            output_names : list[str] | None
-                Names of output variables
-            log_level : str
-                Logging level
-            t_span : tuple[float, float]
-                Time span for simulation (start, end)
-            n_time_points : int
-                Number of time points to output
-            g : float
-                Gravitational acceleration
+            parameters_range: Parameter ranges for m1, m2, l1, l2, theta1_0, theta2_0
+            output_names: Names of output variables
+            log_level: Logging level
+            t_span: Time span for simulation (start, end)
+            n_time_points: Number of time points to output
+            g: Gravitational acceleration
         """
         if parameters_range is None:
             parameters_range = {
@@ -72,12 +66,10 @@ class DoublePendulum(Simulator):
         """Simulate the double pendulum motion and return time series.
 
         Args:
-            x : TensorLike
-                Input parameters [m1, m2, l1, l2, theta1_0, theta2_0]
+            x: Input parameters [m1, m2, l1, l2, theta1_0, theta2_0]
 
         Returns:
-            TensorLike | None
-                Time series data: [theta1_series, theta2_series, kinetic_energy_series]
+            Time series data: [theta1_series, theta2_series, kinetic_energy_series]
         """
         assert x.shape[0] == 1, (
             f"Simulator._forward expects a single input, got {x.shape[0]}"

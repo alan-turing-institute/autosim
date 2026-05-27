@@ -36,8 +36,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
     """Full 2D shallow-water simulator with prognostic [h, u, v].
 
     Args:
-        parameters_range : dict, optional
-            Input parameter (min, max) ranges. Supported keys:
+        parameters_range: Input parameter (min, max) ranges. Supported keys:
 
             - ``amp`` (required): initial-condition amplitude scale.
             - ``h_mean``: mean layer depth (scalar) around which spatial

@@ -10,12 +10,10 @@ def configure_logging(log_to_file=False, level: str = "INFO"):
     """Configure the logging system.
 
     Args:
-        log_to_file: bool or string, optional
-            If True, logs will be written to a file.
-            If a string, logs will be written to the specified file.
-        level: str, optional
-            The verbosity level. Can be "critical", "error", "warning",
-            "info", or "debug". Defaults to "info".
+        log_to_file: If True, logs will be written to a file. If a string, logs will be
+            written to the specified file.
+        level: The verbosity level. Can be "critical", "error", "warning", "info", or
+            "debug". Defaults to "info".
     """
     logger = logging.getLogger("autosim")
     logger.handlers = []  # Clear existing handlers
@@ -88,17 +86,14 @@ def get_configured_logger(
     """Configure logger and progress bar flag consistently.
 
     Args:
-        log_level: str
-            The logging level to set. Can be "progress_bar", "debug", "info",
+        log_level: The logging level to set. Can be "progress_bar", "debug", "info",
             "warning", "error", or "critical".
-        progress_bar_attr: str
-            The attribute to check for progress bar. If log_level is set to this value,
-            the logger will be set to "error" level and progress_bar will be True.
-            Defaults to "progress_bar".
+        progress_bar_attr: The attribute to check for progress bar. If log_level is set
+            to this value, the logger will be set to "error" level and progress_bar will
+            be True. Defaults to "progress_bar".
 
     Returns:
-        tuple[logging.Logger, bool]
-            The configured logger and the progress bar flag.
+        The configured logger and the progress bar flag.
     """
     valid_log_levels = [
         "progress_bar",

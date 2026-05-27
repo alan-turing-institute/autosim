@@ -18,29 +18,21 @@ class CompressibleFluid2D(SpatioTemporalSimulator):
     """Minimal 2D compressible Euler simulator.
 
     Args:
-        parameters_range:
-            ``gamma`` (adiabatic index), ``amp`` (initial perturbation amplitude).
-        return_timeseries:
-            If True, return full trajectory, otherwise final snapshot.
-        n:
-            Grid size (n x n).
-        L:
-            Domain length per axis.
-        T:
-            Final time.
-        dt_save:
-            Save interval when `return_timeseries=True`.
-        cfl:
-            CFL number for adaptive stepping.
-        scenario:
-            Initial-condition family. One of:
+        parameters_range: ``gamma`` (adiabatic index), ``amp`` (initial perturbation
+            amplitude).
+        return_timeseries: If True, return full trajectory, otherwise final snapshot.
+        n: Grid size (n x n).
+        L: Domain length per axis.
+        T: Final time.
+        dt_save: Save interval when `return_timeseries=True`.
+        cfl: CFL number for adaptive stepping.
+        scenario: Initial-condition family. One of:
 
             - ``"shear_layers"`` (default): dual shear layers with multimode
               perturbations
             - ``"vortex_sheet"``: single shear sheet with sinusoidal displacement
             - ``"blast_wave"``: smooth radial over-pressure/density pulse
-        flux_scheme:
-            Numerical interface flux. One of:
+        flux_scheme: Numerical interface flux. One of:
 
             - ``"llf"``: local Lax-Friedrichs (more diffusive, robust)
             - ``"hll"``: HLL flux (less diffusive, sharper fronts)
