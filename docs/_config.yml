@@ -31,7 +31,8 @@ sphinx:
     add_module_names: false
     autoclass_content: class
     autodoc_member_order: bysource
-    autodoc_typehints: none
+    autodoc_typehints: both
+    autodoc_typehints_format: short
     html_show_copyright: false
     language: en
     napoleon_google_docstring: true
