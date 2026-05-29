@@ -16,7 +16,21 @@ integrator_keywords["atol"] = 1e-8
 
 
 class AdvectionDiffusion(SpatioTemporalSimulator):
-    """Simulate the 2D vorticity equation (advection-diffusion)."""
+    r"""Simulate the 2D vorticity equation.
+
+    The simulator evolves a vorticity field according to:
+
+    .. math::
+
+        \begin{aligned}
+        \partial_t \omega
+            &= \nu \nabla^2 \omega
+            - \mu (u \partial_x \omega + v \partial_y \omega)
+        \end{aligned}
+
+    The sampled parameters are the viscosity :math:`\nu` and advection strength
+    :math:`\mu`.
+    """
 
     def __init__(
         self,

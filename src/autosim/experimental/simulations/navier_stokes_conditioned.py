@@ -388,7 +388,24 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
 
 
 class ConditionedNavierStokes2D(SpatioTemporalSimulator):
-    """Conditioned 2D Navier-Stokes smoke simulator inspired by PDEArena."""
+    r"""Conditioned 2D Navier-Stokes smoke simulator inspired by PDEArena.
+
+    The state contains smoke concentration :math:`s` and incompressible velocity
+    :math:`\mathbf{u}`. The solver evolves:
+
+    .. math::
+
+        \begin{aligned}
+        \partial_t s + \mathbf{u}\cdot\nabla s
+            &= \kappa\nabla^2 s, \\
+        \partial_t \mathbf{u} + \mathbf{u}\cdot\nabla\mathbf{u}
+            &= -\nabla p + \nu\nabla^2\mathbf{u}
+            + b(s)\mathbf{e}_y, \\
+        \nabla\cdot\mathbf{u} &= 0.
+        \end{aligned}
+
+    The returned channels are smoke and velocity components: :math:`[s, u, v]`.
+    """
 
     _DEFAULT_SMOOTHNESS = 6.0
     _DEFAULT_NOISE_SCALE = 11.0

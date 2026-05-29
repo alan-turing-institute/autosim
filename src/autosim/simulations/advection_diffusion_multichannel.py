@@ -23,6 +23,19 @@ integrator_keywords = {"rtol": 1e-6, "atol": 1e-8, "method": "RK45"}
 class AdvectionDiffusionMultichannel(SpatioTemporalSimulator):
     r"""Differentiable advection-diffusion simulator exposing multi-channel outputs.
 
+    The simulator evolves a vorticity field according to:
+
+    .. math::
+
+        \begin{aligned}
+        \partial_t \omega
+            &= \nu \nabla^2 \omega
+            - \mu (u \partial_x \omega + v \partial_y \omega)
+        \end{aligned}
+
+    It returns selected channels from
+    :math:`[\omega, u, v, \psi]`, where :math:`\psi` is the streamfunction.
+
     Args:
         parameters_range: Bounds on the sampled viscosity (`nu`) and advection strength
             (`mu`).

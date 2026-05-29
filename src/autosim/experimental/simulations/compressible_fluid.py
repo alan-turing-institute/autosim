@@ -15,7 +15,20 @@ from autosim.types import TensorLike
 
 
 class CompressibleFluid2D(SpatioTemporalSimulator):
-    """Minimal 2D compressible Euler simulator.
+    r"""Minimal 2D compressible Euler simulator.
+
+    The solver evolves conservative variables
+    :math:`U = [\rho, \rho u, \rho v, E]` using:
+
+    .. math::
+
+        \partial_t U + \partial_x F(U) + \partial_y G(U) = 0,
+        \qquad
+        E = \frac{p}{\gamma - 1}
+            + \frac{1}{2}\rho(u^2 + v^2).
+
+    The returned primitive-variable channels are
+    :math:`[\rho, u, v, p]`.
 
     Args:
         parameters_range: ``gamma`` (adiabatic index), ``amp`` (initial perturbation

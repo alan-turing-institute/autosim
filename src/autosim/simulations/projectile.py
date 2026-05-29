@@ -10,13 +10,22 @@ from autosim.types import NumpyLike, TensorLike
 
 
 class Projectile(Simulator):
-    """Simulator of projectile motion.
+    r"""Simulator of projectile motion.
 
     A projectile is launched from an initial height of 2 meters at an  angle of 45
     degrees and falls under the influence of gravity and air resistance. Drag is
     proportional to the square of the velocity. We would like to determine the distance
     travelled by the projectile as a function of the drag coefficient and the launch
     velocity.
+
+    The velocity components obey:
+
+    .. math::
+
+        \begin{aligned}
+        \frac{dv_x}{dt} &= -c v_x \sqrt{v_x^2 + v_y^2} \\
+        \frac{dv_y}{dt} &= -g - c v_y \sqrt{v_x^2 + v_y^2}
+        \end{aligned}
     """
 
     def __init__(
@@ -51,10 +60,19 @@ class Projectile(Simulator):
 
 
 class ProjectileMultioutput(Simulator):
-    """Multi-output simulator of projectile motion.
+    r"""Multi-output simulator of projectile motion.
 
     Simulator of projectile motion that outputs both the distance travelled by the
     projectile and its velocity on impact.
+
+    The velocity components obey:
+
+    .. math::
+
+        \begin{aligned}
+        \frac{dv_x}{dt} &= -c v_x \sqrt{v_x^2 + v_y^2} \\
+        \frac{dv_y}{dt} &= -g - c v_y \sqrt{v_x^2 + v_y^2}
+        \end{aligned}
     """
 
     def __init__(

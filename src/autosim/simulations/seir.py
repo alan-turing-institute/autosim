@@ -73,7 +73,22 @@ def simulate_seir_epidemic(
 
 
 class SEIRSimulator(Simulator):
-    """Simulator of infectious disease spread using the SEIR model."""
+    r"""Simulator of infectious disease spread using the SEIR model.
+
+    The compartment dynamics are:
+
+    .. math::
+
+        \begin{aligned}
+        \frac{dS}{dt} &= -\beta S I / N \\
+        \frac{dE}{dt} &= \beta S I / N - \sigma E \\
+        \frac{dI}{dt} &= \sigma E - \gamma I \\
+        \frac{dR}{dt} &= \gamma I
+        \end{aligned}
+
+    The simulator returns the peak infection rate as a fraction of the total
+    population.
+    """
 
     def __init__(
         self,

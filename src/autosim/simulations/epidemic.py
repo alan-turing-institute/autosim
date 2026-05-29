@@ -9,7 +9,21 @@ from autosim.types import NumpyLike, TensorLike
 
 
 class Epidemic(Simulator):
-    """Simulator of infectious disease spread (SIR)."""
+    r"""Simulator of infectious disease spread using the SIR model.
+
+    The compartment dynamics are:
+
+    .. math::
+
+        \begin{aligned}
+        \frac{dS}{dt} &= -\beta S I / N \\
+        \frac{dI}{dt} &= \beta S I / N - \gamma I \\
+        \frac{dR}{dt} &= \gamma I
+        \end{aligned}
+
+    The simulator returns the peak infection rate as a fraction of the total
+    population.
+    """
 
     def __init__(
         self,

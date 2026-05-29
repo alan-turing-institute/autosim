@@ -33,7 +33,20 @@ MIN_WAVE_SPEED_CFL = 1e-8  # floor for CFL dt; keep conservative to avoid instab
 
 
 class ShallowWater2D(SpatioTemporalSimulator):
-    """Full 2D shallow-water simulator with prognostic [h, u, v].
+    r"""Full 2D shallow-water simulator with prognostic :math:`[h, u, v]`.
+
+    The solver evolves fluid height :math:`h` and horizontal velocity
+    :math:`(u, v)` using:
+
+    .. math::
+
+        \begin{aligned}
+        \partial_t h + \nabla\cdot(h\mathbf{u}) &= 0, \\
+        \partial_t u + u\partial_x u + v\partial_y u
+            &= f v - g\partial_x h + \nu\nabla^2 u - r u, \\
+        \partial_t v + u\partial_x v + v\partial_y v
+            &= -f u - g\partial_y h + \nu\nabla^2 v - r v.
+        \end{aligned}
 
     Args:
         parameters_range: Input parameter (min, max) ranges. Supported keys:

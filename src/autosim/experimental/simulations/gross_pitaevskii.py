@@ -565,7 +565,19 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
 
 
 class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
-    """Gross-Pitaevskii Equation simulator for quantum fluids."""
+    r"""Gross-Pitaevskii equation simulator for quantum fluids.
+
+    The simulator evolves a complex wavefunction :math:`\psi` under:
+
+    .. math::
+
+        i\partial_t \psi =
+        \left[-\frac{1}{2}\nabla^2 + V(x, y, t) + g|\psi|^2
+        - \Omega L_z\right]\psi.
+
+    The returned channels are density, real part, and imaginary part:
+    :math:`[|\psi|^2, \operatorname{Re}(\psi), \operatorname{Im}(\psi)]`.
+    """
 
     _DEFAULT_SIM_PARAMS: ClassVar[dict[str, Any]] = {
         "wx": 1.0,

@@ -15,7 +15,24 @@ integrator_keywords["atol"] = 1e-12
 
 
 class ReactionDiffusion(SpatioTemporalSimulator):
-    """Simulate the reaction-diffusion PDE for a given set of parameters."""
+    r"""Simulate a two-species reaction-diffusion PDE.
+
+    The model evolves two fields :math:`u` and :math:`v` as:
+
+    .. math::
+
+        \begin{aligned}
+        \partial_t u
+            &= d_1 \nabla^2 u + u - u^3 - uv^2 \\
+            &\quad + \beta u^2v + \beta v^3 \\
+        \partial_t v
+            &= d_2 \nabla^2 v + v - u^2v - v^3 \\
+            &\quad - \beta u^3 - \beta uv^2
+        \end{aligned}
+
+    The sampled parameters control the reaction coefficient :math:`\beta` and
+    diffusion scale.
+    """
 
     def __init__(
         self,

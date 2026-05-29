@@ -20,6 +20,24 @@ class LatticeBoltzmann(SpatioTemporalSimulator):
     The simulation domain is a rectangular channel controlled by ``width`` and
     ``height``.
 
+    The D2Q9 update evolves particle populations :math:`f_i` as:
+
+    .. math::
+
+        f_i(\mathbf{x} + \mathbf{c}_i\Delta t, t + \Delta t)
+        =
+        f_i(\mathbf{x}, t)
+        - \frac{1}{\tau}
+        \left(f_i(\mathbf{x}, t) - f_i^{\mathrm{eq}}(\mathbf{x}, t)\right).
+
+    Macroscopic density and velocity are recovered from:
+
+    .. math::
+
+        \rho = \sum_i f_i,
+        \qquad
+        \mathbf{u} = \frac{1}{\rho}\sum_i \mathbf{c}_i f_i.
+
     Args:
         parameters_range: Bounds on sampled parameters:
 

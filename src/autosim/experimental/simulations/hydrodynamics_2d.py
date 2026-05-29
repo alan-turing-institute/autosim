@@ -19,6 +19,19 @@ from autosim.types import TensorLike
 class Hydrodynamics2D(SpatioTemporalSimulator):
     r"""Simplified 2D hydrodynamics simulator with no magnetic field.
 
+    The solver uses a forced incompressible Navier-Stokes model:
+
+    .. math::
+
+        \begin{aligned}
+        \partial_t \mathbf{u} + \mathbf{u}\cdot\nabla\mathbf{u}
+            &= -\nabla p + \nu\nabla^2\mathbf{u} + \mathbf{f}, \\
+        \nabla\cdot\mathbf{u} &= 0.
+        \end{aligned}
+
+    The output channels are velocity components and pressure,
+    :math:`[u, v, p]`.
+
     Args:
         parameters_range: Bounds on sampled parameters:
             - ``nu``: kinematic viscosity
