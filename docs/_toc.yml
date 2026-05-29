@@ -7,7 +7,6 @@ chapters:
   - file: tutorials/index
     sections:
       - file: tutorials/quickstart
-      - file: tutorials/custom_simulator
   - file: reference/index
     sections:
       - file: reference/core/index
