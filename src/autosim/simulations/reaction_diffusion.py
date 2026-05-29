@@ -126,10 +126,14 @@ def reaction_diffusion(
 
     .. math::
 
-        \partial_t u &= d_1 \nabla^2 u + u - u^3 - uv^2
-            + \beta u^2v + \beta v^3 \\
-        \partial_t v &= d_2 \nabla^2 v + v - u^2v - v^3
-            - \beta u^3 - \beta uv^2
+        \begin{aligned}
+        \partial_t u
+            &= d_1 \nabla^2 u + u - u^3 - uv^2 \\
+            &\quad + \beta u^2v + \beta v^3 \\
+        \partial_t v
+            &= d_2 \nabla^2 v + v - u^2v - v^3 \\
+            &\quad - \beta u^3 - \beta uv^2
+        \end{aligned}
 
     Args:
         t: The current time step (not used).

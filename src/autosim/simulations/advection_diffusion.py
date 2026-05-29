@@ -151,8 +151,11 @@ def advection_diffusion(
 
     .. math::
 
-        \partial_t \omega = \nu \nabla^2 \omega
-        - \mu (u \partial_x \omega + v \partial_y \omega)
+        \begin{aligned}
+        \partial_t \omega
+            &= \nu \nabla^2 \omega
+            - \mu (u \partial_x \omega + v \partial_y \omega)
+        \end{aligned}
 
     Args:
         _t: Current time (unused).

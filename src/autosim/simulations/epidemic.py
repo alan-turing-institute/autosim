@@ -50,9 +50,11 @@ def simulate_epidemic(x: NumpyLike, N: int = 1000, I0: int = 1) -> float:
 
     .. math::
 
+        \begin{aligned}
         \frac{dS}{dt} &= -\beta S I / N \\
         \frac{dI}{dt} &= \beta S I / N - \gamma I \\
         \frac{dR}{dt} &= \gamma I
+        \end{aligned}
 
     Args:
         x: The parameters of the SIR model. The first element is the transmission rate

@@ -98,8 +98,10 @@ def f(t: float, y: NumpyLike, c: float):  # noqa: ARG001
 
     .. math::
 
+        \begin{aligned}
         \frac{dv_x}{dt} &= -c v_x \sqrt{v_x^2 + v_y^2} \\
         \frac{dv_y}{dt} &= -g - c v_y \sqrt{v_x^2 + v_y^2}
+        \end{aligned}
 
     Args:
         t: Time variable (not used).

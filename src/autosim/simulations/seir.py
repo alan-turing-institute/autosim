@@ -22,10 +22,12 @@ def simulate_seir_epidemic(
 
     .. math::
 
+        \begin{aligned}
         \frac{dS}{dt} &= -\beta S I / N \\
         \frac{dE}{dt} &= \beta S I / N - \sigma E \\
         \frac{dI}{dt} &= \sigma E - \gamma I \\
         \frac{dR}{dt} &= \gamma I
+        \end{aligned}
 
     Args:
         x: SEIR parameters [beta, gamma, sigma].

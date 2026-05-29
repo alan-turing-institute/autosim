@@ -141,7 +141,7 @@ def _laplacian(field: torch.Tensor, dx: float) -> torch.Tensor:
 
 
 def _poisson_solve_periodic(rhs: torch.Tensor, L: float) -> torch.Tensor:
-    """Solve ∇²_h p = rhs on a periodic square grid using FFT.
+    r"""Solve :math:`\nabla_h^2 p = \mathrm{rhs}` on a periodic square grid using FFT.
 
     Uses the modified wavenumbers of the central-difference Laplacian so
     that the discrete projection is exactly consistent with the FD
