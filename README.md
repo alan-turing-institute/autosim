@@ -45,7 +45,7 @@ Build the local documentation site with:
 uv run jupyter-book build docs --all
 ```
 
-Preview the generated site by opening `docs/_build/html/index.html`.
+Preview the generated site with `uv run python -m http.server -d docs/_build/html`.
 
 ## Generate training data (Hydra CLI)
 
