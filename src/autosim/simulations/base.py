@@ -308,7 +308,7 @@ class Simulator(ABC, ValidationMixin):
             else:
                 logger.warning(
                     "Simulation %d/%d failed. Result is None"
-                    "and is not appended to the results",
+                    " and is not appended to the results",
                     i + 1,
                     len(x),
                 )
