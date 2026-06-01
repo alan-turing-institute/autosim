@@ -28,8 +28,8 @@ class AdvectionDiffusion(SpatioTemporalSimulator):
             - \mu (u \partial_x \omega + v \partial_y \omega)
         \end{aligned}
 
-    The sampled parameters are the viscosity :math:`\nu` and advection strength
-    :math:`\mu`.
+    The parameters :math:`\nu` (viscosity) and :math:`\mu` (advection strength)
+    that control the simulation are sampled from given ranges.
     """
 
     def __init__(
