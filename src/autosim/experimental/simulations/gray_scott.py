@@ -1,3 +1,5 @@
+"""Gray-Scott reaction-diffusion simulator."""
+
 import numpy as np
 import torch
 from numpy.fft import fft2, ifft2
@@ -421,7 +423,23 @@ def simulate_spectral_gray_scott(  # noqa: PLR0915
 
 
 class GrayScott(SpatioTemporalSimulator):
-    """Spectral Gray-Scott simulator based on danfortunato/spectral-gray-scott."""
+    r"""Spectral Gray-Scott simulator based on danfortunato/spectral-gray-scott.
+
+    The model evolves two chemical concentrations :math:`u` and :math:`v`:
+
+    .. math::
+
+        \begin{aligned}
+        \partial_t u
+            &= \delta_u \nabla^2 u - uv^2 + F(1 - u), \\
+        \partial_t v
+            &= \delta_v \nabla^2 v + uv^2 - (F + k)v.
+        \end{aligned}
+
+    Pattern presets choose fixed or ranged values for :math:`F` and :math:`k`;
+    diffusion coefficients are controlled by :math:`\delta_u` and
+    :math:`\delta_v`.
+    """
 
     def __init__(  # noqa: PLR0912
         self,
@@ -443,6 +461,7 @@ class GrayScott(SpatioTemporalSimulator):
         fixed_parameters_given_pattern: bool = True,
         min_std: float | None = None,
     ) -> None:
+        """Initialize the Gray-Scott simulator."""
         if parameters_range is not None:
             parameters_range = dict(parameters_range)
         elif pattern is not None:

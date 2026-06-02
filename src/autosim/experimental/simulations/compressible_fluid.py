@@ -1,5 +1,4 @@
-"""
-Simple 2D compressible-fluid simulator (PDEBench-style fields).
+"""Simple 2D compressible-fluid simulator (PDEBench-style fields).
 
 State channels are [rho, u, v, p], evolved with a compact finite-volume
 local Lax-Friedrichs (Rusanov) scheme for the 2D Euler equations on a periodic grid.
@@ -16,33 +15,40 @@ from autosim.types import TensorLike
 
 
 class CompressibleFluid2D(SpatioTemporalSimulator):
-    """Minimal 2D compressible Euler simulator.
+    r"""Minimal 2D compressible Euler simulator.
 
-    Parameters
-    ----------
-    parameters_range:
-        ``gamma`` (adiabatic index), ``amp`` (initial perturbation amplitude).
-    return_timeseries:
-        If True, return full trajectory, otherwise final snapshot.
-    n:
-        Grid size (n x n).
-    L:
-        Domain length per axis.
-    T:
-        Final time.
-    dt_save:
-        Save interval when `return_timeseries=True`.
-    cfl:
-        CFL number for adaptive stepping.
-    scenario:
-        Initial-condition family. One of:
-        - ``"shear_layers"`` (default): dual shear layers with multimode perturbations
-        - ``"vortex_sheet"``: single shear sheet with sinusoidal displacement
-        - ``"blast_wave"``: smooth radial over-pressure/density pulse
-    flux_scheme:
-        Numerical interface flux. One of:
-        - ``"llf"``: local Lax-Friedrichs (more diffusive, robust)
-        - ``"hll"``: HLL flux (less diffusive, sharper fronts)
+    The solver evolves conservative variables
+    :math:`U = [\rho, \rho u, \rho v, E]` using:
+
+    .. math::
+
+        \partial_t U + \partial_x F(U) + \partial_y G(U) = 0,
+        \qquad
+        E = \frac{p}{\gamma - 1}
+            + \frac{1}{2}\rho(u^2 + v^2).
+
+    The returned primitive-variable channels are
+    :math:`[\rho, u, v, p]`.
+
+    Args:
+        parameters_range: ``gamma`` (adiabatic index), ``amp`` (initial perturbation
+            amplitude).
+        return_timeseries: If True, return full trajectory, otherwise final snapshot.
+        n: Grid size (n x n).
+        L: Domain length per axis.
+        T: Final time.
+        dt_save: Save interval when `return_timeseries=True`.
+        cfl: CFL number for adaptive stepping.
+        scenario: Initial-condition family. One of:
+
+            - ``"shear_layers"`` (default): dual shear layers with multimode
+              perturbations
+            - ``"vortex_sheet"``: single shear sheet with sinusoidal displacement
+            - ``"blast_wave"``: smooth radial over-pressure/density pulse
+        flux_scheme: Numerical interface flux. One of:
+
+            - ``"llf"``: local Lax-Friedrichs (more diffusive, robust)
+            - ``"hll"``: HLL flux (less diffusive, sharper fronts)
     """
 
     def __init__(
@@ -59,6 +65,7 @@ class CompressibleFluid2D(SpatioTemporalSimulator):
         scenario: str = "shear_layers",
         flux_scheme: str = "llf",
     ) -> None:
+        """Initialize the 2D compressible fluid simulator."""
         if parameters_range is None:
             parameters_range = {
                 "gamma": (1.35, 1.67),

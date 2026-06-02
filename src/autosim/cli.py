@@ -1,3 +1,5 @@
+"""Command-line interface for generating and inspecting AutoSim datasets."""
+
 from __future__ import annotations
 
 import argparse
@@ -103,6 +105,31 @@ def save_resolved_config(cfg: Any, output_dir: str | Path) -> None:
     resolved_cfg_path.write_text(resolved_yaml, encoding="utf-8")
 
 
+def _resolve_visualize_batch_indices(
+    visualize_cfg: Any,
+    batch_size: int,
+    split_name: str,
+) -> list[int]:
+    """Resolve configured video batch indices for a generated split."""
+    batch_indices_cfg = visualize_cfg.get("batch_indices", None)
+    if batch_indices_cfg is None:
+        max_examples = int(visualize_cfg.get("max_examples", 4))
+        if max_examples < 0:
+            msg = "visualize.max_examples must be non-negative."
+            raise ValueError(msg)
+        return list(range(min(max_examples, batch_size)))
+
+    batch_indices = [int(idx) for idx in batch_indices_cfg]
+    for idx in batch_indices:
+        if idx < 0 or idx >= batch_size:
+            msg = (
+                f"visualize batch index {idx} is out of range for split "
+                f"'{split_name}' with batch size {batch_size}."
+            )
+            raise ValueError(msg)
+    return batch_indices
+
+
 def save_example_videos(
     splits: dict[str, dict[str, Any]],
     output_dir: str | Path,
@@ -130,17 +157,13 @@ def save_example_videos(
         )
         raise ValueError(msg)
 
-    batch_indices_cfg = visualize_cfg.get("batch_indices", [])
-    batch_indices = [int(idx) for idx in batch_indices_cfg]
+    batch_indices = _resolve_visualize_batch_indices(
+        visualize_cfg=visualize_cfg,
+        batch_size=data.shape[0],
+        split_name=split_name,
+    )
     if not batch_indices:
         return
-    for idx in batch_indices:
-        if idx < 0 or idx >= data.shape[0]:
-            msg = (
-                f"visualize batch index {idx} is out of range for split "
-                f"'{split_name}' with batch size {data.shape[0]}."
-            )
-            raise ValueError(msg)
 
     fps = int(visualize_cfg.get("fps", 5))
     if fps <= 0:
@@ -320,7 +343,7 @@ def _parse_shared_core_field_groups(
                     str(n)
                     for n in (
                         pool_from
-                        if isinstance(pool_from, (list, tuple))
+                        if isinstance(pool_from, list | tuple)
                         else [pool_from]
                     )
                 ]

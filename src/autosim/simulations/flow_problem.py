@@ -1,3 +1,5 @@
+"""Flow problem simulator."""
+
 from collections.abc import Callable
 
 import numpy as np
@@ -9,8 +11,7 @@ from autosim.types import TensorLike
 
 
 class FlowProblem(Simulator):
-    """
-    Flow Problem Simulator.
+    """Flow Problem Simulator.
 
     The system simulated is a tube with an input flow rate at any given time.
     The tube is divided to `ncomp` compartments which allows for the study of
@@ -25,27 +26,21 @@ class FlowProblem(Simulator):
         ncycles: int = 10,
         ncomp: int = 10,
     ):
-        """
-        Initialize the FlowProblem simulator.
+        """Initialize the FlowProblem simulator.
 
-        Parameters
-        ----------
-        parameters_range: dict[str, tuple[float, float]]
-            Dictionary mapping input parameter names to their (min, max) ranges.
-        output_names: list[str]
-            List of output parameters' names.
-        log_level: str
-            Logging level for the simulator. Can be one of:
-            - "progress_bar": shows a progress bar during batch simulations
-            - "debug": shows debug messages
-            - "info": shows informational messages
-            - "warning": shows warning messages
-            - "error": shows error messages
-            - "critical": shows critical messages
-        ncycles: int
-            Number of cycles to simulate.
-        ncomp: int
-            Number of compartments in the tube.
+        Args:
+            parameters_range: Dictionary mapping input parameter names to their (min,
+                max) ranges.
+            output_names: List of output parameters' names.
+            log_level: Logging level for the simulator. Can be one of:
+                - "progress_bar": shows a progress bar during batch simulations
+                - "debug": shows debug messages
+                - "info": shows informational messages
+                - "warning": shows warning messages
+                - "error": shows error messages
+                - "critical": shows critical messages
+            ncycles: Number of cycles to simulate.
+            ncomp: Number of compartments in the tube.
         """
         if parameters_range is None:
             parameters_range = {
@@ -75,13 +70,10 @@ class FlowProblem(Simulator):
         self.ncomp = ncomp
 
     def _forward(self, x: TensorLike) -> TensorLike:
-        """
-        Calculate the pressure and flow rate in the tube compartments.
+        """Calculate the pressure and flow rate in the tube compartments.
 
-        Parameters
-        ----------
-            x: TensorLike
-                Tensor of input parameter values to simulate. Will be converted to a
+        Args:
+            x: Tensor of input parameter values to simulate. Will be converted to a
                 dictionary internally.
                     - `T` (float): cycle length
                     - `td` (float): pulse duration, make sure to make this less than T
@@ -93,10 +85,8 @@ class FlowProblem(Simulator):
                     - `R_o` (float) : outflow resistance
                     - `p_o` (float) : outflow pressure
 
-        Returns
-        -------
-            TensorLike
-                Presssure in the tube compartments at the end of the simulation.
+        Returns:
+            Presssure in the tube compartments at the end of the simulation.
         """
         # Convert tensor input to dictionary
         x_values = x.squeeze().tolist() if hasattr(x, "squeeze") else x

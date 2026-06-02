@@ -1,3 +1,5 @@
+"""Experimental reaction-diffusion simulator."""
+
 import numpy as np
 import torch
 from numpy.fft import fft2, ifft2
@@ -10,7 +12,24 @@ integrator_keywords = {"rtol": 1e-6, "atol": 1e-6, "method": "RK45"}
 
 
 class ReactionDiffusion(SpatioTemporalSimulator):
-    """Simulate the reaction-diffusion PDE for a given set of parameters."""
+    r"""Simulate a two-species reaction-diffusion PDE.
+
+    The model evolves two fields :math:`u` and :math:`v` as:
+
+    .. math::
+
+        \begin{aligned}
+        \partial_t u
+            &= d_1 \nabla^2 u + u - u^3 - uv^2 \\
+            &\quad + \beta u^2v + \beta v^3 \\
+        \partial_t v
+            &= d_2 \nabla^2 v + v - u^2v - v^3 \\
+            &\quad - \beta u^3 - \beta uv^2
+        \end{aligned}
+
+    The sampled parameters control the reaction coefficient :math:`\beta` and
+    diffusion scale.
+    """
 
     def __init__(
         self,
@@ -23,34 +42,25 @@ class ReactionDiffusion(SpatioTemporalSimulator):
         T: float = 10.0,
         dt: float = 0.1,
     ):
-        """
-        Initialize the ReactionDiffusion simulator.
+        """Initialize the ReactionDiffusion simulator.
 
-        Parameters
-        ----------
-        parameters_range: dict[str, tuple[float, float]]
-            Dictionary mapping input parameter names to their (min, max) ranges.
-        output_names: list[str]
-            List of output parameters' names.
-        log_level: str
-            Logging level for the simulator. Can be one of:
-            - "progress_bar": shows a progress bar during batch simulations
-            - "debug": shows debug messages
-            - "info": shows informational messages
-            - "warning": shows warning messages
-            - "error": shows error messages
-            - "critical": shows critical messages
-        return_timeseries: bool
-            Whether to return the full timeseries or just the spatial solution at the
-            final time step. Defaults to False.
-        n: int
-            Number of spatial points in each direction.
-        L: int
-            Domain size in X and Y directions.
-        T: float
-            Total time to simulate.
-        dt: float
-            Time step size.
+        Args:
+            parameters_range: Dictionary mapping input parameter names to their (min,
+                max) ranges.
+            output_names: List of output parameters' names.
+            log_level: Logging level for the simulator. Can be one of:
+                - "progress_bar": shows a progress bar during batch simulations
+                - "debug": shows debug messages
+                - "info": shows informational messages
+                - "warning": shows warning messages
+                - "error": shows error messages
+                - "critical": shows critical messages
+            return_timeseries: Whether to return the full timeseries or just the spatial
+                solution at the final time step. Defaults to False.
+            n: Number of spatial points in each direction.
+            L: Domain size in X and Y directions.
+            T: Total time to simulate.
+            dt: Time step size.
         """
         if parameters_range is None:
             parameters_range = {"beta": (1.0, 2.0), "d": (0.05, 0.3)}
@@ -85,18 +95,15 @@ class ReactionDiffusion(SpatioTemporalSimulator):
     ) -> dict:
         """Reshape to spatiotemporal format.
 
-        Parameters
-        ----------
-        n: int
-            Number of samples to generate.
-        random_seed: int | None
-            Random seed for reproducibility. Defaults to None.
+        Args:
+            n: Number of samples to generate.
+            random_seed: Random seed for reproducibility. Defaults to None.
+            ensure_exact_n: Whether to resample failed trajectories until exactly ``n``
+                succeed.
 
-        Returns
-        -------
-        dict
-            A dictionary containing the reshaped spatiotemporal data, constant scalars,
-            and constant fields.
+        Returns:
+            A dictionary containing the reshaped spatiotemporal data, constant
+            scalars, and constant fields.
         """
         # Run simulation and optionally resample failed trajectories
         y, x = self._forward_batch_with_optional_retries(
@@ -127,27 +134,17 @@ def reaction_diffusion(
     n: int,
     N: int,
 ):
-    """
-    Define the reaction-diffusion PDE in the Fourier (kx, ky) space.
+    """Define the reaction-diffusion PDE in the Fourier (kx, ky) space.
 
-    Parameters
-    ----------
-    t: float
-        The current time step (not used).
-    uvt: NumpyLike
-        Fourier transformed solution vector at current time step (length 2*N, 1-D).
-    K22: NumpyLike
-        Squared Fourier wavenumbers, shape (N,).
-    d1: float
-        The diffusion coefficient for species 1.
-    d2: float
-        The diffusion coefficient for species 2.
-    beta: float
-        The reaction coefficient controlling reaction between the two species.
-    n: int
-        Number of spatial points in each direction.
-    N: int
-        Total number of spatial grid points (n*n).
+    Args:
+        t: The current time step (not used).
+        uvt: Fourier transformed solution vector at current time step (length 2*N, 1-D).
+        K22: Squared Fourier wavenumbers, shape (N,).
+        d1: The diffusion coefficient for species 1.
+        d2: The diffusion coefficient for species 2.
+        beta: The reaction coefficient controlling reaction between the two species.
+        n: Number of spatial points in each direction.
+        N: Total number of spatial grid points (n*n).
     """
     u = np.real(ifft2(uvt[:N].reshape(n, n)))
     v = np.real(ifft2(uvt[N:].reshape(n, n)))
@@ -167,32 +164,23 @@ def simulate_reaction_diffusion(
     T: float = 10.0,
     dt: float = 0.1,
 ) -> tuple[NumpyLike, NumpyLike]:
-    """
-    Simulate the reaction-diffusion PDE for a given set of parameters.
+    """Simulate the reaction-diffusion PDE for a given set of parameters.
 
-    Parameters
-    ----------
-    x: NumpyLike
-        The parameters of the reaction-diffusion model. The first element is the
-        reaction coefficient (beta) and the second element is the diffusion
-        coefficient (d).
-    return_timeseries: bool
-        Whether to return the full timeseries or just the spatial solution at the final
-        time step. Defaults to False.
-    n: int
-        Number of spatial points in each direction. Defaults to 32.
-    L: int
-        Domain size in X and Y directions. Defaults to 20.
-    T: float
-        Total time to simulate. Defaults to 10.0.
-    dt: float
-        Time step size. Defaults to 0.1.
+    Args:
+        x: The parameters of the reaction-diffusion model. The first element is the
+            reaction coefficient (beta) and the second element is the diffusion
+            coefficient (d).
+        return_timeseries: Whether to return the full timeseries or just the spatial
+            solution at the final time step. Defaults to False.
+        n: Number of spatial points in each direction. Defaults to 32.
+        L: Domain size in X and Y directions. Defaults to 20.
+        T: Total time to simulate. Defaults to 10.0.
+        dt: Time step size. Defaults to 0.1.
 
-    Returns
-    -------
-    tuple[NumpyLike, NumpyLike]
-        [u_sol, v_sol], the spatial solution of the reaction-diffusion PDE, either as a
-        timeseries or at the final time point of `return_timeseries` is False.
+    Returns:
+        [u_sol, v_sol], the spatial solution of the reaction-diffusion PDE,
+        either as a timeseries or at the final time point of
+        `return_timeseries` is False.
     """
     beta, d = x
     d1 = d2 = d

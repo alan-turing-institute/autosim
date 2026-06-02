@@ -1,3 +1,5 @@
+"""Conditioned Navier-Stokes smoke simulator."""
+
 from __future__ import annotations
 
 import math
@@ -230,10 +232,22 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
     drives buoyancy forcing in the vertical velocity equation.
 
     Args:
-        bc_mode: ``"periodic"`` (default) wraps all fields; ``"neumann"`` uses
-            zero-gradient BCs for smoke and no-slip BCs for velocity.
-        buoyancy_mode: ``"anomaly"`` (default, Boussinesq) forces with
-            ``smoke - mean(smoke)``; ``"raw"`` forces with raw smoke values.
+        params: first value is interpreted as the vertical buoyancy coefficient.
+        return_timeseries: Whether to return the full saved trajectory or only the final
+            state.
+        n: Number of grid cells in each spatial direction.
+        L: Physical domain length.
+        T: Final simulation time.
+        dt: Maximum solver step size.
+        snapshot_dt: Time interval between saved trajectory frames.
+        nu: Velocity viscosity.
+        smoke_diffusivity: Diffusivity for the smoke scalar.
+        cfl: Courant number used to adapt the step size.
+        smoothness: Smoothness of the sampled initial smoke field.
+        noise_scale: Amplitude scale for the sampled initial smoke field.
+        bc_mode: zero-gradient BCs for smoke and no-slip BCs for velocity.
+        buoyancy_mode: ``smoke - mean(smoke)``; ``"raw"`` forces with raw smoke values.
+        random_seed: Seed for reproducible initial-condition sampling.
     """
     buoyancy_y = float(params[0].item())
 
@@ -374,7 +388,24 @@ def simulate_conditioned_navier_stokes_2d(  # noqa: PLR0912, PLR0915
 
 
 class ConditionedNavierStokes2D(SpatioTemporalSimulator):
-    """Conditioned 2D Navier-Stokes smoke simulator inspired by PDEArena."""
+    r"""Conditioned 2D Navier-Stokes smoke simulator inspired by PDEArena.
+
+    The state contains smoke concentration :math:`s` and incompressible velocity
+    :math:`\mathbf{u}`. The solver evolves:
+
+    .. math::
+
+        \begin{aligned}
+        \partial_t s + \mathbf{u}\cdot\nabla s
+            &= \kappa\nabla^2 s, \\
+        \partial_t \mathbf{u} + \mathbf{u}\cdot\nabla\mathbf{u}
+            &= -\nabla p + \nu\nabla^2\mathbf{u}
+            + b(s)\mathbf{e}_y, \\
+        \nabla\cdot\mathbf{u} &= 0.
+        \end{aligned}
+
+    The returned channels are smoke and velocity components: :math:`[s, u, v]`.
+    """
 
     _DEFAULT_SMOOTHNESS = 6.0
     _DEFAULT_NOISE_SCALE = 11.0
@@ -387,7 +418,7 @@ class ConditionedNavierStokes2D(SpatioTemporalSimulator):
         "smoke_diffusivity",
     )
 
-    def __init__(
+    def __init__(  # noqa: PLR0915
         self,
         parameters_range: dict[str, tuple[float, float]] | None = None,
         output_names: list[str] | None = None,
@@ -405,6 +436,7 @@ class ConditionedNavierStokes2D(SpatioTemporalSimulator):
         skip_nt: int = 0,
         random_seed: int | None = None,
     ) -> None:
+        """Initialize the conditioned Navier-Stokes simulator."""
         if parameters_range is None:
             parameters_range = {
                 "buoyancy_y": (0.2, 0.5),

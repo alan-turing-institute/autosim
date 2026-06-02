@@ -1,3 +1,5 @@
+"""Gross-Pitaevskii equation simulator."""
+
 import math
 from collections.abc import Callable
 from typing import Any, ClassVar, Literal
@@ -20,12 +22,13 @@ def generate_complex_potential(  # noqa: PLR0915
     """Generate a highly controllable 2D potential landscape.
 
     Args:
-        X: Meshgrid X coordinates.
-        Y: Meshgrid Y coordinates.
-        config: Dictionary containing all complexity parameters.
-        t: Current simulation time.
-        static_disorder: Optional precomputed stationary disorder field.
-        rng: Random number generator for spatial disorder.
+        X: X-coordinate grid for evaluating the potential.
+        Y: Y-coordinate grid for evaluating the potential.
+        config: Potential configuration values controlling traps, lattices, and
+            disorder.
+        t: Current simulation time used for rotating or time-varying terms.
+        static_disorder: Precomputed disorder field to add to the potential.
+        rng: Random number generator used when sampling disorder terms.
     """
     trap_Omega = float(config.get("trap_Omega", 0.0))
     X_trap, Y_trap = X, Y
@@ -284,27 +287,39 @@ class GPESimulator2D:
     def _apply_V_half(
         self, psi: torch.Tensor, V: torch.Tensor, g: float, half_dt: complex
     ) -> torch.Tensor:
-        """Apply the potential + nonlinear half-step.
+        r"""Apply the potential and nonlinear half-step.
 
-        This is psi *= exp(-i*(V + g|psi|²)*half_dt)
+        This applies
+        :math:`\psi \leftarrow \psi \exp[-i(V + g|\psi|^2)\Delta t_h]`,
+        where ``half_dt`` provides :math:`\Delta t_h`.
         """
         density = torch.abs(psi) ** 2
         return psi * torch.exp(-1j * (V + g * density) * half_dt)
 
     def _apply_Lz_exp(self, psi: torch.Tensor, alpha: float) -> torch.Tensor:
-        """Apply exp(alpha * Lz) for imaginary-time rotation steps.
+        r"""Apply :math:`\exp(\alpha L_z)` for imaginary-time rotation steps.
 
-        For imaginary time the correct sub-step is exp(Ω·dτ·Lz), which is a
-        *non-unitary* operator that amplifies positive-angular-momentum modes and
-        thereby drives vortex nucleation.  A unitary coordinate rotation (used for
-        real time) leaves the density unchanged and cannot form a vortex lattice.
+        For imaginary time the correct sub-step is
+        :math:`\exp(\Omega\,\Delta\tau\,L_z)`, which is a *non-unitary*
+        operator that amplifies positive-angular-momentum modes and thereby
+        drives vortex nucleation. A unitary coordinate rotation (used for real
+        time) leaves the density unchanged and cannot form a vortex lattice.
 
-        Lz = -i(x ∂/∂y - y ∂/∂x) is evaluated spectrally:
-            ∂ψ/∂x = IFFT(i kx ψ̂)   ∂ψ/∂y = IFFT(i ky ψ̂)
+        The angular momentum operator is evaluated spectrally:
 
-        exp(alpha * Lz) is approximated to first order (I + alpha*Lz); with the
-        small sub-step alpha = Ω·dt/2 ≈ 5x10⁻⁴ the truncation error is negligible
-        and the caller's renormalisation keeps the norm bounded.
+        .. math::
+
+            \begin{aligned}
+            L_z &= -i(x\partial_y - y\partial_x), \\
+            \partial_x \psi &= \operatorname{IFFT}(i k_x \hat{\psi}), \\
+            \partial_y \psi &= \operatorname{IFFT}(i k_y \hat{\psi}).
+            \end{aligned}
+
+        :math:`\exp(\alpha L_z)` is approximated to first order as
+        :math:`I + \alpha L_z`; with the small sub-step
+        :math:`\alpha = \Omega\,\Delta t / 2 \approx 5 \times 10^{-4}`, the
+        truncation error is negligible and the caller's renormalisation keeps
+        the norm bounded.
         """
         psi_hat = torch.fft.fftn(psi)
         dpsi_dx = torch.fft.ifftn(1j * self.KX * psi_hat)
@@ -550,7 +565,19 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
 
 
 class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
-    """Gross-Pitaevskii Equation simulator for quantum fluids."""
+    r"""Gross-Pitaevskii equation simulator for quantum fluids.
+
+    The simulator evolves a complex wavefunction :math:`\psi` under:
+
+    .. math::
+
+        i\partial_t \psi =
+        \left[-\frac{1}{2}\nabla^2 + V(x, y, t) + g|\psi|^2
+        - \Omega L_z\right]\psi.
+
+    The returned channels are density, real part, and imaginary part:
+    :math:`[|\psi|^2, \operatorname{Re}(\psi), \operatorname{Im}(\psi)]`.
+    """
 
     _DEFAULT_SIM_PARAMS: ClassVar[dict[str, Any]] = {
         "wx": 1.0,
@@ -629,6 +656,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         artifact_validation_warmup_frames: int = 8,
         artifact_validation_tail_frames: int = 12,
     ) -> None:
+        """Initialize the Gross-Pitaevskii simulator."""
         if parameters_range is None:
             # Provide some sensible defaults for complexity knobs
             parameters_range = {

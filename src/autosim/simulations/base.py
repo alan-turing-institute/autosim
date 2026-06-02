@@ -1,3 +1,5 @@
+"""Base simulator interfaces and batching helpers."""
+
 import abc
 import logging
 from abc import ABC, abstractmethod
@@ -15,8 +17,7 @@ logger = logging.getLogger("autosim")
 
 
 class Simulator(ABC, ValidationMixin):
-    """
-    Base class for simulations. All simulators should inherit from this class.
+    """Base class for simulations. All simulators should inherit from this class.
 
     This class provides the interface and common functionality for different
     simulation implementations.
@@ -28,23 +29,19 @@ class Simulator(ABC, ValidationMixin):
         output_names: list[str],
         log_level: str = "progress_bar",
     ):
-        """
-        Initialize the simulator with parameter ranges and output names.
+        """Initialize the simulator with parameter ranges and output names.
 
-        Parameters
-        ----------
-        parameters_range: dict[str, tuple[float, float]]
-            Dictionary mapping input parameter names to their (min, max) ranges.
-        output_names: list[str]
-            List of output parameters' names.
-        log_level: str
-            Logging level for the simulator. Can be one of:
-            - "progress_bar": shows a progress bar during batch simulations
-            - "debug": shows debug messages
-            - "info": shows informational messages
-            - "warning": shows warning messages
-            - "error": shows error messages
-            - "critical": shows critical messages
+        Args:
+            parameters_range: Dictionary mapping input parameter names to their (min,
+                max) ranges.
+            output_names: List of output parameters' names.
+            log_level: Logging level for the simulator. Can be one of:
+                - "progress_bar": shows a progress bar during batch simulations
+                - "debug": shows debug messages
+                - "info": shows informational messages
+                - "warning": shows warning messages
+                - "error": shows error messages
+                - "critical": shows critical messages
         """
         self._parameters_range = parameters_range
         self._param_names = list(parameters_range.keys())
@@ -76,10 +73,9 @@ class Simulator(ABC, ValidationMixin):
     ) -> None:
         """Set the range of input parameters for the simulator.
 
-        Parameters
-        ----------
-        parameters_range: dict[str, tuple[float, float]]
-            Dictionary mapping input parameter names to their (min, max) ranges.
+        Args:
+            parameters_range: Dictionary mapping input parameter names to their (min,
+                max) ranges.
         """
         self._parameters_range = parameters_range
         self._param_names = list(parameters_range.keys())
@@ -112,17 +108,14 @@ class Simulator(ABC, ValidationMixin):
         This setter allows renaming the output parameters but does not allow
         changing the number of outputs (dimensionality is fixed after initialization).
 
-        Parameters
-        ----------
-        output_names: list[str]
-            List of output parameter names. Must have the same length as the current
-            number of outputs.
+        Args:
+            output_names: List of output parameter names. Must have the same length as
+                the current number of outputs.
 
-        Raises
-        ------
-        ValueError
-            If the number of output names differs from the simulator's fixed output
-            dimension.
+        Raises:
+            ValueError
+                If the number of output names differs from the simulator's fixed output
+                dimension.
         """
         if len(output_names) != self._out_dim:
             raise ValueError(
@@ -145,25 +138,18 @@ class Simulator(ABC, ValidationMixin):
     def sample_inputs(
         self, n_samples: int, random_seed: int | None = None, method: str = "lhs"
     ) -> TensorLike:
-        """
-        Generate random samples using Quasi-Monte Carlo methods.
+        """Generate random samples using Quasi-Monte Carlo methods.
 
         Available methods are Sobol or Latin Hypercube Sampling. For overview, see
         the scipy documentation:
         https://docs.scipy.org/doc/scipy/reference/stats.qmc.html
 
-        Parameters
-        ----------
-        n_samples: int
-            Number of samples to generate.
-        random_seed: int | None
-            Random seed for reproducibility. If None, no seed is set.
-        method: str
-            Sampling method to use. One of ["lhs", "sobol"].
+        Args:
+            n_samples: Number of samples to generate.
+            random_seed: Random seed for reproducibility. If None, no seed is set.
+            method: Sampling method to use. One of ["lhs", "sobol"].
 
-        Returns
-        -------
-        TensorLike
+        Returns:
             Parameter samples (column order is given by self.param_names)
         """
         if random_seed is not None:
@@ -208,42 +194,31 @@ class Simulator(ABC, ValidationMixin):
 
     @abstractmethod
     def _forward(self, x: TensorLike) -> TensorLike | None:
-        """
-        Abstract method to perform the forward simulation.
+        """Abstract method to perform the forward simulation.
 
-        Parameters
-        ----------
-        x: TensorLike
-            Input parameters into the simulation forward run.
+        Args:
+            x: Input parameters into the simulation forward run.
 
-        Returns
-        -------
-        TensorLike | None
+        Returns:
             Simulated output tensor. Shape = (1, self.out_dim).
             For example, if the simulator outputs two simulated variables,
             then the shape would be (1, 2).
         """
 
     def forward(self, x: TensorLike, allow_failures: bool = True) -> TensorLike | None:
-        """
-        Generate samples from input data using the simulator.
+        """Generate samples from input data using the simulator.
 
         Combines the abstract method `_forward` with some validation checks.
         If there is a failure during the forward pass of the simulation,
         the error is logged and None is returned.
 
-        Parameters
-        ----------
-        x: TensorLike
-            Input tensor of shape (n_samples, self.in_dim).
-        allow_failures: bool
-            Whether to allow failures during simulation.
-            Default is True. When true, failed simulations will return None instead
-            of raising an error. When False, error is raised.
+        Args:
+            x: Input tensor of shape (n_samples, self.in_dim).
+            allow_failures: Whether to allow failures during simulation. Default is
+                True. When true, failed simulations will return None instead of raising
+                an error. When False, error is raised.
 
-        Returns
-        -------
-        TensorLike
+        Returns:
             Simulated output tensor. None if the simulation failed.
         """
         try:
@@ -261,25 +236,19 @@ class Simulator(ABC, ValidationMixin):
     def forward_batch(
         self, x: TensorLike, allow_failures: bool = True
     ) -> tuple[TensorLike, TensorLike]:
-        """
-        Run multiple simulations.
+        """Run multiple simulations.
 
         If allow_failures is False, failed simulations will raise an error.
         Otherwise, failed simulations are skipped, and only successful results
         are returned along with their corresponding input parameters.
 
-        Parameters
-        ----------
-        x: TensorLike
-            Tensor of input parameters to make predictions for.
-        allow_failures: bool
-            Whether to allow failures during simulation.
-            Default is True. When true, failed simulations will return None instead
-            of raising an error. When False, error is raised.
+        Args:
+            x: Tensor of input parameters to make predictions for.
+            allow_failures: Whether to allow failures during simulation. Default is
+                True. When true, failed simulations will return None instead of raising
+                an error. When False, error is raised.
 
-        Returns
-        -------
-        tuple[TensorLike, TensorLike]
+        Returns:
             Tuple of (simulation_results, valid_input_parameters).
             Only successful simulations are included.
         """
@@ -331,17 +300,12 @@ class Simulator(ABC, ValidationMixin):
         return self.results_tensor, x[valid_idx]
 
     def get_parameter_idx(self, name: str) -> int:
-        """
-        Get the index of a specific parameter.
+        """Get the index of a specific parameter.
 
-        Parameters
-        ----------
-        name: str
-            Name of the parameter to retrieve.
+        Args:
+            name: Name of the parameter to retrieve.
 
-        Returns
-        -------
-        float
+        Returns:
             Index of the specified parameter.
         """
         if name not in self._param_names:
@@ -349,12 +313,9 @@ class Simulator(ABC, ValidationMixin):
         return self._param_names.index(name)
 
     def get_outputs_as_dict(self) -> dict[str, TensorLike]:
-        """
-        Return simulation results as a dictionary with output names as keys.
+        """Return simulation results as a dictionary with output names as keys.
 
-        Returns
-        -------
-        dict[str, TensorLike]
+        Returns:
             Dictionary where keys are output names and values are tensors
             of shape (n_samples,) for each output dimension.
         """
@@ -367,8 +328,7 @@ class Simulator(ABC, ValidationMixin):
 
 
 class TorchSimulator(Simulator, TorchDeviceMixin):
-    """
-    Simulator that runs computations on a specified torch device.
+    """Simulator that runs computations on a specified torch device.
 
     This subclass extends :class:`Simulator` with the :class:`TorchDeviceMixin`
     so that simulators implemented in PyTorch (e.g., ``torchcor``) can run on
@@ -383,27 +343,21 @@ class TorchSimulator(Simulator, TorchDeviceMixin):
         log_level: str = "progress_bar",
         device: DeviceLike | None = None,
     ):
+        """Initialize a simulator with torch device management."""
         Simulator.__init__(self, parameters_range, output_names, log_level)
         TorchDeviceMixin.__init__(self, device=device)
 
     def sample_inputs(
         self, n_samples: int, random_seed: int | None = None, method: str = "lhs"
     ) -> TensorLike:
-        """
-        Sample inputs and move them to the simulator's device.
+        """Sample inputs and move them to the simulator's device.
 
-        Parameters
-        ----------
-        n_samples: int
-            Number of samples to generate.
-        random_seed: int | None
-            Optional random seed to make sampling reproducible.
-        method: str
-            Sampling method, one of ``"lhs"`` or ``"sobol"``.
+        Args:
+            n_samples: Number of samples to generate.
+            random_seed: Optional random seed to make sampling reproducible.
+            method: Sampling method, one of ``"lhs"`` or ``"sobol"``.
 
-        Returns
-        -------
-        TensorLike
+        Returns:
             Sampled inputs located on ``self.device``.
         """
         samples = super().sample_inputs(
@@ -413,19 +367,13 @@ class TorchSimulator(Simulator, TorchDeviceMixin):
         return samples_device
 
     def forward(self, x: TensorLike, allow_failures: bool = True) -> TensorLike | None:
-        """
-        Run a single simulation on the configured device.
+        """Run a single simulation on the configured device.
 
-        Parameters
-        ----------
-        x: TensorLike
-            Input tensor with shape ``(n_samples, in_dim)``.
-        allow_failures: bool
-            When True, failures return ``None`` instead of raising.
+        Args:
+            x: Input tensor with shape ``(n_samples, in_dim)``.
+            allow_failures: When True, failures return ``None`` instead of raising.
 
-        Returns
-        -------
-        TensorLike | None
+        Returns:
             Simulation result on ``self.device`` or ``None`` on failure.
         """
         (x_device,) = self._move_tensors_to_device(x)
@@ -437,19 +385,14 @@ class TorchSimulator(Simulator, TorchDeviceMixin):
     def forward_batch(
         self, x: TensorLike, allow_failures: bool = True
     ) -> tuple[TensorLike, TensorLike]:
-        """
-        Run a batch of simulations with device management.
+        """Run a batch of simulations with device management.
 
-        Parameters
-        ----------
-        x: TensorLike
-            Batch of inputs with shape ``(batch_size, in_dim)``.
-        allow_failures: bool
-            Whether to skip failures (True) or raise immediately (False).
+        Args:
+            x: Batch of inputs with shape ``(batch_size, in_dim)``.
+            allow_failures: Whether to skip failures (True) or raise immediately
+                (False).
 
-        Returns
-        -------
-        tuple[TensorLike, TensorLike]
+        Returns:
             Tuple of ``(results, valid_inputs)`` residing on ``self.device``.
         """
         (x_device,) = self._move_tensors_to_device(x)
@@ -463,8 +406,7 @@ class TorchSimulator(Simulator, TorchDeviceMixin):
 
 
 class SpatioTemporalSimulator(Simulator, abc.ABC):
-    """
-    Base class for simulators that output spatiotemporal data.
+    """Base class for simulators that output spatiotemporal data.
 
     This class extends the base Simulator with additional functionality for
     handling spatiotemporal outputs, such as reshaping to spatiotemporal format
@@ -478,24 +420,17 @@ class SpatioTemporalSimulator(Simulator, abc.ABC):
         random_seed: int | None = None,
         ensure_exact_n: bool = False,
     ) -> dict:
-        """
-        Generate spatiotemporal samples from the simulator.
+        """Generate spatiotemporal samples from the simulator.
 
-        Parameters
-        ----------
-        n: int
-            Number of samples to generate.
-        random_seed: int | None
-            Random seed for reproducibility. Defaults to None.
-        ensure_exact_n: bool
-            When True, retry failed simulations until exactly ``n`` successful
-            samples are collected. Defaults to False.
+        Args:
+            n: Number of samples to generate.
+            random_seed: Random seed for reproducibility. Defaults to None.
+            ensure_exact_n: When True, retry failed simulations until exactly ``n``
+                successful samples are collected. Defaults to False.
 
-        Returns
-        -------
-        dict
-            A dictionary containing the reshaped spatiotemporal data, constant scalars,
-            and constant fields.
+        Returns:
+            A dictionary containing the reshaped spatiotemporal data, constant
+            scalars, and constant fields.
         """
 
     @staticmethod
@@ -511,18 +446,12 @@ class SpatioTemporalSimulator(Simulator, abc.ABC):
     ) -> tuple[TensorLike, TensorLike]:
         """Run a batch and optionally retry until exactly ``n`` successes.
 
-        Parameters
-        ----------
-        n: int
-            Number of successful samples requested.
-        random_seed: int | None
-            Base random seed for deterministic sampling.
-        ensure_exact_n: bool
-            Whether to keep resampling failed simulations.
+        Args:
+            n: Number of successful samples requested.
+            random_seed: Base random seed for deterministic sampling.
+            ensure_exact_n: Whether to keep resampling failed simulations.
 
-        Returns
-        -------
-        tuple[TensorLike, TensorLike]
+        Returns:
             Tuple of ``(simulation_results, valid_input_parameters)``.
         """
         x = self.sample_inputs(n, random_seed)

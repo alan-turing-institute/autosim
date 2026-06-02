@@ -1,5 +1,4 @@
-"""
-Description of experiment and references.
+"""Description of experiment and references.
 
 Phase 1: Cooling to Ground State in Imaginary Time.
 Phase 2: Spinning the trap in Real Time to spawn a vortex lattice.

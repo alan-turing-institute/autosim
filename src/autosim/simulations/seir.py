@@ -1,3 +1,5 @@
+"""SEIR epidemic simulator and ODE helper functions."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -14,23 +16,26 @@ def simulate_seir_epidemic(
     I0: int = 1,
     E0: int = 0,
 ) -> float:
-    """
-    Simulate an epidemic using the SEIR model.
+    r"""Simulate an epidemic using the SEIR model.
 
-    Parameters
-    ----------
-    x : NumpyLike
-        SEIR parameters [beta, gamma, sigma].
-    N : int
-        Total population.
-    I0 : int
-        Initial infected.
-    E0 : int
-        Initial exposed.
+    The compartment dynamics are:
 
-    Returns
-    -------
-    peak_infection_rate : float
+    .. math::
+
+        \begin{aligned}
+        \frac{dS}{dt} &= -\beta S I / N \\
+        \frac{dE}{dt} &= \beta S I / N - \sigma E \\
+        \frac{dI}{dt} &= \sigma E - \gamma I \\
+        \frac{dR}{dt} &= \gamma I
+        \end{aligned}
+
+    Args:
+        x: SEIR parameters [beta, gamma, sigma].
+        N: Total population.
+        I0: Initial infected.
+        E0: Initial exposed.
+
+    Returns:
         Peak infection fraction I_max / N.
     """
     if len(x) != 3:
@@ -68,7 +73,22 @@ def simulate_seir_epidemic(
 
 
 class SEIRSimulator(Simulator):
-    """Simulator of infectious disease spread using the SEIR model."""
+    r"""Simulator of infectious disease spread using the SEIR model.
+
+    The compartment dynamics are:
+
+    .. math::
+
+        \begin{aligned}
+        \frac{dS}{dt} &= -\beta S I / N \\
+        \frac{dE}{dt} &= \beta S I / N - \sigma E \\
+        \frac{dI}{dt} &= \sigma E - \gamma I \\
+        \frac{dR}{dt} &= \gamma I
+        \end{aligned}
+
+    The simulator returns the peak infection rate as a fraction of the total
+    population.
+    """
 
     def __init__(
         self,
@@ -76,6 +96,7 @@ class SEIRSimulator(Simulator):
         output_names=None,
         log_level: str = "progress_bar",
     ):
+        """Initialize the SEIR epidemic simulator."""
         if parameters_range is None:
             parameters_range = {
                 "beta": (0.1, 0.5),
@@ -88,17 +109,12 @@ class SEIRSimulator(Simulator):
         super().__init__(parameters_range, output_names, log_level)
 
     def _forward(self, x: TensorLike) -> TensorLike:
-        """
-        Simulate the epidemic using the SEIR model.
+        """Simulate the epidemic using the SEIR model.
 
-        Parameters
-        ----------
-        x : TensorLike
-            Input parameter values [beta, gamma, sigma].
+        Args:
+            x: Input parameter values [beta, gamma, sigma].
 
-        Returns
-        -------
-        TensorLike
+        Returns:
             Peak infection rate (fraction of population).
         """
         if x.shape[0] != 1:

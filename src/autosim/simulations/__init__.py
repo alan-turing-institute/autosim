@@ -1,3 +1,5 @@
+"""Stable simulator implementations."""
+
 from .advection_diffusion import AdvectionDiffusion
 from .advection_diffusion_multichannel import AdvectionDiffusionMultichannel
 from .epidemic import Epidemic

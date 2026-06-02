@@ -1,5 +1,4 @@
-"""
-Lattice Boltzmann Method (LBM) Simulator for 2D Fluid Flow.
+"""Lattice Boltzmann Method (LBM) Simulator for 2D Fluid Flow.
 
 This module implements a differentiable D2Q9 LBM solver for incompressible
 Navier-Stokes equations. It supports complex boundary conditions (like obstacles)
@@ -21,44 +20,52 @@ class LatticeBoltzmann(SpatioTemporalSimulator):
     The simulation domain is a rectangular channel controlled by ``width`` and
     ``height``.
 
-    Parameters
-    ----------
-    parameters_range: dict[str, tuple[float, float]], optional
-        Bounds on sampled parameters:
-        - ``viscosity``: Kinematic viscosity (0.01-0.05 typically).
-        - ``u_in``: Maximum inflow velocity (keep < 0.15 for stability).
-                - ``oscillation_frequency``: Inlet oscillation frequency in cycles per
-                    unit simulation time.
-    output_names: list[str], optional
-        Names for output channels. Defaults to
-        ``["vorticity", "velocity_x", "velocity_y", "rho"]``.
-    return_timeseries: bool, default=False
-        If True, returns full trajectory; otherwise final frame only.
-    use_cylinder: bool, default=True
-        If True, include the circular obstacle. If False, run a plain channel.
-    oscillatory_inlet: bool | None, default=None
-        If True, apply time-dependent inlet modulation (useful for rich dynamics
-        in no-cylinder channels). If None, defaults to ``not use_cylinder``.
-    width: int, default=128
-        Grid width (Nx).
-    height: int, default=64
-        Grid height (Ny).
-    T: float, default=4.0
-        Total simulation time (in seconds, approximate).
-    dt: float, default=1/250
-        Temporal step size in simulation-time units. Smaller values increase
-        internal step count and reduce jumpiness in returned trajectories.
-    n_saved_frames: int | None, default=None
-        Number of saved frames for returned timeseries. If None, save every
-        post-warmup LBM step (temporal resolution scales with ``T``). If set,
-        the simulator samples exactly that many frames when possible (capped at
-        available post-warmup steps).
-    skip_nt: int, default=0
-        Number of initial saved trajectory frames to drop from returned
-        timeseries outputs.
-    warmup_steps: int, default=200
-        Number of initial LBM steps to run without recording to let the
-        inlet flow establish and the simulation stabilize.
+    The D2Q9 update evolves particle populations :math:`f_i` as:
+
+    .. math::
+
+        f_i(\mathbf{x} + \mathbf{c}_i\Delta t, t + \Delta t)
+        =
+        f_i(\mathbf{x}, t)
+        - \frac{1}{\tau}
+        \left(f_i(\mathbf{x}, t) - f_i^{\mathrm{eq}}(\mathbf{x}, t)\right).
+
+    Macroscopic density and velocity are recovered from:
+
+    .. math::
+
+        \rho = \sum_i f_i,
+        \qquad
+        \mathbf{u} = \frac{1}{\rho}\sum_i \mathbf{c}_i f_i.
+
+    Args:
+        parameters_range: Bounds on sampled parameters:
+
+            - ``viscosity``: Kinematic viscosity (0.01-0.05 typically).
+            - ``u_in``: Maximum inflow velocity (keep < 0.15 for stability).
+            - ``oscillation_frequency``: Inlet oscillation frequency in cycles per
+              unit simulation time.
+        output_names: Names for output channels. Defaults to ``["vorticity",
+            "velocity_x", "velocity_y", "rho"]``.
+        return_timeseries: If True, returns full trajectory; otherwise final frame only.
+        use_cylinder: If True, include the circular obstacle. If False, run a plain
+            channel.
+        oscillatory_inlet: If True, apply time-dependent inlet modulation (useful for
+            rich dynamics in no-cylinder channels). If None, defaults to ``not
+            use_cylinder``.
+        width: Grid width (Nx).
+        height: Grid height (Ny).
+        T: Total simulation time (in seconds, approximate).
+        dt: Temporal step size in simulation-time units. Smaller values increase
+            internal step count and reduce jumpiness in returned trajectories.
+        n_saved_frames: Number of saved frames for returned timeseries. If None, save
+            every post-warmup LBM step (temporal resolution scales with ``T``). If set,
+            the simulator samples exactly that many frames when possible (capped at
+            available post-warmup steps).
+        skip_nt: Number of initial saved trajectory frames to drop from returned
+            timeseries outputs.
+        warmup_steps: Number of initial LBM steps to run without recording to let the
+            inlet flow establish and the simulation stabilize.
     """
 
     _REQUIRED_PARAMETER_NAMES = ("viscosity", "u_in", "oscillation_frequency")
@@ -79,6 +86,7 @@ class LatticeBoltzmann(SpatioTemporalSimulator):
         skip_nt: int = 0,
         warmup_steps: int = 200,
     ) -> None:
+        """Initialize the D2Q9 Lattice Boltzmann simulator."""
         if parameters_range is None:
             # Re ~ u_in * D / nu. D=height/5 approx.
             # If u=0.1, D=10, nu=0.02 -> Re=50 (vortex shedding).
@@ -225,22 +233,22 @@ def simulate_lbm_cylinder(  # noqa: PLR0912, PLR0915
     n_saved_frames: int | None = None,
     warmup_steps: int = 200,
 ) -> TensorLike:
-    """
-    Simulate flow past a cylinder using D2Q9 Lattice Boltzmann.
+    """Simulate flow past a cylinder using D2Q9 Lattice Boltzmann.
 
     Args:
-        params: Tensor-like with ``[viscosity, u_in, oscillation_frequency]``.
-        return_timeseries: Whether to return all saved frames or only the final one.
-        width: Grid width.
-        height: Grid height.
-        duration: Physical duration of the simulated trajectory.
-        dt: Simulation timestep.
-        use_cylinder: Whether to include a circular obstacle.
-        oscillatory_inlet: Whether to modulate inlet velocity over time.
-        n_saved_frames: Number of post-warmup frames to keep. If ``None``, save all.
-        warmup_steps: Number of initial steps to run without recording.
+        params: Physical parameters for viscosity, inlet speed, and inlet oscillation.
+        return_timeseries: Whether to return the saved flow trajectory or only the final
+            frame.
+        width: Number of lattice nodes in the horizontal direction.
+        height: Number of lattice nodes in the vertical direction.
+        duration: Physical duration to simulate after warmup.
+        dt: Time represented by each LBM step.
+        use_cylinder: Whether to include a circular obstacle in the flow.
+        oscillatory_inlet: Whether to use the sampled inlet oscillation frequency.
+        n_saved_frames: Number of trajectory frames to save when returning a timeseries.
+        warmup_steps: Number of initial steps to run before collecting outputs.
 
-    Coordinate system: x (width, index 1), y (height, index 0).
+    Coordinate system:
     """
     device = params.device
 
