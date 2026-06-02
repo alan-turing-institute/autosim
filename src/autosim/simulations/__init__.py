@@ -1,15 +1,16 @@
 """Stable simulator implementations."""
 
 from .advection_diffusion import AdvectionDiffusion
-from .advection_diffusion_multichannel import AdvectionDiffusionMultichannel
 from .epidemic import Epidemic
 from .flow_problem import FlowProblem
 from .projectile import Projectile, ProjectileMultioutput
 from .seir import SEIRSimulator
 from .spatiotemporal import (
+    AdvectionDiffusionMultichannel,
     ConditionedNavierStokes2D,
     GrayScott,
     GrossPitaevskiiEquation2D,
+    ReactionDiffusion,
 )
 
 ALL_SIMULATORS = [
@@ -23,6 +24,7 @@ ALL_SIMULATORS = [
     FlowProblem,
     Projectile,
     ProjectileMultioutput,
+    ReactionDiffusion,
 ]
 
 __all__ = [
@@ -35,6 +37,7 @@ __all__ = [
     "GrossPitaevskiiEquation2D",
     "Projectile",
     "ProjectileMultioutput",
+    "ReactionDiffusion",
     "SEIRSimulator",
 ]
 

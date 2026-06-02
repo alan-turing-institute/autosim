@@ -43,7 +43,11 @@ class DummySimulator(SpatioTemporalSimulator):
 
 def test_build_simulator_from_target_core_and_experimental() -> None:
     core_cfg = OmegaConf.create(
-        {"_target_": "autosim.simulations.AdvectionDiffusion", "log_level": "warning"}
+        {
+            "_target_": "autosim.simulations.spatiotemporal."
+            "AdvectionDiffusionMultichannel",
+            "log_level": "warning",
+        }
     )
     experimental_cfg = OmegaConf.create(
         {
@@ -52,7 +56,9 @@ def test_build_simulator_from_target_core_and_experimental() -> None:
         }
     )
 
-    assert build_simulator(core_cfg).__class__.__name__ == "AdvectionDiffusion"
+    assert (
+        build_simulator(core_cfg).__class__.__name__ == "AdvectionDiffusionMultichannel"
+    )
     assert build_simulator(experimental_cfg).__class__.__name__ == "ShallowWater2D"
 
 

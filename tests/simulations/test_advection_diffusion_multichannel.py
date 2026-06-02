@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from autosim.simulations import AdvectionDiffusionMultichannel
+from autosim.simulations.spatiotemporal import AdvectionDiffusionMultichannel
 
 
 def test_output_indices_validation() -> None:
