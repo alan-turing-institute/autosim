@@ -1,7 +1,7 @@
 autosim.simulations.reaction_diffusion
 ======================================
 
-.. deprecated::
+.. deprecated:: 0.1.0
 
    Use ``autosim.simulations.spatiotemporal.ReactionDiffusion``.
 
