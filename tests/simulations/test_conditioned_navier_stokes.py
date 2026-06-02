@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from autosim.experimental.simulations.navier_stokes_conditioned import (
+from autosim.simulations.spatiotemporal.navier_stokes_conditioned import (
     ConditionedNavierStokes2D,
 )
 
@@ -26,7 +26,7 @@ def test_forward_uses_fixed_defaults_when_ranges_not_provided(monkeypatch) -> No
         return torch.zeros((8, 8, 3), dtype=torch.float32)
 
     monkeypatch.setattr(
-        "autosim.experimental.simulations.navier_stokes_conditioned."
+        "autosim.simulations.spatiotemporal.navier_stokes_conditioned."
         "simulate_conditioned_navier_stokes_2d",
         _fake_simulate_conditioned_navier_stokes_2d,
     )
@@ -58,7 +58,7 @@ def test_forward_uses_sampled_smoke_controls_from_input(monkeypatch) -> None:
         return torch.zeros((8, 8, 3), dtype=torch.float32)
 
     monkeypatch.setattr(
-        "autosim.experimental.simulations.navier_stokes_conditioned."
+        "autosim.simulations.spatiotemporal.navier_stokes_conditioned."
         "simulate_conditioned_navier_stokes_2d",
         _fake_simulate_conditioned_navier_stokes_2d,
     )

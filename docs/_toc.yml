@@ -20,6 +20,11 @@ chapters:
       - file: reference/simulations/index
         sections:
           - file: reference/simulations/base
+          - file: reference/simulations/spatiotemporal/index
+            sections:
+              - file: reference/simulations/spatiotemporal/gray_scott
+              - file: reference/simulations/spatiotemporal/gross_pitaevskii
+              - file: reference/simulations/spatiotemporal/navier_stokes_conditioned
           - file: reference/simulations/advection_diffusion
           - file: reference/simulations/advection_diffusion_multichannel
           - file: reference/simulations/double_pendulum
@@ -31,10 +36,7 @@ chapters:
       - file: reference/experimental/index
         sections:
           - file: reference/experimental/compressible_fluid
-          - file: reference/experimental/gray_scott
-          - file: reference/experimental/gross_pitaevskii
           - file: reference/experimental/hydrodynamics_2d
           - file: reference/experimental/lattice_boltzmann
-          - file: reference/experimental/navier_stokes_conditioned
           - file: reference/experimental/reaction_diffusion
           - file: reference/experimental/shallow_water

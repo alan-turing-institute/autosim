@@ -1,8 +1,5 @@
 from autosim.experimental.simulations import (
     CompressibleFluid2D,
-    ConditionedNavierStokes2D,
-    GrayScott,
-    GrossPitaevskiiEquation2D,
     Hydrodynamics2D,
     LatticeBoltzmann,
     ReactionDiffusion,
@@ -11,8 +8,11 @@ from autosim.experimental.simulations import (
 from autosim.simulations import (
     AdvectionDiffusion,
     AdvectionDiffusionMultichannel,
+    ConditionedNavierStokes2D,
     Epidemic,
     FlowProblem,
+    GrayScott,
+    GrossPitaevskiiEquation2D,
     Projectile,
     ProjectileMultioutput,
     SEIRSimulator,

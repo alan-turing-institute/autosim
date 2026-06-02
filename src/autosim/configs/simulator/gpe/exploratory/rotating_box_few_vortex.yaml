@@ -14,7 +14,7 @@
 # References:
 #   Madison, K. W., et al. "Vortex formation in a stirred Bose-Einstein condensate."
 #   Phys. Rev. Lett. 84, 806 (2000). DOI: 10.1103/PhysRevLett.84.806
-_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+_target_: autosim.simulations.spatiotemporal.GrossPitaevskiiEquation2D
 return_timeseries: true
 log_level: warning
 output_names: [density, real, imag]

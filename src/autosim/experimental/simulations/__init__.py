@@ -10,12 +10,14 @@ from .reaction_diffusion import ReactionDiffusion
 from .shallow_water import ShallowWater2D
 
 ALL_SIMULATORS = [
-    ReactionDiffusion,
     CompressibleFluid2D,
+    ConditionedNavierStokes2D,
+    GrayScott,
+    GrossPitaevskiiEquation2D,
     Hydrodynamics2D,
     LatticeBoltzmann,
-    GrayScott,
-    ConditionedNavierStokes2D,
+    ReactionDiffusion,
+    ShallowWater2D,
 ]
 
 __all__ = [
@@ -29,4 +31,4 @@ __all__ = [
     "ShallowWater2D",
 ]
 
-SIMULATOR_REGISTRY = dict(zip(__all__, ALL_SIMULATORS, strict=False))
+SIMULATOR_REGISTRY = {simulator.__name__: simulator for simulator in ALL_SIMULATORS}

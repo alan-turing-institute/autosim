@@ -1,4 +1,4 @@
-_target_: autosim.experimental.simulations.ConditionedNavierStokes2D
+_target_: autosim.simulations.spatiotemporal.ConditionedNavierStokes2D
 return_timeseries: true
 log_level: warning
 n: 64

@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-import autosim.experimental.simulations.gross_pitaevskii as gpe_module
-from autosim.experimental.simulations import GrossPitaevskiiEquation2D
+import autosim.simulations.spatiotemporal.gross_pitaevskii as gpe_module
+from autosim.simulations.spatiotemporal import GrossPitaevskiiEquation2D
 
 
 @pytest.fixture

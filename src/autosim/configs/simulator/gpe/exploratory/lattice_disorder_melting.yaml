@@ -21,7 +21,7 @@
 #     Phys. Rev. Lett. 95, 070401 (2005). DOI: 10.1103/PhysRevLett.95.070401
 #   Henn, E. A. L., et al. "Emergence of turbulence in an oscillating Bose-Einstein condensate."
 #     Phys. Rev. Lett. 103, 045301 (2009). DOI: 10.1103/PhysRevLett.103.045301
-_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+_target_: autosim.simulations.spatiotemporal.GrossPitaevskiiEquation2D
 return_timeseries: true
 log_level: warning
 output_names: [density, real, imag]

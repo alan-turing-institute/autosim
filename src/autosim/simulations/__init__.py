@@ -6,10 +6,18 @@ from .epidemic import Epidemic
 from .flow_problem import FlowProblem
 from .projectile import Projectile, ProjectileMultioutput
 from .seir import SEIRSimulator
+from .spatiotemporal import (
+    ConditionedNavierStokes2D,
+    GrayScott,
+    GrossPitaevskiiEquation2D,
+)
 
 ALL_SIMULATORS = [
     AdvectionDiffusion,
     AdvectionDiffusionMultichannel,
+    ConditionedNavierStokes2D,
+    GrayScott,
+    GrossPitaevskiiEquation2D,
     Epidemic,
     SEIRSimulator,
     FlowProblem,
@@ -20,11 +28,14 @@ ALL_SIMULATORS = [
 __all__ = [
     "AdvectionDiffusion",
     "AdvectionDiffusionMultichannel",
+    "ConditionedNavierStokes2D",
     "Epidemic",
     "FlowProblem",
+    "GrayScott",
+    "GrossPitaevskiiEquation2D",
     "Projectile",
     "ProjectileMultioutput",
     "SEIRSimulator",
 ]
 
-SIMULATOR_REGISTRY = dict(zip(__all__, ALL_SIMULATORS, strict=False))
+SIMULATOR_REGISTRY = {simulator.__name__: simulator for simulator in ALL_SIMULATORS}

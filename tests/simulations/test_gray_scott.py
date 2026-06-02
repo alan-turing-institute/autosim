@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 import torch
 
-from autosim.experimental.simulations import GrayScott
-from autosim.experimental.simulations.gray_scott import (
+from autosim.simulations.spatiotemporal import GrayScott
+from autosim.simulations.spatiotemporal.gray_scott import (
     _compute_snapshot_count,
     _nonlinear_terms,
     _normalize_field,

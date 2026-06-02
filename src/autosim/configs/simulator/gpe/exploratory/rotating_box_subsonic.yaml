@@ -13,7 +13,7 @@
 # References:
 #   Fetter, A. L. "Rotating trapped Bose-Einstein condensates."
 #   Rev. Mod. Phys. 81, 647 (2009). DOI: 10.1103/RevModPhys.81.647
-_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+_target_: autosim.simulations.spatiotemporal.GrossPitaevskiiEquation2D
 return_timeseries: true
 log_level: warning
 output_names: [density, real, imag]

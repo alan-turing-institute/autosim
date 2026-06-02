@@ -14,7 +14,7 @@
 #   Gonzalez-Tudela, A., & Cirac, J. I. "Cold atoms in twisted-bilayer optical potentials."
 #     Phys. Rev. A 100, 053604 (2019). DOI: 10.1103/PhysRevA.100.053604
 #
-_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+_target_: autosim.simulations.spatiotemporal.GrossPitaevskiiEquation2D
 return_timeseries: true
 log_level: warning
 output_names: [density, real, imag]

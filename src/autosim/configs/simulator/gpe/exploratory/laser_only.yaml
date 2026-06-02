@@ -5,7 +5,7 @@
 # Physical Review Letters 104, 160401 (2010). DOI: 10.1103/PhysRevLett.104.160401
 # Raman et al. is primarily a critical-velocity benchmark (harmonic trap), while
 # Neely et al. is directly relevant to vortex nucleation from obstacle motion.
-_target_: autosim.experimental.simulations.GrossPitaevskiiEquation2D
+_target_: autosim.simulations.spatiotemporal.GrossPitaevskiiEquation2D
 return_timeseries: true
 log_level: warning
 output_names: [density, real, imag]

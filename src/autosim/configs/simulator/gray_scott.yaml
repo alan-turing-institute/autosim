@@ -1,4 +1,4 @@
-_target_: autosim.experimental.simulations.GrayScott
+_target_: autosim.simulations.spatiotemporal.GrayScott
 return_timeseries: true
 log_level: warning
 n: 64
