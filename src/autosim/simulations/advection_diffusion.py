@@ -1,13 +1,14 @@
 """Advection-diffusion simulator and finite-difference solver helpers."""
 
+import warnings
+
 import numpy as np
 import scipy.sparse as sp
-import torch
 from scipy.fft import fft2, ifft2
 from scipy.integrate import solve_ivp
 
-from autosim.simulations.base import SpatioTemporalSimulator
-from autosim.types import NumpyLike, TensorLike
+from autosim.simulations.spatiotemporal import AdvectionDiffusionMultichannel
+from autosim.types import NumpyLike
 
 integrator_keywords = {}
 integrator_keywords["rtol"] = 1e-6
@@ -15,21 +16,15 @@ integrator_keywords["method"] = "RK45"
 integrator_keywords["atol"] = 1e-8
 
 
-class AdvectionDiffusion(SpatioTemporalSimulator):
-    r"""Simulate the 2D vorticity equation.
+class AdvectionDiffusion(AdvectionDiffusionMultichannel):
+    r"""Deprecated vorticity-only advection-diffusion simulator.
 
-    The simulator evolves a vorticity field according to:
+    This legacy class delegates to
+    :class:`autosim.simulations.spatiotemporal.AdvectionDiffusionMultichannel` with
+    ``output_indices=[0]``.
 
-    .. math::
-
-        \begin{aligned}
-        \partial_t \omega
-            &= \nu \nabla^2 \omega
-            - \mu (u \partial_x \omega + v \partial_y \omega)
-        \end{aligned}
-
-    The parameters :math:`\nu` (viscosity) and :math:`\mu` (advection strength)
-    that control the simulation are sampled from given ranges.
+    Use ``AdvectionDiffusionMultichannel(output_indices=[0])`` for the canonical
+    vorticity-only API.
     """
 
     def __init__(
@@ -42,8 +37,9 @@ class AdvectionDiffusion(SpatioTemporalSimulator):
         L: float = 10.0,
         T: float = 80.0,
         dt: float = 0.25,
+        integrator_kwargs: dict | None = None,
     ):
-        """Initialize the AdvectionDiffusion simulator.
+        """Initialize the deprecated vorticity-only wrapper.
 
         Args:
             parameters_range: Mapping of input parameter names to (min, max) ranges.
@@ -55,56 +51,28 @@ class AdvectionDiffusion(SpatioTemporalSimulator):
             L: Domain size in X and Y directions.
             T: Total simulation time.
             dt: Time step size.
+            integrator_kwargs: Extra keyword arguments forwarded to the canonical
+                multichannel simulator.
         """
-        if parameters_range is None:
-            parameters_range = {
-                "nu": (0.0001, 0.01),  # viscosity
-                "mu": (0.5, 2.0),  # advection strength
-            }
-        if output_names is None:
-            output_names = ["vorticity"]
-        super().__init__(parameters_range, output_names, log_level)
-        self.return_timeseries = return_timeseries
-        self.n = n
-        self.L = L
-        self.T = T
-        self.dt = dt
-
-    def _forward(self, x: TensorLike) -> TensorLike:
-        assert x.shape[0] == 1, (
-            f"Simulator._forward expects a single input, got {x.shape[0]}"
+        warnings.warn(
+            "AdvectionDiffusion is deprecated. Use "
+            "AdvectionDiffusionMultichannel(output_indices=[0]) from "
+            "autosim.simulations.spatiotemporal instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-
-        vorticity_sol = simulate_advection_diffusion(
-            x.cpu().numpy()[0], self.return_timeseries, self.n, self.L, self.T, self.dt
-        )
-
-        return torch.tensor(vorticity_sol.ravel(), dtype=torch.float32).reshape(1, -1)
-
-    def forward_samples_spatiotemporal(
-        self,
-        n: int,
-        random_seed: int | None = None,
-        ensure_exact_n: bool = False,
-    ) -> dict:
-        """Reshape to spatiotemporal format and return data plus constants."""
-        y, x = self._forward_batch_with_optional_retries(
+        super().__init__(
+            parameters_range=parameters_range,
+            output_names=output_names,
+            output_indices=[0],
+            return_timeseries=return_timeseries,
+            log_level=log_level,
             n=n,
-            random_seed=random_seed,
-            ensure_exact_n=ensure_exact_n,
+            L=L,
+            T=T,
+            dt=dt,
+            integrator_kwargs=integrator_kwargs,
         )
-
-        if self.return_timeseries:
-            n_time = int(self.T / self.dt)
-            y_reshaped = y.reshape(y.shape[0], n_time, self.n, self.n, 1)
-        else:
-            y_reshaped = y.reshape(y.shape[0], 1, self.n, self.n, 1)
-
-        return {
-            "data": y_reshaped,
-            "constant_scalars": x,
-            "constant_fields": None,
-        }
 
 
 def create_sparse_matrices(
@@ -216,6 +184,14 @@ def simulate_advection_diffusion(
         T: Total simulation time.
         dt: Time step for saved solver outputs.
     """
+    warnings.warn(
+        "simulate_advection_diffusion from autosim.simulations.advection_diffusion "
+        "is deprecated. Use "
+        "autosim.simulations.spatiotemporal.advection_diffusion_multichannel."
+        "simulate_advection_diffusion instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     nu, mu = x
 
     # Time vector

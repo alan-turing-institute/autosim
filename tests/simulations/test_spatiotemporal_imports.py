@@ -64,8 +64,8 @@ def test_promoted_experimental_imports_remain_compatible() -> None:
     assert ExperimentalGrayScottModule is GrayScott
     assert ExperimentalGrossPitaevskiiEquation2D is GrossPitaevskiiEquation2D
     assert ExperimentalGrossPitaevskiiEquation2DModule is GrossPitaevskiiEquation2D
-    assert ExperimentalReactionDiffusion is ReactionDiffusion
-    assert ExperimentalReactionDiffusionModule is ReactionDiffusion
+    assert issubclass(ExperimentalReactionDiffusion, ReactionDiffusion)
+    assert issubclass(ExperimentalReactionDiffusionModule, ReactionDiffusion)
 
 
 def test_legacy_stable_module_imports_remain_compatible() -> None:

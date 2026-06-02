@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import autosim.simulations.reaction_diffusion as legacy_reaction_diffusion
 from autosim.simulations.spatiotemporal import reaction_diffusion
@@ -14,9 +15,10 @@ def test_reaction_diffusion_canonical_matches_legacy_small_case() -> None:
         "dt": 0.25,
     }
 
-    legacy_u, legacy_v = legacy_reaction_diffusion.simulate_reaction_diffusion(
-        x, **kwargs
-    )
+    with pytest.warns(DeprecationWarning, match="simulate_reaction_diffusion"):
+        legacy_u, legacy_v = legacy_reaction_diffusion.simulate_reaction_diffusion(
+            x, **kwargs
+        )
     canonical_u, canonical_v = reaction_diffusion.simulate_reaction_diffusion(
         x, **kwargs
     )

@@ -1,5 +1,7 @@
 """Reaction-diffusion simulator and spectral solver helpers."""
 
+import warnings
+
 import numpy as np
 import torch
 from numpy.fft import fft2, ifft2
@@ -65,6 +67,13 @@ class ReactionDiffusion(SpatioTemporalSimulator):
             T: Total time to simulate.
             dt: Time step size.
         """
+        warnings.warn(
+            "autosim.simulations.reaction_diffusion.ReactionDiffusion is "
+            "deprecated. Use autosim.simulations.spatiotemporal."
+            "ReactionDiffusion instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if parameters_range is None:
             parameters_range = {"beta": (1.0, 2.0), "d": (0.05, 0.3)}
         if output_names is None:
@@ -206,6 +215,13 @@ def simulate_reaction_diffusion(
         either as a timeseries or at the final time point of
         `return_timeseries` is False.
     """
+    warnings.warn(
+        "simulate_reaction_diffusion from autosim.simulations.reaction_diffusion "
+        "is deprecated. Use autosim.simulations.spatiotemporal."
+        "reaction_diffusion.simulate_reaction_diffusion instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     beta, d = x
     d1 = d2 = d
 
