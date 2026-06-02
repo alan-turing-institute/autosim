@@ -41,7 +41,7 @@ shear along a diagonal and violently emit turbulent vortices instead of a lattic
 
 import matplotlib.pyplot as plt
 
-from autosim.experimental.simulations import GrossPitaevskiiEquation2D as GPESim
+from autosim.simulations.spatiotemporal import GrossPitaevskiiEquation2D as GPESim
 
 
 def run_box_vortex_lattice_experiment():  # noqa: D103
