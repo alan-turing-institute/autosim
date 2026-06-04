@@ -2,26 +2,27 @@
 
 ## Spatiotemporal
 
-Stable spatiotemporal simulation families are organized from foundational
-pattern dynamics to increasingly realistic fluid systems:
+These examples use stable simulators from `autosim.simulations.spatiotemporal`.
+They cover reaction-diffusion systems, fluid transport, conditioned
+smoke-flow Navier-Stokes, and Gross-Pitaevskii quantum-fluid dynamics.
 
 ### Pattern-formation families
 
-- [Reaction-Diffusion](spatiotemporal/00_00_reaction_diffusion.ipynb): A spectral (FFT-based) two-species reaction-diffusion generator that produces diverse spatiotemporal patterns — spirals, spots, and labyrinthine textures — across reaction and diffusion parameter regimes.
-- [Gray-Scott](spatiotemporal/00_01_gray_scott.ipynb): A spectral ETDRK4 reaction-diffusion generator that spans diverse morphologies (spots, spirals, worms, and maze-like regimes) via feed/kill parameters.
+- [Reaction-Diffusion](spatiotemporal/reaction_diffusion.ipynb): A spectral (FFT-based) two-species reaction-diffusion generator that produces diverse spatiotemporal patterns — spirals, spots, and labyrinthine textures — across reaction and diffusion parameter regimes.
+- [Gray-Scott](spatiotemporal/gray_scott.ipynb): A spectral ETDRK4 reaction-diffusion generator that spans diverse morphologies (spots, spirals, worms, and maze-like regimes) via feed/kill parameters.
 
 ### Weather-like and transport families
 
-- [Advection-Diffusion](spatiotemporal/01_00_advection_diffusion.ipynb): A 2D incompressible vorticity–streamfunction solver with spectral Poisson inversion that generates vorticity fields across a range of viscosities and forcing strengths.
+- [Advection-Diffusion](spatiotemporal/advection_diffusion.ipynb): A 2D incompressible vorticity–streamfunction solver with spectral Poisson inversion that generates vorticity fields across a range of viscosities and forcing strengths.
 
 ### Classical fluid dynamics families
 
-- [Conditioned Incompressible Navier-Stokes 2D (smoke)](spatiotemporal/02_00_conditioned_navier_stokes.ipynb): A buoyancy-driven incompressible flow generator with passive scalar transport and controllable forcing and boundary variants.
+- [Conditioned Incompressible Navier-Stokes 2D (smoke)](spatiotemporal/conditioned_navier_stokes.ipynb): A buoyancy-driven incompressible flow generator with passive scalar transport and controllable forcing and boundary variants.
 
 ### Quantum-fluid dynamics families
 
-- [Gross-Pitaevskii Equation 2D](spatiotemporal/03_01_gross_pitaevskii.ipynb): A nonlinear Schrödinger quantum-fluid generator with trap geometry, optional stirring, and disorder controls for vortex and interference dynamics.
-- [Box Vortex Lattice](spatiotemporal/03_02_box_vortex_lattice.py): A script for generating GPE vortex-lattice data from a rotating box-trap setup.
+- [Gross-Pitaevskii Equation 2D](spatiotemporal/gross_pitaevskii.ipynb): A nonlinear Schrödinger quantum-fluid generator with trap geometry, optional stirring, and disorder controls for vortex and interference dynamics.
+- [Box Vortex Lattice](spatiotemporal/box_vortex_lattice.py): A script for generating GPE vortex-lattice data from a rotating box-trap setup.
 
 ## Experimental
 
