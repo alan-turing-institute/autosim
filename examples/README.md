@@ -22,7 +22,6 @@ smoke-flow Navier-Stokes, and Gross-Pitaevskii quantum-fluid dynamics.
 ### Quantum-fluid dynamics families
 
 - [Gross-Pitaevskii Equation 2D](spatiotemporal/gross_pitaevskii.ipynb): A nonlinear Schrödinger quantum-fluid generator with trap geometry, optional stirring, and disorder controls for vortex and interference dynamics.
-- [Box Vortex Lattice](spatiotemporal/box_vortex_lattice.py): A script for generating GPE vortex-lattice data from a rotating box-trap setup.
 
 ## Experimental
 
