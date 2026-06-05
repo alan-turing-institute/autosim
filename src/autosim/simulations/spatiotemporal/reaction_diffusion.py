@@ -41,6 +41,7 @@ class ReactionDiffusion(SpatioTemporalSimulator):
         L: int = 20,
         T: float = 10.0,
         dt: float = 0.1,
+        integrator_kwargs: dict | None = None,
     ):
         """Initialize the ReactionDiffusion simulator.
 
@@ -61,6 +62,8 @@ class ReactionDiffusion(SpatioTemporalSimulator):
             L: Domain size in X and Y directions.
             T: Total time to simulate.
             dt: Time step size.
+            integrator_kwargs: Extra keyword arguments forwarded to
+                `scipy.integrate.solve_ivp`.
         """
         if parameters_range is None:
             parameters_range = {"beta": (1.0, 2.0), "d": (0.05, 0.3)}
@@ -72,13 +75,20 @@ class ReactionDiffusion(SpatioTemporalSimulator):
         self.L = L
         self.T = T
         self.dt = dt
+        self.integrator_kwargs = {**integrator_keywords, **(integrator_kwargs or {})}
 
     def _forward(self, x: TensorLike) -> TensorLike:
         assert x.shape[0] == 1, (
             f"Simulator._forward expects a single input, got {x.shape[0]}"
         )
         u_sol, v_sol = simulate_reaction_diffusion(
-            x.cpu().numpy()[0], self.return_timeseries, self.n, self.L, self.T, self.dt
+            x.cpu().numpy()[0],
+            self.return_timeseries,
+            self.n,
+            self.L,
+            self.T,
+            self.dt,
+            self.integrator_kwargs,
         )
 
         # concatenate U and V arrays (flattened across time and space)
@@ -163,6 +173,7 @@ def simulate_reaction_diffusion(
     L: int = 20,
     T: float = 10.0,
     dt: float = 0.1,
+    integrator_kwargs: dict | None = None,
 ) -> tuple[NumpyLike, NumpyLike]:
     """Simulate the reaction-diffusion PDE for a given set of parameters.
 
@@ -176,6 +187,8 @@ def simulate_reaction_diffusion(
         L: Domain size in X and Y directions. Defaults to 20.
         T: Total time to simulate. Defaults to 10.0.
         dt: Time step size. Defaults to 0.1.
+        integrator_kwargs: Extra keyword arguments forwarded to
+            `scipy.integrate.solve_ivp`.
 
     Returns:
         [u_sol, v_sol], the spatial solution of the reaction-diffusion PDE,
@@ -205,6 +218,7 @@ def simulate_reaction_diffusion(
     v0 = np.tanh(r) * np.sin(theta - r)
 
     uvt0 = np.hstack([fft2(u0).ravel(), fft2(v0).ravel()])
+    ode_kwargs = {**integrator_keywords, **(integrator_kwargs or {})}
 
     uvsol = solve_ivp(
         reaction_diffusion,
@@ -212,7 +226,7 @@ def simulate_reaction_diffusion(
         y0=uvt0,
         t_eval=t,
         args=(K22, d1, d2, beta, n, N),
-        **integrator_keywords,
+        **ode_kwargs,
     )
     uvsol = uvsol.y
 
