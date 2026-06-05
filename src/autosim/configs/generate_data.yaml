@@ -1,5 +1,5 @@
 defaults:
-  - simulator: advection_diffusion
+  - simulator: spatiotemporal/advection_diffusion
   - _self_
 
 dataset:

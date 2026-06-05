@@ -134,7 +134,7 @@ def test_cli_generates_dataset_fast_with_advection_diffusion(tmp_path: Path) -> 
         "dataset.n_valid=1",
         "dataset.n_test=1",
         "overwrite=true",
-        "simulator=advection_diffusion",
+        "simulator=spatiotemporal/advection_diffusion",
         "simulator.log_level=warning",
         "simulator.return_timeseries=true",
         "simulator.n=8",
@@ -166,7 +166,7 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
     )
 
     output_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
-    assert "advection_diffusion" in output_lines
+    assert "spatiotemporal/advection_diffusion" in output_lines
     assert "experimental/shallow_water2d" in output_lines
 
 
