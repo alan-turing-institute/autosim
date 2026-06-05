@@ -67,16 +67,22 @@ Simulator defaults now live in package configs under
 Nested groups are supported, so you can select configs such as
 `simulator=spatiotemporal/gpe/laser_only_wake`.
 
-Available simulator config names include:
-`spatiotemporal/advection_diffusion`,
-`spatiotemporal/advection_diffusion_multichannel`,
-`spatiotemporal/conditioned_navier_stokes_2d`,
-`spatiotemporal/gpe/laser_only_wake`,
-`spatiotemporal/gpe/rotating_box_lattice`, `spatiotemporal/gray_scott`,
-`spatiotemporal/reaction_diffusion`, `experimental/compressible_fluid_2d`,
-`experimental/hydrodynamics_2d`, `experimental/lattice_boltzmann`,
-`experimental/shallow_water2d`, `epidemic`, `flow_problem`, `projectile`,
-`projectile_multioutput`, and `seir_simulator`.
+Available simulator config groups include:
+
+- Stable spatiotemporal configs:
+  `spatiotemporal/advection_diffusion`,
+  `spatiotemporal/advection_diffusion_multichannel`,
+  `spatiotemporal/conditioned_navier_stokes_2d`,
+  `spatiotemporal/gpe/laser_only_wake`,
+  `spatiotemporal/gpe/rotating_box_lattice`, `spatiotemporal/gray_scott`,
+  and `spatiotemporal/reaction_diffusion`.
+- Stable non-spatiotemporal configs:
+  `epidemic`, `flow_problem`, `projectile`, `projectile_multioutput`, and
+  `seir_simulator`.
+- Experimental configs:
+  `experimental/compressible_fluid_2d`,
+  `experimental/hydrodynamics_2d`, `experimental/lattice_boltzmann`, and
+  `experimental/shallow_water2d`.
 
 Additional exploratory GPE configs are available under `experimental/gpe/` for
 reference and in-progress work (note: `high_complexity` and `low_complexity`

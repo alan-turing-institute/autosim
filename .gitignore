@@ -223,6 +223,4 @@ docs/outlier_detection.md
 examples/*
 !examples/README.md
 !examples/spatiotemporal/
-!examples/spatiotemporal/*.ipynb
-!examples/spatiotemporal/*.py
 datasets

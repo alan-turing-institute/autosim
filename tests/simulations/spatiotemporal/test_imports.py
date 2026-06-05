@@ -5,33 +5,16 @@ from autosim.simulations import (
     GrayScott,
     GrossPitaevskiiEquation2D,
     ReactionDiffusion,
-)
-from autosim.simulations.spatiotemporal import (
-    AdvectionDiffusion as SpatioTemporalAdvectionDiffusion,
-)
-from autosim.simulations.spatiotemporal import (
-    AdvectionDiffusionMultichannel as SpatioTemporalAdvectionDiffusionMultichannel,
-)
-from autosim.simulations.spatiotemporal import (
-    ConditionedNavierStokes2D as SpatioTemporalConditionedNavierStokes2D,
-)
-from autosim.simulations.spatiotemporal import (
-    GrayScott as SpatioTemporalGrayScott,
-)
-from autosim.simulations.spatiotemporal import (
-    GrossPitaevskiiEquation2D as SpatioTemporalGrossPitaevskiiEquation2D,
-)
-from autosim.simulations.spatiotemporal import (
-    ReactionDiffusion as SpatioTemporalReactionDiffusion,
+    spatiotemporal,
 )
 
 
 def test_promoted_simulators_export_from_stable_paths() -> None:
-    assert AdvectionDiffusion is SpatioTemporalAdvectionDiffusion
+    assert AdvectionDiffusion is spatiotemporal.AdvectionDiffusion
     assert (
-        AdvectionDiffusionMultichannel is SpatioTemporalAdvectionDiffusionMultichannel
+        AdvectionDiffusionMultichannel is spatiotemporal.AdvectionDiffusionMultichannel
     )
-    assert ConditionedNavierStokes2D is SpatioTemporalConditionedNavierStokes2D
-    assert GrayScott is SpatioTemporalGrayScott
-    assert GrossPitaevskiiEquation2D is SpatioTemporalGrossPitaevskiiEquation2D
-    assert ReactionDiffusion is SpatioTemporalReactionDiffusion
+    assert ConditionedNavierStokes2D is spatiotemporal.ConditionedNavierStokes2D
+    assert GrayScott is spatiotemporal.GrayScott
+    assert GrossPitaevskiiEquation2D is spatiotemporal.GrossPitaevskiiEquation2D
+    assert ReactionDiffusion is spatiotemporal.ReactionDiffusion
