@@ -1,5 +1,5 @@
 defaults:
-  - simulator: shallow_water2d
+  - simulator: advection_diffusion
   - _self_
 
 dataset:

@@ -167,7 +167,7 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
 
     output_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     assert "advection_diffusion" in output_lines
-    assert "shallow_water2d" in output_lines
+    assert "experimental/shallow_water2d" in output_lines
 
 
 def test_compute_normalization_stats_includes_temporal_deltas() -> None:
