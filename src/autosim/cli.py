@@ -694,7 +694,7 @@ def list_simulators() -> list[str]:
     if not simulator_dir.exists():
         return []
     return sorted(
-        str(path.relative_to(simulator_dir).with_suffix(""))
+        path.relative_to(simulator_dir).with_suffix("").as_posix()
         for path in simulator_dir.rglob("*.yaml")
     )
 
