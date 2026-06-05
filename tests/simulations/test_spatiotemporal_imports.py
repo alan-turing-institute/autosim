@@ -1,9 +1,13 @@
 from autosim.simulations import (
+    AdvectionDiffusion,
     AdvectionDiffusionMultichannel,
     ConditionedNavierStokes2D,
     GrayScott,
     GrossPitaevskiiEquation2D,
     ReactionDiffusion,
+)
+from autosim.simulations.spatiotemporal import (
+    AdvectionDiffusion as SpatioTemporalAdvectionDiffusion,
 )
 from autosim.simulations.spatiotemporal import (
     AdvectionDiffusionMultichannel as SpatioTemporalAdvectionDiffusionMultichannel,
@@ -23,6 +27,7 @@ from autosim.simulations.spatiotemporal import (
 
 
 def test_promoted_simulators_export_from_stable_paths() -> None:
+    assert AdvectionDiffusion is SpatioTemporalAdvectionDiffusion
     assert (
         AdvectionDiffusionMultichannel is SpatioTemporalAdvectionDiffusionMultichannel
     )

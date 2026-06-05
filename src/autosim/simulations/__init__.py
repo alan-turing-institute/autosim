@@ -1,11 +1,11 @@
 """Stable simulator implementations."""
 
-from .advection_diffusion import AdvectionDiffusion
 from .epidemic import Epidemic
 from .flow_problem import FlowProblem
 from .projectile import Projectile, ProjectileMultioutput
 from .seir import SEIRSimulator
 from .spatiotemporal import (
+    AdvectionDiffusion,
     AdvectionDiffusionMultichannel,
     ConditionedNavierStokes2D,
     GrayScott,

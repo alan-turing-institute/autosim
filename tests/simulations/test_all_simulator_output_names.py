@@ -1,5 +1,3 @@
-import pytest
-
 from autosim.experimental.simulations import (
     CompressibleFluid2D,
     Hydrodynamics2D,
@@ -22,11 +20,8 @@ from autosim.simulations import (
 
 
 def test_all_simulators_have_explicit_output_names() -> None:
-    with pytest.warns(DeprecationWarning, match="AdvectionDiffusion"):
-        advection_diffusion = AdvectionDiffusion()
-
     simulators = [
-        advection_diffusion,
+        AdvectionDiffusion(),
         AdvectionDiffusionMultichannel(),
         ReactionDiffusion(),
         Epidemic(),

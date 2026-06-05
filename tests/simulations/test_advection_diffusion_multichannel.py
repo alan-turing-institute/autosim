@@ -3,7 +3,10 @@ from __future__ import annotations
 import pytest
 import torch
 
-from autosim.simulations.spatiotemporal import AdvectionDiffusionMultichannel
+from autosim.simulations.spatiotemporal import (
+    AdvectionDiffusion,
+    AdvectionDiffusionMultichannel,
+)
 
 
 def test_output_indices_validation() -> None:
@@ -50,3 +53,34 @@ def test_output_indices_select_and_order_channels() -> None:
 
     expected_subset = full["data"][..., [0, 2]]
     assert torch.allclose(subset["data"], expected_subset)
+
+
+def test_advection_diffusion_matches_vorticity_channel() -> None:
+    fixed_params = {"nu": (0.001, 0.001), "mu": (1.0, 1.0)}
+
+    sim = AdvectionDiffusion(
+        parameters_range=fixed_params,
+        return_timeseries=False,
+        n=8,
+        L=4.0,
+        T=0.25,
+        dt=0.25,
+        log_level="warning",
+    )
+    canonical = AdvectionDiffusionMultichannel(
+        parameters_range=fixed_params,
+        output_indices=[0],
+        return_timeseries=False,
+        n=8,
+        L=4.0,
+        T=0.25,
+        dt=0.25,
+        log_level="warning",
+    )
+
+    sim_out = sim.forward_samples_spatiotemporal(n=1, random_seed=7)
+    canonical_out = canonical.forward_samples_spatiotemporal(n=1, random_seed=7)
+
+    assert sim.output_names == ["vorticity"]
+    assert sim_out["data"].shape == (1, 1, 8, 8, 1)
+    assert torch.allclose(sim_out["data"], canonical_out["data"])

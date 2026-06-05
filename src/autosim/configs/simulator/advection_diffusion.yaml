@@ -1,5 +1,4 @@
-_target_: autosim.simulations.spatiotemporal.AdvectionDiffusionMultichannel
-output_indices: [0]
+_target_: autosim.simulations.spatiotemporal.AdvectionDiffusion
 return_timeseries: true
 log_level: warning
 n: 64
