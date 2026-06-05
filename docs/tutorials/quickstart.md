@@ -13,7 +13,7 @@ Generate a small dataset with the advection-diffusion simulator:
 
 ```bash
 uv run autosim \
-  simulator=advection_diffusion \
+  simulator=spatiotemporal/advection_diffusion \
   simulator.n=16 simulator.T=0.2 simulator.dt=0.1 \
   dataset.n_train=1 dataset.n_valid=1 dataset.n_test=1
 ```

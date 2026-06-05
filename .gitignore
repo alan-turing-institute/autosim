@@ -220,5 +220,7 @@ docs/_build/
 docs/outlier_detection.md
 
 # Examples
-examples/
+examples/*
+!examples/README.md
+!examples/spatiotemporal/
 datasets

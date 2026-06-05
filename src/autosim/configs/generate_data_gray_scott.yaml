@@ -1,5 +1,5 @@
 defaults:
-  - simulator: gray_scott
+  - simulator: spatiotemporal/gray_scott
   - _self_
 
 dataset:
