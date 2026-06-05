@@ -1,4 +1,4 @@
-"""Experimental reaction-diffusion simulator."""
+"""Spatiotemporal reaction-diffusion simulator."""
 
 import numpy as np
 import torch
