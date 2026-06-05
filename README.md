@@ -65,18 +65,20 @@ uv run autosim list
 Simulator defaults now live in package configs under
 `src/autosim/configs/simulator` and can be selected via config groups.
 Nested groups are supported, so you can select configs such as
-`simulator=gpe/laser_only_wake`.
+`simulator=spatiotemporal/gpe/laser_only_wake`.
 
 Available simulator config names include:
-`advection_diffusion`, `advection_diffusion_multichannel`, `compressible_fluid_2d`,
-`conditioned_navier_stokes_2d`, `epidemic`, `flow_problem`,
-`gpe/laser_only_wake`, `gpe/rotating_box_lattice`,
-`gray_scott`,
-`hydrodynamics_2d`, `lattice_boltzmann`, `projectile`,
-`projectile_multioutput`, `reaction_diffusion`, `seir_simulator`,
-`shallow_water2d`.
+`spatiotemporal/advection_diffusion`,
+`spatiotemporal/advection_diffusion_multichannel`,
+`spatiotemporal/conditioned_navier_stokes_2d`,
+`spatiotemporal/gpe/laser_only_wake`,
+`spatiotemporal/gpe/rotating_box_lattice`, `spatiotemporal/gray_scott`,
+`spatiotemporal/reaction_diffusion`, `experimental/compressible_fluid_2d`,
+`experimental/hydrodynamics_2d`, `experimental/lattice_boltzmann`,
+`experimental/shallow_water2d`, `epidemic`, `flow_problem`, `projectile`,
+`projectile_multioutput`, and `seir_simulator`.
 
-Additional exploratory GPE configs are available under `gpe/exploratory/` for
+Additional exploratory GPE configs are available under `experimental/gpe/` for
 reference and in-progress work (note: `high_complexity` and `low_complexity`
 start from an arbitrary Gaussian, not a physical ground state).
 
@@ -84,7 +86,7 @@ Override simulator and dataset settings from the command line via Hydra:
 
 ```bash
 uv run autosim \
-	simulator=shallow_water2d \
+	simulator=experimental/shallow_water2d \
 	simulator.nx=32 \
 	simulator.ny=32 \
 	simulator.T=10.0 \
@@ -97,7 +99,7 @@ Use a faster built-in simulator config:
 
 ```bash
 uv run autosim \
-	simulator=advection_diffusion \
+	simulator=spatiotemporal/advection_diffusion \
 	simulator.n=16 simulator.T=0.2 simulator.dt=0.1 \
 	dataset.n_train=1 dataset.n_valid=1 dataset.n_test=1
 ```
@@ -106,7 +108,7 @@ Optionally save example rollout videos for selected batch indices after generati
 
 ```bash
 uv run autosim \
-	simulator=advection_diffusion_multichannel \
+	simulator=spatiotemporal/advection_diffusion_multichannel \
 	dataset.n_train=4 dataset.n_valid=1 dataset.n_test=1 \
 	visualize.enabled=true \
 	visualize.split=train \
@@ -122,7 +124,7 @@ Use `visualize.file_ext=mp4` if ffmpeg is available.
 
 	```bash
 	uv run autosim \
-		simulator=gray_scott \
+		simulator=spatiotemporal/gray_scott \
 		stratify.enabled=true \
 		stratify.key=simulator.pattern \
 		stratify.values=[gliders,bubbles,maze,worms,spirals,spots] \
