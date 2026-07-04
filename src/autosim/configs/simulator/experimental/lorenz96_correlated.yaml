@@ -1,0 +1,13 @@
+_target_: autosim.experimental.simulations.Lorenz96Correlated
+log_level: warning
+n_steps: 128
+burn: 150
+n_sites: 40
+forcing: 8.0
+c: 0.5
+dt: 0.01
+ell: 2.0
+n_substeps: 10
+ic_scale: 0.1
+parameters_range:
+  x0: [-1.0, 1.0]

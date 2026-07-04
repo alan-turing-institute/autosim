@@ -1,0 +1,9 @@
+_target_: autosim.experimental.simulations.OrnsteinUhlenbeck
+log_level: warning
+n_steps: 64
+kappa: 1.0
+c: 0.5
+m: 0.0
+dt: 0.05
+parameters_range:
+  x0: [-2.0, 2.0]
