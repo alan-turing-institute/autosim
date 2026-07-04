@@ -82,6 +82,14 @@ def test_mc_reference_shape():
     assert mc.shape == (16, 10, 1, 1, 1), f"Unexpected shape: {mc.shape}"
 
 
+def test_ou_rejects_non_contractive_mean():
+    """kappa*dt outside (0, 2) gives a non-stationary AR(1) mean -> rejected."""
+    with pytest.raises(ValueError, match="contractive"):
+        OrnsteinUhlenbeck(kappa=0.0)  # kappa*dt = 0 -> a = 1 (no reversion)
+    with pytest.raises(ValueError, match="contractive"):
+        OrnsteinUhlenbeck(kappa=50.0, dt=0.05)  # kappa*dt = 2.5 -> |a| > 1
+
+
 # ---------------------------------------------------------------------------
 # Cox-Ingersoll-Ross tests (the nonlinear, state-dependent-spread value toy:
 # OU's square-root sibling with a closed-form mean+variance oracle).
@@ -102,6 +110,14 @@ def test_cir_default_feller_is_high():
     """The defaults sit well off the zero boundary (Feller number >> 1)."""
     sim = CoxIngersollRoss(kappa=1.0, theta=1.0, sigma=0.3)
     assert sim.feller > 10.0  # 2*1*1/0.09 ~= 22
+
+
+def test_cir_rejects_non_contractive_mean():
+    """kappa*dt outside (0, 2) gives a non-stationary AR(1) mean -> rejected."""
+    with pytest.raises(ValueError, match="contractive"):
+        CoxIngersollRoss(kappa=0.0)  # kappa*dt = 0 -> a = 1 (no reversion)
+    with pytest.raises(ValueError, match="contractive"):
+        CoxIngersollRoss(kappa=50.0, dt=0.05)  # kappa*dt = 2.5 -> |a| > 1
 
 
 def test_cir_mc_reference_matches_closed_form_mean_and_var():

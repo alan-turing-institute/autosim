@@ -99,6 +99,7 @@ class OrnsteinUhlenbeck(ScalarSDESimulator):
         self.c = c
         self.m = m
         self.dt = dt
+        self._validate_ar1_contractive(kappa, dt)
 
     def _step(self, x: float, rng: np.random.Generator) -> float:
         """Apply one Euler-Maruyama step.

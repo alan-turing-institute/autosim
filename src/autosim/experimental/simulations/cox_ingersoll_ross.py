@@ -152,6 +152,7 @@ class CoxIngersollRoss(ScalarSDESimulator):
         self.theta = theta
         self.sigma = sigma
         self.dt = dt
+        self._validate_ar1_contractive(kappa, dt)
 
     @property
     def feller(self) -> float:

@@ -47,6 +47,31 @@ class ScalarSDESimulator(SpatioTemporalSimulator, abc.ABC):
             The updated state after one step.
         """
 
+    def _validate_ar1_contractive(self, kappa: float, dt: float) -> None:
+        """Fail-early on a non-contractive AR(1) mean.
+
+        The Euler-Maruyama mean-reversion is the AR(1) recursion with
+        coefficient ``a = 1 - kappa dt``; the process is stationary (and its
+        closed-form predictive variance finite) only when ``|a| < 1``, i.e.
+        ``0 < kappa dt < 2``. This is the scalar analogue of the contractivity
+        check the field simulators apply to their mean operator.
+
+        Args:
+            kappa: Mean-reversion rate.
+            dt: Euler-Maruyama step size.
+
+        Raises:
+            ValueError: If ``|1 - kappa dt| >= 1`` (non-contractive / unstable).
+        """
+        if abs(1.0 - kappa * dt) >= 1.0:
+            msg = (
+                f"{type(self).__name__} requires a contractive mean reversion "
+                f"(0 < kappa*dt < 2, i.e. |1 - kappa*dt| < 1) for a stationary "
+                f"process with finite predictive variance; got "
+                f"kappa*dt = {kappa * dt:.4f}."
+            )
+            raise ValueError(msg)
+
     def _integrate(
         self, x0: float, n_steps: int, rng: np.random.Generator
     ) -> np.ndarray:
