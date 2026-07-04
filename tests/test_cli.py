@@ -43,7 +43,10 @@ class DummySimulator(SpatioTemporalSimulator):
 
 def test_build_simulator_from_target_core_and_experimental() -> None:
     core_cfg = OmegaConf.create(
-        {"_target_": "autosim.simulations.AdvectionDiffusion", "log_level": "warning"}
+        {
+            "_target_": "autosim.simulations.spatiotemporal.AdvectionDiffusion",
+            "log_level": "warning",
+        }
     )
     experimental_cfg = OmegaConf.create(
         {
@@ -131,7 +134,7 @@ def test_cli_generates_dataset_fast_with_advection_diffusion(tmp_path: Path) -> 
         "dataset.n_valid=1",
         "dataset.n_test=1",
         "overwrite=true",
-        "simulator=advection_diffusion",
+        "simulator=spatiotemporal/advection_diffusion",
         "simulator.log_level=warning",
         "simulator.return_timeseries=true",
         "simulator.n=8",
@@ -163,8 +166,9 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
     )
 
     output_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
-    assert "advection_diffusion" in output_lines
-    assert "shallow_water2d" in output_lines
+    assert "spatiotemporal/advection_diffusion" in output_lines
+    assert "experimental/shallow_water2d" in output_lines
+    assert all("\\" not in line for line in output_lines)
 
 
 def test_compute_normalization_stats_includes_temporal_deltas() -> None:
@@ -461,6 +465,42 @@ def test_save_example_videos_out_of_range_raises(tmp_path: Path, dummy_splits) -
     )
     with pytest.raises(ValueError, match="out of range"):
         save_example_videos(splits=dummy_splits, output_dir=tmp_path, visualize_cfg=cfg)
+
+
+def test_save_example_videos_defaults_to_available_examples(
+    tmp_path: Path, dummy_splits, monkeypatch
+) -> None:
+    import autosim.cli as cli_module  # noqa: PLC0415
+
+    calls: list[dict] = []
+
+    def _fake(**kwargs):
+        save_path = Path(str(kwargs["save_path"]))
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        save_path.write_text("stub")
+        calls.append(kwargs)
+
+    monkeypatch.setattr(cli_module, "plot_spatiotemporal_video", _fake)
+
+    cfg = OmegaConf.create(
+        {
+            "enabled": True,
+            "split": "valid",
+            "batch_indices": None,
+            "max_examples": 4,
+            "fps": 5,
+            "file_ext": "gif",
+            "overwrite": True,
+        }
+    )
+
+    save_example_videos(splits=dummy_splits, output_dir=tmp_path, visualize_cfg=cfg)
+
+    assert len(calls) == 1
+    assert calls[0]["batch_idx"] == 0
+    assert Path(str(calls[0]["save_path"])) == (
+        tmp_path / "examples" / "valid" / "batch_0.gif"
+    )
 
 
 def test_save_example_videos_uses_batch_indices_and_split(

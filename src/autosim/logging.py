@@ -1,3 +1,5 @@
+"""Logging helpers for simulator progress and verbosity settings."""
+
 import logging
 import os
 import sys
@@ -5,17 +7,13 @@ from pathlib import Path
 
 
 def configure_logging(log_to_file=False, level: str = "INFO"):
-    """
-    Configure the logging system.
+    """Configure the logging system.
 
-    Parameters
-    ----------
-    log_to_file: bool or string, optional
-        If True, logs will be written to a file.
-        If a string, logs will be written to the specified file.
-    verbose: str, optional
-        The verbosity level. Can be "critical", "error", "warning",
-          "info", or "debug". Defaults to "info".
+    Args:
+        log_to_file: If True, logs will be written to a file. If a string, logs will be
+            written to the specified file.
+        level: The verbosity level. Can be "critical", "error", "warning", "info", or
+            "debug". Defaults to "info".
     """
     logger = logging.getLogger("autosim")
     logger.handlers = []  # Clear existing handlers
@@ -85,22 +83,16 @@ def configure_logging(log_to_file=False, level: str = "INFO"):
 def get_configured_logger(
     log_level, progress_bar_attr="progress_bar"
 ) -> tuple[logging.Logger, bool]:
-    """
-    Configure logger and progress bar flag consistently.
+    """Configure logger and progress bar flag consistently.
 
-    Parameters
-    ----------
-    log_level: str
-        The logging level to set. Can be "progress_bar", "debug", "info",
-        "warning", "error", or "critical".
-    progress_bar_attr: str
-        The attribute to check for progress bar. If log_level is set to this value,
-        the logger will be set to "error" level and progress_bar will be True. Defaults
-        to "progress_bar".
+    Args:
+        log_level: The logging level to set. Can be "progress_bar", "debug", "info",
+            "warning", "error", or "critical".
+        progress_bar_attr: The attribute to check for progress bar. If log_level is set
+            to this value, the logger will be set to "error" level and progress_bar will
+            be True. Defaults to "progress_bar".
 
-    Returns
-    -------
-    tuple[logging.Logger, bool]
+    Returns:
         The configured logger and the progress bar flag.
     """
     valid_log_levels = [

@@ -1,3 +1,5 @@
+"""Utility functions for plotting and visualizing simulator outputs."""
+
 from __future__ import annotations
 
 from typing import Literal
@@ -45,43 +47,33 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
 ):
     """Create a video comparing ground truth and predicted spatiotemporal time series.
 
-    Parameters
-    ----------
-    true: array_like (B, T, W, H, C)
-        Ground-truth tensor.
-    pred: array_like
-        Optional predicted tensor of shape (B, T, W, H, C).
-    batch_idx: int
-        Which batch index to visualize (default: 0).
-    fps: int, optional
-        Frames per second for the video (default: 5).
-    vmin: float, optional
-        Minimum value for color scale (default: auto from data).
-    vmax: float, optional
-        Maximum value for color scale (default: auto from data).
-    cmap: str, optional
-        Colormap to use (default: "viridis").
-    save_path: str, optional
-        Optional path to save the video (e.g., "output.mp4").
-    title: str, optional
-        Title for the video (default: "Ground Truth vs Prediction").
-    colorbar_mode: {"none", "row", "column", "all"}
-        Select how colorbars (and underlying color scales) are shared for the
-        first two rows (true vs prediction):
-        - "none": every subplot gets its own colorbar (default).
-        - "row": a single colorbar per row (first two rows only).
-        - "column": a single colorbar per column (true/pred share per channel).
-        - "all": one colorbar shared across the first two rows.
-    channel_names: list[str] | None
-        Optional list of channel names for titles.
-    preserve_aspect: bool
-        If True, resize each subplot panel to match the spatial WxH ratio of the
-        data so the image fills the panel without distortion. If False (default),
-        panels are square and the image is stretched to fill via ``aspect='auto'``.
+    Args:
+        true: Ground-truth tensor.
+        pred: Optional predicted tensor of shape (B, T, W, H, C).
+        pred_uq: Optional prediction uncertainty tensor of shape (B, T, W, H, C).
+        batch_idx: Which batch index to visualize (default: 0).
+        fps: Frames per second for the video (default: 5).
+        vmin: Minimum value for color scale (default: auto from data).
+        vmax: Maximum value for color scale (default: auto from data).
+        cmap: Colormap to use (default: "viridis").
+        save_path: Optional path to save the video (e.g., "output.mp4").
+        title: Title for the video (default: "Ground Truth vs Prediction").
+        pred_uq_label: Row label used when plotting prediction uncertainty.
+        colorbar_mode: Select how colorbars (and underlying color scales) are shared for
+            the first two rows (true vs prediction):
+            - "none": every subplot gets its own colorbar (default).
+            - "row": a single colorbar per row (first two rows only).
+            - "column": a single colorbar per column (true/pred share per channel).
+            - "all": one colorbar shared across the first two rows.
+        colorbar_mode_uq: Select how colorbars are shared for the prediction uncertainty
+            row.
+        channel_names: Optional list of channel names for titles.
+        preserve_aspect: If True, resize each subplot panel to match the spatial WxH
+            ratio of the data so the image fills the panel without distortion. If False
+            (default), panels are square and the image is stretched to fill via
+            ``aspect='auto'``.
 
-    Returns
-    -------
-    animation.FuncAnimation
+    Returns:
         Animation object that can be displayed in notebooks.
     """
     colorbar_mode_str = colorbar_mode.lower()

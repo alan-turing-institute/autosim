@@ -1,3 +1,5 @@
+"""Shared type aliases used across AutoSim."""
+
 from typing import Any, TypeAlias
 
 import numpy as np
