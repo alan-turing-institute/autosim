@@ -56,28 +56,20 @@ class Lorenz96(SpatioTemporalSimulator):
     initial conditions within the attractor basin while providing trajectory
     diversity across the training set.
 
-    Parameters
-    ----------
-    parameters_range: dict[str, tuple[float, float]], optional
-        Bounds on the sampled IC scale parameter.  Defaults to
-        ``{"ic_scale": (0.0, 1.0)}``.
-    output_names: list[str], optional
-        Names for the flattened outputs (length n_steps * n_sites).  Defaults to
-        ``["x"]`` (single flat vector; the reshape to spatial form is done in
-        ``forward_samples_spatiotemporal``).
-    log_level: str, default="error"
-        Logging verbosity passed to the base ``Simulator``.
-    n_steps: int, default=128
-        Number of Euler-Maruyama steps to record per trajectory.
-    n_sites: int, default=40
-        Number of ring sites N.
-    forcing: float, default=8.0
-        Lorenz-96 forcing constant F.  F = 8.0 is the standard chaotic regime.
-    c: float, default=0.5
-        Diffusion coefficient (noise amplitude).
-    dt: float, default=0.01
-        Euler-Maruyama step size.  The deterministic L96 is stable with
-        4th-order RK for dt<=0.05; EM requires dt<=0.01 to stay bounded.
+    Args:
+        parameters_range: Bounds on the sampled IC scale parameter. Defaults to
+            ``{"ic_scale": (0.0, 1.0)}``.
+        output_names: Names for the flattened outputs (length n_steps * n_sites).
+            Defaults to ``["x"]`` (single flat vector; the reshape to spatial
+            form is done in ``forward_samples_spatiotemporal``).
+        log_level: Logging verbosity passed to the base ``Simulator``.
+        n_steps: Number of Euler-Maruyama steps to record per trajectory.
+        n_sites: Number of ring sites N.
+        forcing: Lorenz-96 forcing constant F. F = 8.0 is the standard chaotic
+            regime.
+        c: Diffusion coefficient (noise amplitude).
+        dt: Euler-Maruyama step size. The deterministic L96 is stable with
+            4th-order RK for dt<=0.05; EM requires dt<=0.01 to stay bounded.
     """
 
     # Fixed perturbation pattern used to build initial conditions from ic_scale.
@@ -139,6 +131,7 @@ class Lorenz96(SpatioTemporalSimulator):
         c: float = 0.5,
         dt: float = 0.01,
     ) -> None:
+        """Initialize the Lorenz-96 integrator and validate parameters."""
         if parameters_range is None:
             parameters_range = {"ic_scale": (0.0, 1.0)}
         if output_names is None:
@@ -169,38 +162,28 @@ class Lorenz96(SpatioTemporalSimulator):
     def _l96_rhs(self, x: np.ndarray) -> np.ndarray:
         """Vectorised Lorenz-96 RHS for a state vector of length n_sites.
 
-        Parameters
-        ----------
-        x: np.ndarray
-            Current state, shape (n_sites,).
+        Args:
+            x: Current state, shape (n_sites,).
 
-        Returns
-        -------
-        np.ndarray
+        Returns:
             Time derivative dX/dt, shape (n_sites,).
 
-        Notes
-        -----
-        Indices use periodic (ring) boundary conditions via ``np.roll``:
-            roll(x, -1)[i] = x[(i+1) % N]   (X_{i+1})
-            roll(x,  1)[i] = x[(i-1) % N]   (X_{i-1})
-            roll(x,  2)[i] = x[(i-2) % N]   (X_{i-2})
+        Notes:
+            Indices use periodic (ring) boundary conditions via ``np.roll``:
+                roll(x, -1)[i] = x[(i+1) % N]   (X_{i+1})
+                roll(x,  1)[i] = x[(i-1) % N]   (X_{i-1})
+                roll(x,  2)[i] = x[(i-2) % N]   (X_{i-2})
         """
         return (np.roll(x, -1) - np.roll(x, 2)) * np.roll(x, 1) - x + self.forcing
 
     def _step(self, x: np.ndarray, rng: np.random.Generator) -> np.ndarray:
         """Apply one Euler-Maruyama step to the full L96 state vector.
 
-        Parameters
-        ----------
-        x: np.ndarray
-            Current state, shape (n_sites,).
-        rng: np.random.Generator
-            NumPy random generator supplying the i.i.d. Wiener increments.
+        Args:
+            x: Current state, shape (n_sites,).
+            rng: NumPy random generator supplying the i.i.d. Wiener increments.
 
-        Returns
-        -------
-        np.ndarray
+        Returns:
             Updated state after one step, shape (n_sites,).
         """
         xi = rng.standard_normal(self.n_sites)
@@ -210,73 +193,75 @@ class Lorenz96(SpatioTemporalSimulator):
     # Simulator interface
     # ------------------------------------------------------------------
 
+    def _integrate(self, ic_scale: float, rng: np.random.Generator) -> np.ndarray:
+        """Integrate one L96 trajectory from an IC-scale parameter.
+
+        Args:
+            ic_scale: Scales the fixed perturbation off the F-uniform fixed
+                point to build the initial state.
+            rng: Random generator supplying the process noise.
+
+        Returns:
+            Float32 trajectory of shape ``(n_steps, n_sites)`` (time outer, sites
+            inner).
+        """
+        x = self.forcing + ic_scale * self._ic_pattern.astype(np.float64)
+        traj = np.empty((self.n_steps, self.n_sites), dtype=np.float32)
+        for t in range(self.n_steps):
+            x = self._step(x, rng)
+            traj[t] = x.astype(np.float32)
+        return traj
+
     def _forward(self, x: TensorLike) -> TensorLike:
         """Integrate a single stochastic L96 trajectory.
 
-        Parameters
-        ----------
-        x: TensorLike
-            Input tensor of shape ``(1, 1)`` containing the sampled IC scale
-            parameter ``ic_scale``.
+        Args:
+            x: Input tensor of shape ``(1, 1)`` containing the sampled IC scale
+                parameter ``ic_scale``.
 
-        Returns
-        -------
-        TensorLike
-            Flattened trajectory tensor of shape ``(1, n_steps * n_sites)``,
-            where the time axis is outer and the site axis is inner (row-major).
+        Returns:
+            Flattened trajectory tensor of shape ``(1, n_steps * n_sites)`` (time
+            axis outer, site axis inner, row-major).
         """
         if x.shape[0] != 1:
-            msg = f"Lorenz96._forward expects a single input, got {x.shape[0]}"
+            msg = (
+                f"{type(self).__name__}._forward expects a single input, "
+                f"got {x.shape[0]}"
+            )
             raise ValueError(msg)
 
         ic_scale = float(x.cpu().numpy()[0, 0])
-        X = self.forcing + ic_scale * self._ic_pattern.astype(np.float64)
-
-        rng = np.random.default_rng()  # fresh process-noise path per trajectory
-        traj = np.empty((self.n_steps, self.n_sites), dtype=np.float32)
-        for t in range(self.n_steps):
-            X = self._step(X, rng)
-            traj[t] = X.astype(np.float32)
-
-        # Row-major: flatten as (n_steps * n_sites,) with time outer, sites inner.
+        rng = np.random.default_rng()  # fresh process-noise path per call
+        traj = self._integrate(ic_scale, rng)
         return torch.from_numpy(traj.reshape(1, self.n_steps * self.n_sites))
 
     def forward_samples_spatiotemporal(
         self,
         n: int,
         random_seed: int | None = None,
-        ensure_exact_n: bool = False,
+        ensure_exact_n: bool = False,  # noqa: ARG002 -- generation is always exact
     ) -> dict:
         """Produce stochastic L96 trajectories with sampled initial conditions.
 
-        Parameters
-        ----------
-        n: int
-            Number of trajectories to sample.
-        random_seed: int, optional
-            Seed for reproducible initial-condition draws.
+        Both the sampled IC scales and the process noise are seeded from
+        ``random_seed``, so a given seed reproduces the full batch. L96 never
+        fails, so ``ensure_exact_n`` is always satisfied without retries.
 
-        Returns
-        -------
-        dict
-            Dictionary with keys:
+        Args:
+            n: Number of trajectories to sample.
+            random_seed: Seed for reproducible IC scales and process noise.
+            ensure_exact_n: Accepted for API parity; the batch already contains
+                exactly ``n`` trajectories.
 
-            ``data``
-                Float32 tensor of shape ``(batch, n_steps, n_sites, 1, 1)``.  The
-                last two singleton dimensions are the second spatial axis and the
-                channel axis, following the spatiotemporal convention.
-            ``constant_scalars``
-                Sampled ``ic_scale`` parameters, shape ``(batch, 1)``.
-            ``constant_fields``
-                Always ``None``; placeholder for API consistency with the
-                ``AdvectionDiffusion`` twin simulator.
+        Returns:
+            A dict with ``data`` (float32 ``(batch, n_steps, n_sites, 1, 1)``),
+            ``constant_scalars`` (sampled ``ic_scale``, ``(batch, 1)``) and
+            ``constant_fields`` (``None``, API parity).
         """
-        y, x = self._forward_batch_with_optional_retries(
-            n=n, random_seed=random_seed, ensure_exact_n=ensure_exact_n
-        )
-
-        # y shape: (n, n_steps * n_sites) — reshape time-outer, sites-inner.
-        data = y.reshape(y.shape[0], self.n_steps, self.n_sites, 1, 1)
+        x = self.sample_inputs(n, random_seed)
+        rng = np.random.default_rng(random_seed)
+        traj = np.stack([self._integrate(float(x[i, 0]), rng) for i in range(n)])
+        data = torch.from_numpy(traj).reshape(n, self.n_steps, self.n_sites, 1, 1)
         return {
             "data": data,
             "constant_scalars": x,
@@ -298,25 +283,21 @@ class Lorenz96(SpatioTemporalSimulator):
         with lead time — this is the defining property of this chaotic toy
         testbed hierarchy.
 
-        Parameters
-        ----------
-        x_state: torch.Tensor
-            Initial state; any shape that can be flattened to ``(n_sites,)``.
-            The first ``n_sites`` elements are used as ``X_0``.
-        n_draws: int
-            Number of independent Monte Carlo trajectories.
-        n_steps: int
-            Number of Euler-Maruyama steps per trajectory.
-        random_seed: int, optional
-            Seed for reproducible draws.
+        Args:
+            x_state: Initial state; any shape that can be flattened to
+                ``(n_sites,)``. The first ``n_sites`` elements are used as
+                ``X_0``.
+            n_draws: Number of independent Monte Carlo trajectories.
+            n_steps: Number of Euler-Maruyama steps per trajectory.
+            random_seed: Seed for reproducible draws.
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
             Float32 tensor of shape ``(n_draws, n_steps, n_sites, 1, 1)``.
         """
         rng = np.random.default_rng(random_seed)
-        flat = torch.as_tensor(x_state).reshape(-1)[: self.n_sites].numpy()
+        flat = (
+            torch.as_tensor(x_state).detach().cpu().reshape(-1)[: self.n_sites].numpy()
+        )
         x0 = flat.astype(np.float64)
 
         out = np.empty((n_draws, n_steps, self.n_sites), dtype=np.float32)

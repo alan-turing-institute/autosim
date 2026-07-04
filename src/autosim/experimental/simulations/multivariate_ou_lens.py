@@ -42,18 +42,13 @@ def latent_var(
     fully specifies the latent Gaussian predictive. Analogous to OU's
     ``ou_closed_form_var`` but matrix-valued.
 
-    Parameters
-    ----------
-    leads: torch.Tensor
-        Integer lead steps (1-based), e.g. ``torch.arange(1, n_steps + 1)``.
-    A: TensorLike
-        Transition matrix, shape ``(d_z, d_z)``.
-    Sigma_z: TensorLike
-        One-step noise covariance, shape ``(d_z, d_z)``.
+    Args:
+        leads: Integer lead steps (1-based), e.g.
+            ``torch.arange(1, n_steps + 1)``.
+        A: Transition matrix, shape ``(d_z, d_z)``.
+        Sigma_z: One-step noise covariance, shape ``(d_z, d_z)``.
 
-    Returns
-    -------
-    torch.Tensor
+    Returns:
         Covariance at each requested lead, shape ``(len(leads), d_z, d_z)``.
     """
     a = torch.as_tensor(A, dtype=torch.float64)
@@ -119,30 +114,25 @@ class MultivariateOULens(SpatioTemporalSimulator):
     latent process rather than the lens — the falsifiable contrast to the
     Gaussian-latent main construction.
 
-    Parameters
-    ----------
-    A, D_z, U_z:
-        Latent transition ``(d_z, d_z)``, noise diagonal ``(d_z,)``, and
-        low-rank noise factor ``(d_z, r_star)``. Default to a ``d_z = 4``,
-        ``r_star = 2`` contractive instance.
-    obs_dim: int
-        Ambient dimension ``d_x`` (default 16).
-    obs_shape: tuple[int, int, int] | None
-        Ambient ``(H, W, C)`` reshape of the ``d_x`` vector (default a square
-        single-channel field; must multiply to ``obs_dim``).
-    tail_alpha: float
-        ``sinh`` tail-weight knob (default 0.7).
-    mixing_seed: int
-        Seed for the fixed cross-term mixing (default 0).
-    latent_noise: str
-        ``"gaussian"`` (default) or ``"student_t"`` (the heavy-tailed-latent
-        negative control).
-    student_t_dof: float
-        Degrees of freedom when ``latent_noise="student_t"`` (default 4).
-    ic_bound: float
-        Half-width of the uniform box the initial latent ``z_0`` is drawn from.
-    n_steps: int
-        Number of latent steps recorded per trajectory (default 64).
+    Args:
+        A: Latent transition ``(d_z, d_z)``. Defaults to a ``d_z = 4``
+            contractive instance.
+        D_z: Noise diagonal ``(d_z,)``. Defaults to a ``d_z = 4`` contractive
+            instance.
+        U_z: Low-rank noise factor ``(d_z, r_star)``. Defaults to a
+            ``d_z = 4``, ``r_star = 2`` contractive instance.
+        obs_dim: Ambient dimension ``d_x`` (default 16).
+        obs_shape: Ambient ``(H, W, C)`` reshape of the ``d_x`` vector (default
+            a square single-channel field; must multiply to ``obs_dim``).
+        tail_alpha: ``sinh`` tail-weight knob (default 0.7).
+        mixing_seed: Seed for the fixed cross-term mixing (default 0).
+        latent_noise: ``"gaussian"`` (default) or ``"student_t"`` (the
+            heavy-tailed-latent negative control).
+        student_t_dof: Degrees of freedom when ``latent_noise="student_t"``
+            (default 4).
+        ic_bound: Half-width of the uniform box the initial latent ``z_0`` is
+            drawn from.
+        n_steps: Number of latent steps recorded per trajectory (default 64).
     """
 
     def __init__(
@@ -162,6 +152,7 @@ class MultivariateOULens(SpatioTemporalSimulator):
         log_level: str = "error",
         n_steps: int = 64,
     ) -> None:
+        """Initialize the multivariate-OU lens and validate its matrices."""
         a = _default_transition() if A is None else np.asarray(A, dtype=np.float64)
         d_z = a.shape[0]
         d_diag = (
@@ -290,11 +281,23 @@ class MultivariateOULens(SpatioTemporalSimulator):
             std = std * np.sqrt((dof - 2.0) / dof)
         return self._chol_sigma @ std
 
-    def _roll_latent(self, z0: np.ndarray, rng: np.random.Generator) -> np.ndarray:
-        """Integrate one latent OU trajectory of ``n_steps`` from ``z0``."""
+    def _roll_latent(
+        self, z0: np.ndarray, rng: np.random.Generator, n_steps: int | None = None
+    ) -> np.ndarray:
+        """Integrate one latent OU trajectory from ``z0``.
+
+        Args:
+            z0: Initial latent state, shape ``(d_z,)``.
+            rng: Random generator supplying the process noise.
+            n_steps: Number of steps to record; defaults to ``self.n_steps``.
+
+        Returns:
+            Latent trajectory of shape ``(n_steps, d_z)``.
+        """
+        steps = self.n_steps if n_steps is None else n_steps
         z = np.asarray(z0, dtype=np.float64).reshape(self.d_z)
-        traj = np.empty((self.n_steps, self.d_z), dtype=np.float64)
-        for t in range(self.n_steps):
+        traj = np.empty((steps, self.d_z), dtype=np.float64)
+        for t in range(steps):
             z = self.A @ z + self._draw_noise(rng)
             traj[t] = z
         return traj
@@ -320,25 +323,32 @@ class MultivariateOULens(SpatioTemporalSimulator):
         self,
         n: int,
         random_seed: int | None = None,
-        ensure_exact_n: bool = False,
+        ensure_exact_n: bool = False,  # noqa: ARG002 -- generation is always exact
     ) -> dict:
         """Sample ``n`` lens trajectories and the true initial latents.
 
-        Returns
-        -------
-        dict
-            ``data``: float32 ``(n, n_steps, H, W, C)`` ambient fields.
-            ``constant_scalars``: the sampled initial latents ``z_0``,
-            ``(n, d_z)``.
-            ``constant_fields``: ``None`` (API parity with the OU twin).
-            ``latent_states``: the same ``z_0`` exposed for the oracle arm,
-            ``(n, d_z)``.
+        Both the sampled initial latents and the process noise are seeded from
+        ``random_seed``, so a given seed reproduces the full batch. This
+        integrator never fails, so ``ensure_exact_n`` is always satisfied
+        without retries.
+
+        Returns:
+            A dict with ``data`` (float32 ``(n, n_steps, H, W, C)`` ambient
+            fields), ``constant_scalars`` (the sampled initial latents
+            ``z_0``, ``(n, d_z)``), ``constant_fields`` (``None``, API parity
+            with the OU twin) and ``latent_states`` (the same ``z_0`` exposed
+            for the oracle arm, ``(n, d_z)``).
         """
-        y, x = self._forward_batch_with_optional_retries(
-            n=n, random_seed=random_seed, ensure_exact_n=ensure_exact_n
-        )
+        x = self.sample_inputs(n, random_seed)
+        rng = np.random.default_rng(random_seed)  # one shared process-noise stream
         h, w, c = self.obs_shape
-        data = y.reshape(y.shape[0], self.n_steps, h, w, c)
+        ambient = np.stack(
+            [
+                self.lens(self._roll_latent(x[i].cpu().numpy().reshape(self.d_z), rng))
+                for i in range(n)
+            ]
+        ).astype(np.float32)
+        data = torch.from_numpy(ambient).reshape(n, self.n_steps, h, w, c)
         return {
             "data": data,
             "constant_scalars": x,
@@ -366,17 +376,12 @@ class MultivariateOULens(SpatioTemporalSimulator):
         Returns float32 ``(n_draws, n_steps, H, W, C)``.
         """
         rng = np.random.default_rng(random_seed)
-        z0 = torch.as_tensor(x_state).cpu().numpy().reshape(-1)[: self.d_z]
+        z0 = torch.as_tensor(x_state).detach().cpu().numpy().reshape(-1)[: self.d_z]
         h, w, c = self.obs_shape
         out = np.empty((n_draws, n_steps, self.obs_dim), dtype=np.float32)
-        saved_n_steps = self.n_steps
-        self.n_steps = n_steps
-        try:
-            for d in range(n_draws):
-                latent_traj = self._roll_latent(z0, rng)
-                out[d] = self.lens(latent_traj).astype(np.float32)
-        finally:
-            self.n_steps = saved_n_steps
+        for d in range(n_draws):
+            latent_traj = self._roll_latent(z0, rng, n_steps)
+            out[d] = self.lens(latent_traj).astype(np.float32)
         return torch.from_numpy(out).reshape(n_draws, n_steps, h, w, c)
 
 

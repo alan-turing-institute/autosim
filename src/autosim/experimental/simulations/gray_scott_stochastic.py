@@ -46,14 +46,10 @@ def _laplacian_periodic(field: np.ndarray) -> np.ndarray:
     Mirrors ``advection_diffusion._laplacian_periodic`` with unit grid spacing
     (``dx = 1``): a 5-point stencil applied via ``np.roll`` on both spatial axes.
 
-    Parameters
-    ----------
-    field: np.ndarray
-        Scalar field on a 2-D grid, shape ``(grid, grid)``.
+    Args:
+        field: Scalar field on a 2-D grid, shape ``(grid, grid)``.
 
-    Returns
-    -------
-    np.ndarray
+    Returns:
         Discrete Laplacian, same shape as ``field``.
     """
     return (
@@ -83,37 +79,26 @@ class GrayScottStochastic(SpatioTemporalSimulator):
     conditional spread that grows with lead instead of decaying — the defining
     contrast with the contractive advection-diffusion control.
 
-    Parameters
-    ----------
-    parameters_range: dict[str, tuple[float, float]], optional
-        Bounds on the sampled IC scale parameter. Defaults to
-        ``{"ic_scale": (0.0, 1.0)}``.
-    output_names: list[str], optional
-        Names for the flattened outputs. Defaults to ``["x"]`` (a single flat
-        vector; ``forward_samples_spatiotemporal`` reshapes to spatial form).
-    log_level: str, default="error"
-        Logging verbosity passed to the base ``Simulator``.
-    n_steps: int, default=96
-        Number of Euler-Maruyama steps recorded per trajectory.
-    grid_size: int, default=8
-        Side length of the square periodic grid.
-    diffusion_u: float, default=0.16
-        Diffusion coefficient ``Du`` for species U.
-    diffusion_v: float, default=0.08
-        Diffusion coefficient ``Dv`` for species V.
-    feed: float, default=0.06
-        Feed rate ``f``.
-    kill: float, default=0.062
-        Kill rate ``k``.
-    c: float, default=0.03
-        Process-noise amplitude (per species, per site). At this amplitude the
-        cross-draw spread grows monotonically over a ~96-step horizon (the
-        reaction-sustained, non-contractive signature) without the field
-        blowing up.
-    dt: float, default=1.0
-        Euler-Maruyama step size. With unit grid spacing the explicit diffusion
-        limit is ``dt <= 0.25 / max(Du, Dv)`` (~1.56 here), so ``dt = 1.0`` is
-        stable.
+    Args:
+        parameters_range: Bounds on the sampled IC scale parameter. Defaults
+            to ``{"ic_scale": (0.0, 1.0)}``.
+        output_names: Names for the flattened outputs. Defaults to ``["x"]``
+            (a single flat vector; ``forward_samples_spatiotemporal`` reshapes
+            to spatial form).
+        log_level: Logging verbosity passed to the base ``Simulator``.
+        n_steps: Number of Euler-Maruyama steps recorded per trajectory.
+        grid_size: Side length of the square periodic grid.
+        diffusion_u: Diffusion coefficient ``Du`` for species U.
+        diffusion_v: Diffusion coefficient ``Dv`` for species V.
+        feed: Feed rate ``f``.
+        kill: Kill rate ``k``.
+        c: Process-noise amplitude (per species, per site). At this amplitude
+            the cross-draw spread grows monotonically over a ~96-step horizon
+            (the reaction-sustained, non-contractive signature) without the
+            field blowing up.
+        dt: Euler-Maruyama step size. With unit grid spacing the explicit
+            diffusion limit is ``dt <= 0.25 / max(Du, Dv)`` (~1.56 here), so
+            ``dt = 1.0`` is stable.
     """
 
     def __init__(
@@ -130,6 +115,7 @@ class GrayScottStochastic(SpatioTemporalSimulator):
         c: float = 0.03,
         dt: float = 1.0,
     ) -> None:
+        """Initialize the stochastic Gray-Scott integrator and validate parameters."""
         if parameters_range is None:
             parameters_range = {"ic_scale": (0.0, 1.0)}
         if output_names is None:
@@ -167,14 +153,10 @@ class GrayScottStochastic(SpatioTemporalSimulator):
         symmetry-breaking ripple so different trajectories start from distinct
         (but all active) states.
 
-        Parameters
-        ----------
-        ic_scale: float
-            Sampled IC parameter in ``[0, 1]``.
+        Args:
+            ic_scale: Sampled IC parameter in ``[0, 1]``.
 
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray]
+        Returns:
             The ``(U, V)`` fields, each shape ``(grid_size, grid_size)``.
         """
         g = self.grid_size
@@ -193,14 +175,11 @@ class GrayScottStochastic(SpatioTemporalSimulator):
     def _rhs(self, u: np.ndarray, v: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Deterministic Gray-Scott right-hand sides for both species.
 
-        Parameters
-        ----------
-        u, v: np.ndarray
-            Current ``U`` and ``V`` fields, shape ``(grid_size, grid_size)``.
+        Args:
+            u: Current ``U`` field, shape ``(grid_size, grid_size)``.
+            v: Current ``V`` field, shape ``(grid_size, grid_size)``.
 
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray]
+        Returns:
             ``(dU/dt, dV/dt)``, same shapes.
         """
         reaction = u * v * v
@@ -219,16 +198,13 @@ class GrayScottStochastic(SpatioTemporalSimulator):
     ) -> tuple[np.ndarray, np.ndarray]:
         """Apply one stochastic Euler-Maruyama step to the (U, V) fields.
 
-        Parameters
-        ----------
-        u, v: np.ndarray
-            Current fields, shape ``(grid_size, grid_size)``.
-        rng: np.random.Generator
-            Generator supplying the i.i.d. Wiener increments for each species.
+        Args:
+            u: Current ``U`` field, shape ``(grid_size, grid_size)``.
+            v: Current ``V`` field, shape ``(grid_size, grid_size)``.
+            rng: Generator supplying the i.i.d. Wiener increments for each
+                species.
 
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray]
+        Returns:
             Updated ``(U, V)`` after one step.
         """
         du, dv = self._rhs(u, v)
@@ -246,19 +222,36 @@ class GrayScottStochastic(SpatioTemporalSimulator):
         """Stack (U, V) fields into a channel-last frame ``(grid, grid, 2)``."""
         return np.stack([u, v], axis=-1)
 
+    def _integrate(self, ic_scale: float, rng: np.random.Generator) -> np.ndarray:
+        """Integrate one stochastic Gray-Scott trajectory from an IC-scale parameter.
+
+        Args:
+            ic_scale: Sampled IC parameter modulating the active seed and ripple.
+            rng: Random generator supplying the process noise.
+
+        Returns:
+            Float32 trajectory of shape ``(n_steps, grid, grid, 2)`` (time outer,
+            the ``(grid, grid, channel)`` frame inner).
+        """
+        u, v = self._initial_condition(ic_scale)
+        g = self.grid_size
+        traj = np.empty((self.n_steps, g, g, 2), dtype=np.float32)
+        for t in range(self.n_steps):
+            u, v = self._step(u, v, rng)
+            traj[t] = self._stack_channels(u, v).astype(np.float32)
+        return traj
+
     def _forward(self, x: TensorLike) -> TensorLike:
         """Integrate a single stochastic Gray-Scott trajectory.
 
-        Parameters
-        ----------
-        x: TensorLike
-            Input tensor of shape ``(1, 1)`` containing the sampled ``ic_scale``.
+        Args:
+            x: Input tensor of shape ``(1, 1)`` containing the sampled
+                ``ic_scale``.
 
-        Returns
-        -------
-        TensorLike
-            Flattened trajectory of shape ``(1, n_steps * grid_size * grid_size * 2)``,
-            row-major with time outer and the ``(grid, grid, channel)`` frame inner.
+        Returns:
+            Flattened trajectory of shape
+            ``(1, n_steps * grid_size * grid_size * 2)``, row-major with time
+            outer and the ``(grid, grid, channel)`` frame inner.
         """
         if x.shape[0] != 1:
             msg = (
@@ -267,35 +260,31 @@ class GrayScottStochastic(SpatioTemporalSimulator):
             raise ValueError(msg)
 
         ic_scale = float(x.cpu().numpy()[0, 0])
-        u, v = self._initial_condition(ic_scale)
-
         rng = np.random.default_rng()  # fresh process-noise path per trajectory
-        g = self.grid_size
-        traj = np.empty((self.n_steps, g, g, 2), dtype=np.float32)
-        for t in range(self.n_steps):
-            u, v = self._step(u, v, rng)
-            traj[t] = self._stack_channels(u, v).astype(np.float32)
-
+        traj = self._integrate(ic_scale, rng)
         return torch.from_numpy(traj.reshape(1, -1))
 
     def forward_samples_spatiotemporal(
         self,
         n: int,
         random_seed: int | None = None,
-        ensure_exact_n: bool = False,
+        ensure_exact_n: bool = False,  # noqa: ARG002 -- generation is always exact
     ) -> dict:
         """Produce stochastic Gray-Scott trajectories with sampled ICs.
 
-        Parameters
-        ----------
-        n: int
-            Number of trajectories to sample.
-        random_seed: int, optional
-            Seed for reproducible initial-condition draws.
+        Both the sampled IC scales and the process noise are seeded from
+        ``random_seed``, so a given seed reproduces the full batch. This
+        integrator never fails, so ``ensure_exact_n`` is always satisfied
+        without retries.
 
-        Returns
-        -------
-        dict
+        Args:
+            n: Number of trajectories to sample.
+            random_seed: Seed for reproducible initial-condition draws and
+                process noise.
+            ensure_exact_n: Accepted for API parity; the batch already
+                contains exactly ``n`` trajectories.
+
+        Returns:
             Dictionary with keys:
 
             ``data``
@@ -306,12 +295,11 @@ class GrayScottStochastic(SpatioTemporalSimulator):
                 Always ``None``; placeholder for API consistency with the
                 ``AdvectionDiffusion`` twin simulator.
         """
-        y, x = self._forward_batch_with_optional_retries(
-            n=n, random_seed=random_seed, ensure_exact_n=ensure_exact_n
-        )
-
+        x = self.sample_inputs(n, random_seed)
+        rng = np.random.default_rng(random_seed)
         g = self.grid_size
-        data = y.reshape(y.shape[0], self.n_steps, g, g, 2)
+        traj = np.stack([self._integrate(float(x[i, 0]), rng) for i in range(n)])
+        data = torch.from_numpy(traj).reshape(n, self.n_steps, g, g, 2)
         return {
             "data": data,
             "constant_scalars": x,
@@ -333,27 +321,21 @@ class GrayScottStochastic(SpatioTemporalSimulator):
         cross-draw spread is non-trivial and grows with lead — the property that
         distinguishes this rung from the contractive advection-diffusion control.
 
-        Parameters
-        ----------
-        x_state: torch.Tensor
-            Initial state; any shape whose last axis is the 2 channels and whose
-            leading ``grid_size * grid_size`` spatial entries define ``(U, V)``.
-            Accepts ``(grid, grid, 2)``, ``(grid*grid, 2)``, or any shape that
-            reshapes to ``(grid, grid, 2)``.
-        n_draws: int
-            Number of independent Monte Carlo trajectories.
-        n_steps: int
-            Number of Euler-Maruyama steps per trajectory.
-        random_seed: int, optional
-            Seed for reproducible draws.
+        Args:
+            x_state: Initial state; any shape whose last axis is the 2
+                channels and whose leading ``grid_size * grid_size`` spatial
+                entries define ``(U, V)``. Accepts ``(grid, grid, 2)``,
+                ``(grid*grid, 2)``, or any shape that reshapes to
+                ``(grid, grid, 2)``.
+            n_draws: Number of independent Monte Carlo trajectories.
+            n_steps: Number of Euler-Maruyama steps per trajectory.
+            random_seed: Seed for reproducible draws.
 
-        Returns
-        -------
-        torch.Tensor
+        Returns:
             Float32 tensor of shape ``(n_draws, n_steps, grid, grid, 2)``.
         """
         g = self.grid_size
-        frame = torch.as_tensor(x_state).reshape(g, g, 2).cpu().numpy()
+        frame = torch.as_tensor(x_state).reshape(g, g, 2).detach().cpu().numpy()
         u0 = frame[..., 0].astype(np.float64)
         v0 = frame[..., 1].astype(np.float64)
 

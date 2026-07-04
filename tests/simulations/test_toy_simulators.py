@@ -10,11 +10,9 @@ import torch
 # ---------------------------------------------------------------------------
 from autosim.experimental.simulations.correlated_diffusion_1d import (
     CorrelatedDiffusion1D,
-    diff1d_closed_form_cov,
 )
 from autosim.experimental.simulations.correlated_diffusion_2d import (
     CorrelatedDiffusion2D,
-    diff2d_closed_form_cov,
 )
 from autosim.experimental.simulations.cox_ingersoll_ross import (
     CoxIngersollRoss,
@@ -24,6 +22,7 @@ from autosim.experimental.simulations.cox_ingersoll_ross import (
 from autosim.experimental.simulations.double_well import DoubleWell
 from autosim.experimental.simulations.gray_scott_stochastic import GrayScottStochastic
 from autosim.experimental.simulations.lorenz96 import Lorenz96
+from autosim.experimental.simulations.lorenz96_correlated import Lorenz96Correlated
 from autosim.experimental.simulations.multivariate_ou_lens import (
     MultivariateOULens,
     latent_var,
@@ -53,12 +52,13 @@ def test_mc_reference_matches_closed_form_variance():
     leads = torch.arange(1, 31)
     closed = ou_closed_form_var(leads, kappa=1.0, c=0.5, dt=0.05)
     max_err = (emp_var - closed).abs().max().item()
-    # Discretisation bias O(dt)≈0.003 + MC noise at 4000 draws ≈ 0.003; allow 0.02
+    # Oracle is the exact Euler-Maruyama variance (no O(dt) bias); only MC noise at
+    # 4000 draws ≈ 0.003 remains, so allow 0.02.
     assert max_err < 0.02, f"max|emp-closed| = {max_err:.4f} exceeds tolerance 0.02"
 
 
 def test_closed_form_var_monotone_and_saturates():
-    """ou_closed_form_var is monotonically increasing and saturates at c^2/(2*kappa)."""
+    """ou_closed_form_var is monotone and saturates at discrete stationary variance."""
     kappa, c, dt = 1.0, 0.5, 0.05
     leads = torch.arange(1, 201)
     var = ou_closed_form_var(leads, kappa=kappa, c=c, dt=dt)
@@ -66,8 +66,9 @@ def test_closed_form_var_monotone_and_saturates():
     # Monotonically non-decreasing
     assert (var[1:] >= var[:-1]).all(), "closed-form variance is not monotone"
 
-    # Saturation: large-lead value should be close to c^2 / (2*kappa)
-    asymptote = c**2 / (2.0 * kappa)
+    # Saturation: the Euler-Maruyama AR(1) stationary variance is
+    # q / (1 - a^2) = c^2 / (kappa (2 - kappa dt)) (approaches c^2/(2 kappa) as dt->0).
+    asymptote = c**2 / (kappa * (2.0 - kappa * dt))
     assert abs(var[-1].item() - asymptote) < 1e-3, (
         f"Saturation value {var[-1].item():.6f} far from asymptote {asymptote:.6f}"
     )
@@ -118,7 +119,8 @@ def test_cir_mc_reference_matches_closed_form_mean_and_var():
     cf_var = cir_closed_form_var(leads, kappa=1.0, theta=1.0, sigma=0.3, x0=x0, dt=0.05)
     mean_err = (emp_mean - cf_mean).abs().max().item()
     var_err = (emp_var - cf_var).abs().max().item()
-    # mean ~ O(1), nearly unbiased; var ~ 0.045 stationary, O(dt) bias + MC noise.
+    # Oracle is the exact full-truncation-Euler moment (no O(dt) bias); mean ~ O(1)
+    # and var ~ 0.046 stationary, so only MC noise remains.
     assert mean_err < 0.01, f"max|emp_mean - cf_mean| = {mean_err:.5f}"
     assert var_err < 5e-3, f"max|emp_var - cf_var| = {var_err:.5f}"
 
@@ -135,8 +137,10 @@ def test_cir_variance_is_state_dependent():
     )
     # a higher initial state injects more noise early -> larger short-lead variance
     assert var_hi[0] > var_lo[0] + 1e-4
-    # both saturate at the same x0-independent stationary variance
-    asymptote = 1.0 * 0.3**2 / (2.0 * 1.0)  # theta * sigma^2 / (2 kappa)
+    # both saturate at the same x0-independent stationary variance; the discrete
+    # full-truncation-Euler value is theta sigma^2 / (kappa (2 - kappa dt)).
+    kappa, sigma, dt = 1.0, 0.3, 0.05
+    asymptote = 1.0 * sigma**2 / (kappa * (2.0 - kappa * dt))
     long = cir_closed_form_var(
         torch.arange(1, 401), kappa=1.0, theta=1.0, sigma=0.3, x0=3.0, dt=0.05
     )
@@ -472,7 +476,7 @@ def test_diff1d_closed_form_cov_matches_mc():
     """The closed-form one-step covariance traces the Monte-Carlo covariance."""
     sim = CorrelatedDiffusion1D()  # default ring params (N=40)
     x = sim.sample_state(seed=0)  # a single state vector (N,)
-    cov_cf = diff1d_closed_form_cov(x)  # (N, N): G diag(sigma2(x)) Gᵀ + delta² I
+    cov_cf = sim.closed_form_cov(x)  # (N, N): G diag(sigma2(x)) Gᵀ + delta² I
     eps = sim.sample_noise(x, n=200_000, seed=1)  # (n, N) draws from N(0, Sigma(x))
     cov_mc = torch.cov(eps.T)
     assert torch.allclose(cov_cf, cov_mc, atol=2e-2, rtol=5e-2)
@@ -483,7 +487,7 @@ def test_diff1d_forcing_is_genuinely_correlated():
     actually exercises collection coverage; gen_diff1d.py verification gate 3)."""
     sim = CorrelatedDiffusion1D()
     x = sim.sample_state(seed=0)
-    cov = diff1d_closed_form_cov(x)
+    cov = sim.closed_form_cov(x)
     d = torch.sqrt(torch.diag(cov))
     corr = cov / torch.outer(d, d)
     nn = torch.tensor([corr[i, (i + 1) % sim.n_sites] for i in range(sim.n_sites)])
@@ -523,7 +527,7 @@ def test_diff2d_closed_form_cov_matches_mc():
     """The closed-form one-step covariance traces the Monte-Carlo covariance."""
     sim = CorrelatedDiffusion2D()  # default torus params (8x8 = 64 sites)
     x = sim.sample_state(seed=0)  # a single field, flattened to (64,)
-    cov_cf = diff2d_closed_form_cov(x)  # (64, 64): G diag(sigma2(x)) Gᵀ + delta² I
+    cov_cf = sim.closed_form_cov(x)  # (64, 64): G diag(sigma2(x)) Gᵀ + delta² I
     eps = sim.sample_noise(x, n=200_000, seed=1)  # (n, 64) draws from N(0, Sigma(x))
     cov_mc = torch.cov(eps.T)
     assert torch.allclose(cov_cf, cov_mc, atol=2e-2, rtol=5e-2)
@@ -535,7 +539,7 @@ def test_diff2d_forcing_is_genuinely_correlated():
     sim = CorrelatedDiffusion2D()
     ns = sim.n_side
     x = sim.sample_state(seed=0)
-    cov = diff2d_closed_form_cov(x)
+    cov = sim.closed_form_cov(x)
     d = torch.sqrt(torch.diag(cov))
     corr = cov / torch.outer(d, d)
     idx = torch.arange(ns * ns).reshape(ns, ns)
@@ -555,3 +559,81 @@ def test_diff2d_rejects_non_contractive_mean():
     """gamma/kappa that push the mean operator past the unit circle are rejected."""
     with pytest.raises(ValueError, match="contractive"):
         CorrelatedDiffusion2D(gamma=0.0, kappa=2.0)
+
+
+# ---------------------------------------------------------------------------
+# mc_reference rollout oracle: the multi-step DGP reference. Its first-step
+# spread must reproduce the closed-form forcing covariance (ties the rollout to
+# the oracle), and it must be deterministic under a fixed seed.
+# ---------------------------------------------------------------------------
+
+
+def test_diff1d_mc_reference_first_step_matches_closed_form_cov():
+    """mc_reference's first-step across-member covariance equals Sigma(x0)."""
+    sim = CorrelatedDiffusion1D()
+    x = sim.sample_state(seed=0)
+    mc = sim.mc_reference(x, n_draws=100_000, n_steps=2, random_seed=1)
+    assert mc.shape == (100_000, 2, sim.n_sites, 1, 1)
+    step0 = mc[:, 0].reshape(100_000, sim.n_sites)  # eps around A x0
+    cov_mc = torch.cov(step0.T)
+    cov_cf = sim.closed_form_cov(x)
+    assert torch.allclose(cov_cf, cov_mc, atol=2e-2, rtol=5e-2)
+    # deterministic under a fixed seed
+    mc_again = sim.mc_reference(x, n_draws=64, n_steps=4, random_seed=1)
+    assert torch.equal(
+        mc_again, sim.mc_reference(x, n_draws=64, n_steps=4, random_seed=1)
+    )
+
+
+# ---------------------------------------------------------------------------
+# Reproducibility gate: forward_samples_spatiotemporal must be deterministic
+# under a fixed seed (both the sampled inputs AND the process noise) and
+# seed-sensitive under a different seed. Locks in the seeding fix across every
+# stochastic simulator so an unseeded RNG can never silently regress.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("cls", "kwargs"),
+    [
+        (OrnsteinUhlenbeck, {"n_steps": 8}),
+        (CoxIngersollRoss, {"n_steps": 8}),
+        (DoubleWell, {"n_steps": 8}),
+        (Lorenz96, {"n_steps": 8}),
+        (GrayScottStochastic, {"n_steps": 8, "grid_size": 8}),
+        (MultivariateOULens, {"n_steps": 8}),
+        (CorrelatedDiffusion1D, {"n_steps": 8}),
+        (CorrelatedDiffusion2D, {"n_steps": 8}),
+        (Lorenz96Correlated, {"n_steps": 8, "burn": 10}),
+    ],
+)
+def test_forward_samples_is_seed_reproducible(cls, kwargs):
+    """Same seed -> identical batch; different seed -> different data."""
+    sim = cls(**kwargs)
+    out_a = sim.forward_samples_spatiotemporal(4, random_seed=123)
+    out_b = sim.forward_samples_spatiotemporal(4, random_seed=123)
+    out_c = sim.forward_samples_spatiotemporal(4, random_seed=456)
+
+    # Determinism: a fixed seed reproduces both the data and the sampled inputs.
+    assert torch.equal(out_a["data"], out_b["data"])
+    assert torch.equal(out_a["constant_scalars"], out_b["constant_scalars"])
+
+    # Seed-sensitivity: the process noise actually depends on the seed, so a
+    # different seed must move the data (guards against an unseeded RNG path).
+    assert not torch.equal(out_a["data"], out_c["data"])
+
+
+def test_diff2d_mc_reference_first_step_matches_closed_form_cov():
+    """mc_reference's first-step across-member covariance equals Sigma(x0) (torus)."""
+    sim = CorrelatedDiffusion2D()
+    x = sim.sample_state(seed=0)
+    mc = sim.mc_reference(x, n_draws=100_000, n_steps=2, random_seed=1)
+    assert mc.shape == (100_000, 2, sim.n_side, sim.n_side, 1)
+    step0 = mc[:, 0].reshape(100_000, sim.n_sites)
+    cov_mc = torch.cov(step0.T)
+    cov_cf = sim.closed_form_cov(x)
+    assert torch.allclose(cov_cf, cov_mc, atol=2e-2, rtol=5e-2)
+    mc_again = sim.mc_reference(x, n_draws=64, n_steps=4, random_seed=1)
+    assert torch.equal(
+        mc_again, sim.mc_reference(x, n_draws=64, n_steps=4, random_seed=1)
+    )

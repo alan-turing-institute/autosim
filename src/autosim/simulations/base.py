@@ -161,9 +161,12 @@ class Simulator(ABC, ValidationMixin):
             return const_vals.repeat(n_samples, 1)
 
         if method.lower() == "lhs":
-            sampler = qmc.LatinHypercube(d=len(self.sample_param_bounds))
+            # scipy>=1.15 renamed the QMC seeding kwarg from ``seed`` to ``rng``.
+            sampler = qmc.LatinHypercube(
+                d=len(self.sample_param_bounds), rng=random_seed
+            )
         elif method.lower() == "sobol":
-            sampler = qmc.Sobol(d=len(self.sample_param_bounds))
+            sampler = qmc.Sobol(d=len(self.sample_param_bounds), rng=random_seed)
         else:
             msg = (
                 f"Invalid sampling method: {method}. "
