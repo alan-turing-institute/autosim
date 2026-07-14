@@ -150,3 +150,17 @@ uv run autosim \
 	++simulator.my_arg=42 \
 	simulator.log_level=warning
 ```
+
+## Citation
+
+```bibtex
+@misc{greenbury-etal-2026-reliability,
+      title={Reliability of Probabilistic Emulation of Physical Systems}, 
+      author={Sam F. Greenbury and Radka Jersakova and Paolo Conti and Marjan Famili and Christopher Iliffe Sprague and Edwin Brown and Jason D. McEwen},
+      year={2026},
+      eprint={2606.12997},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2606.12997}, 
+}
+```
