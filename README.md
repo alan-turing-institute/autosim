@@ -72,6 +72,8 @@ uv run autosim \
 	simulator.nx=32 \
 	simulator.ny=32 \
 	simulator.T=10.0 \
+	simulator.dt_save=0.2 \
+	simulator.skip_nt=0 \
 	dataset.n_train=50 dataset.n_valid=10 dataset.n_test=10 \
 	dataset.output_dir=examples/experimental/generated_datasets/shallow_water_small \
 	seed=123 overwrite=true
