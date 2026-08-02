@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
@@ -12,12 +13,22 @@ from hydra.utils import get_original_cwd, instantiate
 from omegaconf import DictConfig, OmegaConf
 
 from autosim.simulations.base import SpatioTemporalSimulator
-from autosim.utils import plot_spatiotemporal_video
 
 if not OmegaConf.has_resolver("shortuuid"):
     OmegaConf.register_new_resolver(
         "shortuuid", lambda n=7: uuid.uuid4().hex[: int(n)], use_cache=True
     )
+
+
+def _load_video_plotter() -> Callable[..., Any]:
+    """Load the video plotter with a backend suitable for CLI file output."""
+    import matplotlib as mpl  # noqa: PLC0415
+
+    mpl.use("Agg", force=True)
+
+    from autosim.utils import plot_spatiotemporal_video  # noqa: PLC0415
+
+    return plot_spatiotemporal_video
 
 
 def build_simulator(simulator_cfg: Any) -> SpatioTemporalSimulator:
@@ -163,6 +174,7 @@ def save_example_videos(
     if configured_channel_names is not None:
         resolved_channel_names = [str(name) for name in configured_channel_names]
 
+    plot_spatiotemporal_video = _load_video_plotter()
     for idx in batch_indices:
         save_path = videos_dir / f"batch_{idx}.{file_ext}"
         if save_path.exists() and not overwrite:

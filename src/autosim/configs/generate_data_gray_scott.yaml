@@ -18,7 +18,7 @@ stratify:
   values: [spirals, spots, worms, maze, gliders, bubbles]
 
 visualize:
-  enabled: true
+  enabled: false
   split: train
   batch_indices: [0, 1, 2, 3]
   fps: 5

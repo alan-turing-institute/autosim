@@ -86,7 +86,8 @@ uv run autosim \
 	dataset.n_train=1 dataset.n_valid=1 dataset.n_test=1
 ```
 
-Optionally save example rollout videos for selected batch indices after generation:
+Visualization is disabled by default. Enable it to save example MP4 rollout videos
+for selected batch indices after generation:
 
 ```bash
 uv run autosim \
@@ -95,12 +96,12 @@ uv run autosim \
 	visualize.enabled=true \
 	visualize.split=train \
 	visualize.batch_indices=[0,2] \
-	visualize.file_ext=gif
+	visualize.file_ext=mp4
 ```
 
 By default videos are written under
 `<dataset.output_dir>/examples/<split>/batch_<idx>.<ext>`.
-Use `visualize.file_ext=mp4` if ffmpeg is available.
+MP4 output requires ffmpeg. If it is unavailable, use `visualize.file_ext=gif`.
 
 	Generate one combined dataset from ordered strata values (single sweep key):
 

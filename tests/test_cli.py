@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -165,6 +166,61 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
     output_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     assert "advection_diffusion" in output_lines
     assert "shallow_water2d" in output_lines
+
+
+def test_cli_list_does_not_load_matplotlib_backend() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["MPLBACKEND"] = "not-a-matplotlib-backend"
+
+    result = subprocess.run(
+        [sys.executable, "-m", "autosim.cli", "list"],
+        check=True,
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert "shallow_water2d" in result.stdout
+
+
+def test_cli_video_plotter_uses_headless_backend() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["MPLBACKEND"] = "TkAgg"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from autosim.cli import _load_video_plotter; "
+                "_load_video_plotter(); "
+                "import matplotlib; "
+                "print(matplotlib.get_backend())"
+            ),
+        ],
+        check=True,
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert result.stdout.strip().lower() == "agg"
+
+
+@pytest.mark.parametrize(
+    "config_name",
+    ["generate_data.yaml", "generate_data_gpe.yaml", "generate_data_gray_scott.yaml"],
+)
+def test_generation_configs_disable_visualization_by_default(config_name: str) -> None:
+    config_dir = Path(__file__).resolve().parents[1] / "src" / "autosim" / "configs"
+    config_path = config_dir / config_name
+
+    cfg = OmegaConf.load(config_path)
+
+    assert cfg.visualize.enabled is False
 
 
 def test_compute_normalization_stats_includes_temporal_deltas() -> None:
@@ -438,14 +494,14 @@ def test_save_example_videos_empty_batch_indices_is_noop(
 ) -> None:
     import autosim.cli as cli_module  # noqa: PLC0415
 
-    calls: list = []
     monkeypatch.setattr(
-        cli_module, "plot_spatiotemporal_video", lambda **kw: calls.append(kw)
+        cli_module,
+        "_load_video_plotter",
+        lambda: pytest.fail("disabled video rendering loaded Matplotlib"),
     )
 
     cfg = OmegaConf.create({"enabled": True, "split": "train", "batch_indices": []})
     save_example_videos(splits=dummy_splits, output_dir=tmp_path, visualize_cfg=cfg)
-    assert calls == []
 
 
 def test_save_example_videos_out_of_range_raises(tmp_path: Path, dummy_splits) -> None:
@@ -476,7 +532,7 @@ def test_save_example_videos_uses_batch_indices_and_split(
         save_path.write_text("stub")
         calls.append(kwargs)
 
-    monkeypatch.setattr(cli_module, "plot_spatiotemporal_video", _fake)
+    monkeypatch.setattr(cli_module, "_load_video_plotter", lambda: _fake)
 
     cfg = OmegaConf.create(
         {
