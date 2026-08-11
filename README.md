@@ -81,8 +81,9 @@ Available simulator config groups include:
   `seir_simulator`.
 - Experimental configs:
   `experimental/compressible_fluid_2d`,
-  `experimental/hydrodynamics_2d`, `experimental/lattice_boltzmann`, and
-  `experimental/shallow_water2d`.
+  `experimental/hydrodynamics_2d`, `experimental/lattice_boltzmann`,
+  `experimental/shallow_water2d`, and
+  `experimental/shallow_water2d_forced`.
 
 Additional exploratory GPE configs are available under `experimental/gpe/` for
 reference and in-progress work (note: `high_complexity` and `low_complexity`

@@ -29,7 +29,7 @@ These examples use simulators that are still under `autosim.experimental`.
 
 ### Weather-like and transport families
 
-- [Shallow-Water 2D](experimental/01_01_shallow_water_equation.ipynb): A geophysical fluid model that evolves height and horizontal velocity fields to capture wave propagation, rotation effects, and balanced flow structure.
+- [Shallow-Water 2D](experimental/01_01_shallow_water_equation.ipynb): A geophysical fluid model with deterministic, vortical, geostrophically balanced, and wind-stress-like momentum forcing, including optional white or temporally correlated Ornstein-Uhlenbeck noise.
 
 ### Classical fluid dynamics families
 

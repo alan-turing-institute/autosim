@@ -88,8 +88,8 @@ class ShallowWater2D(SpatioTemporalSimulator):
             - ``beta``: central planetary-vorticity gradient.
             - ``f0``: reference Coriolis parameter; zero disables constant
               rotation.
-            - ``forcing_energy_rate``: ensemble-mean stochastic
-              specific-energy injection rate.
+            - ``forcing_energy_rate``: diffusion scale in the linearized SWE
+              specific-energy norm.
             - ``forcing_correlation_time``: OU e-folding time; zero selects
               white noise.
 
@@ -116,7 +116,9 @@ class ShallowWater2D(SpatioTemporalSimulator):
             ``"vortical"``, geostrophically ``"balanced"``, unconstrained
             ``"momentum"`` forcing.
         forcing_energy_rate
-            Ensemble-mean specific-energy injection rate.
+            Diffusion scale in the linearized SWE specific-energy norm. For
+            white noise it sets the expected increment energy per unit time;
+            for resolved OU forcing it sets the long-time diffusion rate.
         forcing_wavenumber, forcing_bandwidth
             Central angular wavenumber and width of the Gaussian spectral
             ring. A central wavenumber ``k`` corresponds to wavelength
@@ -599,7 +601,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     k_min = 2.0 * math.pi / max(Lx, Ly)
     k_cut = k_min * (min(nx, ny) // K_CUT_FACTOR)
 
-    # Component 1: random large-scale streamfunction (k^{-2} → E(k)~k^{-3})
+    # Component 1: random large-scale streamfunction with k^{-2} weighting
     random_field = torch.randn(nx, ny, dtype=dtype)
     psi_hat_rand = to_spec(random_field).to(dtype=complex_dtype)
     K_mag = torch.sqrt(K2 + k_min**2)
