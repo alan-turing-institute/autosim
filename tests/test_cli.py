@@ -168,6 +168,7 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
     output_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     assert "spatiotemporal/advection_diffusion" in output_lines
     assert "experimental/shallow_water2d" in output_lines
+    assert "experimental/shallow_water2d_forced" in output_lines
     assert all("\\" not in line for line in output_lines)
 
 
