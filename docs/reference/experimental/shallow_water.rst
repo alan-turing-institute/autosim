@@ -13,6 +13,24 @@ produces spatially varying Coriolis acceleration in ``periodic_beta`` mode.
 At ``f0=0``, ``balanced`` forcing has no height component and therefore
 reduces to ``vortical`` forcing.
 
+Zero-gravity limit
+------------------
+
+Setting ``g=0`` removes height-gradient feedback from the momentum equations
+and initializes ``h`` uniformly. With ``f0=beta=0``, velocity follows forced,
+damped two-dimensional vector-Burgers dynamics:
+
+.. math::
+
+   \partial_t \mathbf{u} + \mathbf{u}\cdot\nabla\mathbf{u}
+   = \nu\nabla^2\mathbf{u} - r\mathbf{u} + \mathbf{F}.
+
+The continuity equation is still integrated, so ``h`` is a passive field rather
+than a constant. This limit is not incompressible Navier--Stokes: even when
+``vortical`` forcing is divergence-free, nonlinear evolution can generate
+velocity divergence. Smaller initial amplitudes and stronger viscosity and drag
+than the gravity-supported defaults help prevent compressive steepening.
+
 Forcing choices
 ---------------
 
