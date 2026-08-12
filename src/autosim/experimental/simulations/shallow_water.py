@@ -57,6 +57,10 @@ class ShallowWater2D(SpatioTemporalSimulator):
             &= -f u - g\partial_y h + \nu\nabla^2 v - r v.
         \end{aligned}
 
+    Setting ``g=0`` removes height-gradient feedback from momentum. With
+    ``f0=beta=0``, velocity then follows forced, damped 2D vector-Burgers
+    dynamics while :math:`h` remains a passive continuity field.
+
     The stochastic forcing options represent different unresolved processes:
 
     - ``"vortical"`` injects divergence-free velocity and can represent
@@ -104,6 +108,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
             Grid, domain, time and CFL settings.
         g, h_mean, nu, drag, beta, f0
             Physics constants (used when not in parameters_range).
+            ``g=0`` removes height feedback and initializes a flat height field.
             ``f0=None`` derives ``sqrt(g * h_mean) / 8``; ``f0=0`` disables
             rotation when ``beta`` is also omitted.
         coriolis_mode
@@ -389,10 +394,16 @@ def _sample_swe_forcing_field(
         energy_transfer = 0.5 * K2_inv.square() * (dKx.square() + dKy.square())
         if forcing_type == "vortical":
             dh = zero
-        else:
+        elif g > 0:
             # Constant-f geostrophic balance: g * grad(dh) = f0 * grad(dpsi).
             dh = (f0 / g) * to_phys(psi_increment_hat)
             energy_transfer += 0.5 * (g / h_mean) * (f0 / g) ** 2 * K2_inv.square()
+        elif f0 == 0:
+            # With no gravity or rotation, balanced forcing reduces to vortical.
+            dh = zero
+        else:
+            msg = "balanced forcing with g=0 requires f0=0"
+            raise ValueError(msg)
         expected_energy = expected_filtered_variance(
             nx=nx,
             ny=ny,
@@ -499,8 +510,8 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     if T < 0 or dt_save <= 0 or cfl <= 0:
         msg = "T must be non-negative and dt_save/cfl must be positive"
         raise ValueError(msg)
-    if g <= 0 or h_mean <= 0:
-        msg = "g and h_mean must be positive"
+    if g < 0 or h_mean <= 0:
+        msg = "g must be non-negative and h_mean must be positive"
         raise ValueError(msg)
     if nu < 0 or drag < 0:
         msg = "nu and drag must be non-negative"
@@ -529,6 +540,9 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     c = math.sqrt(g * h_mean)
     f0 = c / 8.0 if f0 is None else f0
     beta = 0.5 * f0 / Ly if beta is None else beta
+    if g == 0 and forcing_type == "balanced" and f0 != 0:
+        msg = "balanced forcing with g=0 requires f0=0"
+        raise ValueError(msg)
     f_grid = _coriolis_grid(Y, f0=f0, beta=beta, Ly=Ly, mode=coriolis_mode)
 
     Kx, Ky, dKx, dKy = spectral_wavenumbers(nx, ny, Lx, Ly, dtype)
@@ -658,7 +672,11 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
 
     u0 = to_phys(-iKy * psi_h)  # u = -∂ψ/∂y
     v0 = to_phys(iKx * psi_h)  # v =  ∂ψ/∂x
-    h0 = (h_mean + (f0 / g) * psi0).clamp(min=0.5 * h_mean)  # geostrophic balance
+    h0 = (
+        (h_mean + (f0 / g) * psi0).clamp(min=0.5 * h_mean)
+        if g > 0
+        else torch.full_like(psi0, h_mean)
+    )
 
     def rhs(
         h: torch.Tensor, u: torch.Tensor, v: torch.Tensor

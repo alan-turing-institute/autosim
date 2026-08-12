@@ -330,11 +330,13 @@ def test_balanced_forcing_is_geostrophic() -> None:
     assert torch.count_nonzero(dv) > 0
 
 
-def test_balanced_forcing_matches_vortical_when_f0_is_zero() -> None:
+@pytest.mark.parametrize("g", [0.0, 9.81])
+def test_balanced_forcing_matches_vortical_when_f0_is_zero(g: float) -> None:
     forcing_options: dict[str, Any] = {
         "amp": 0.0,
         "T": 0.01,
         "dt_save": 0.01,
+        "g": g,
         "nu": 0.0,
         "drag": 0.0,
         "f0": 0.0,
@@ -347,6 +349,46 @@ def test_balanced_forcing_matches_vortical_when_f0_is_zero() -> None:
     balanced = _run_small_swe(**forcing_options, forcing_type="balanced")
 
     torch.testing.assert_close(balanced, vortical)
+
+
+def test_zero_gravity_velocity_is_independent_of_height() -> None:
+    options: dict[str, Any] = {
+        "amp": 0.01,
+        "T": 0.2,
+        "dt_save": 0.1,
+        "g": 0.0,
+        "nu": 0.05,
+        "drag": 0.05,
+        "f0": 0.0,
+        "beta": 0.0,
+        "coriolis_mode": "f_plane",
+        "forcing_type": "vortical",
+        "forcing_energy_rate": 1e-4,
+        "forcing_correlation_time": 0.1,
+    }
+
+    torch.manual_seed(7)
+    shallow = _run_small_swe(h_mean=1.0, **options)
+    torch.manual_seed(7)
+    deep = _run_small_swe(h_mean=2.0, **options)
+
+    torch.testing.assert_close(deep[..., 1:], shallow[..., 1:])
+    torch.testing.assert_close(deep[..., 0], 2.0 * shallow[..., 0])
+    torch.testing.assert_close(shallow[0, ..., 0], torch.ones_like(shallow[0, ..., 0]))
+
+
+def test_zero_gravity_balanced_forcing_requires_zero_f0() -> None:
+    with pytest.raises(ValueError, match="balanced forcing with g=0 requires f0=0"):
+        _run_small_swe(
+            g=0.0,
+            f0=1.0,
+            forcing_type="balanced",
+        )
+
+
+def test_negative_gravity_raises() -> None:
+    with pytest.raises(ValueError, match="g must be non-negative"):
+        _run_small_swe(g=-1.0)
 
 
 def test_momentum_forcing_includes_divergent_velocity() -> None:
