@@ -68,7 +68,11 @@ def _run_small_swe(**overrides: Any) -> torch.Tensor:
         "drag": 2e-3,
     }
     options.update(overrides)
-    return simulate_swe_2d(**options)
+    result = simulate_swe_2d(**options)
+    if isinstance(result, tuple):
+        msg = "_run_small_swe does not request energy-budget diagnostics"
+        raise RuntimeError(msg)
+    return result
 
 
 def test_full_swe_timeseries_shape_and_finite() -> None:
@@ -236,6 +240,264 @@ def test_default_f0_matches_explicit_derived_value() -> None:
     torch.testing.assert_close(default, explicit)
 
 
+def test_random_initial_condition_remains_default() -> None:
+    torch.manual_seed(7)
+    default = _run_small_swe(T=0.0)
+    torch.manual_seed(7)
+    explicit = _run_small_swe(T=0.0, initial_condition="random")
+
+    torch.testing.assert_close(default, explicit)
+
+
+def test_balanced_double_jet_is_periodic_and_geostrophic() -> None:
+    amp = 0.1
+    g = 9.81
+    h_mean = 1.0
+    nx = ny = 24
+    result = _run_small_swe(
+        amp=amp,
+        nx=nx,
+        ny=ny,
+        Lx=24.0,
+        Ly=24.0,
+        T=0.0,
+        g=g,
+        h_mean=h_mean,
+        coriolis_mode="f_plane",
+        initial_condition="balanced_double_jet",
+        jet_mode=1,
+        jet_perturbation_fraction=0.0,
+    )[0]
+    h, u, v = result.double().unbind(dim=-1)
+    f0 = (g * h_mean) ** 0.5 / 8.0
+    ky = 2j * torch.pi * torch.fft.rfftfreq(ny, d=1.0)
+    dh_dy = torch.fft.irfft2(ky[None, :] * torch.fft.rfft2(h), s=(nx, ny))
+
+    assert float(u.mean()) == pytest.approx(0.0, abs=1e-7)
+    assert float(torch.sqrt(u.square().mean())) == pytest.approx(amp, rel=1e-5)
+    assert torch.count_nonzero(v) == 0
+    torch.testing.assert_close(
+        -f0 * u,
+        g * dh_dy,
+        rtol=2e-5,
+        atol=2e-6,
+    )
+    torch.testing.assert_close(h.mean(), torch.tensor(h_mean, dtype=h.dtype))
+
+
+def test_balanced_random_pv_is_non_zonal_and_geostrophic() -> None:
+    amp = 0.1
+    g = 9.81
+    h_mean = 1.0
+    nx = ny = 24
+    domain_size = 24.0
+    result = _run_small_swe(
+        amp=amp,
+        nx=nx,
+        ny=ny,
+        Lx=domain_size,
+        Ly=domain_size,
+        T=0.0,
+        g=g,
+        h_mean=h_mean,
+        coriolis_mode="f_plane",
+        initial_condition="balanced_random_pv",
+        initial_wavenumber=4.0 * 2.0 * torch.pi / domain_size,
+        initial_bandwidth=0.5 * 2.0 * torch.pi / domain_size,
+    )[0]
+    h, u, v = result.double().unbind(dim=-1)
+    f0 = (g * h_mean) ** 0.5 / 8.0
+    kx = 2j * torch.pi * torch.fft.fftfreq(nx, d=domain_size / nx)
+    ky = 2j * torch.pi * torch.fft.rfftfreq(ny, d=domain_size / ny)
+    dh_hat = torch.fft.rfft2(h)
+    dh_dx = torch.fft.irfft2(kx[:, None] * dh_hat, s=(nx, ny))
+    dh_dy = torch.fft.irfft2(ky[None, :] * dh_hat, s=(nx, ny))
+
+    assert float(torch.sqrt((u.square() + v.square()).mean())) == pytest.approx(
+        amp, rel=1e-5
+    )
+    assert u.std().item() > 0
+    assert v.std().item() > 0
+    torch.testing.assert_close(f0 * v, g * dh_dx, rtol=2e-5, atol=2e-6)
+    torch.testing.assert_close(-f0 * u, g * dh_dy, rtol=2e-5, atol=2e-6)
+    torch.testing.assert_close(h.mean(), torch.tensor(h_mean, dtype=h.dtype))
+
+
+def test_balanced_random_pv_seed_is_reproducible() -> None:
+    options: dict[str, Any] = {
+        "T": 0.0,
+        "initial_condition": "balanced_random_pv",
+    }
+    torch.manual_seed(7)
+    first = _run_small_swe(**options)
+    torch.manual_seed(7)
+    repeated = _run_small_swe(**options)
+    torch.manual_seed(8)
+    different = _run_small_swe(**options)
+
+    torch.testing.assert_close(repeated, first, rtol=0.0, atol=0.0)
+    assert not torch.equal(different, first)
+
+
+def test_balanced_random_pv_wavenumber_is_sampled_and_used() -> None:
+    nx = ny = 24
+    domain_size = 24.0
+    fundamental_wavenumber = float(2.0 * torch.pi / domain_size)
+    bandwidth = 0.4 * fundamental_wavenumber
+    sim = _small_simulator(
+        nx=nx,
+        ny=ny,
+        Lx=domain_size,
+        Ly=domain_size,
+        T=0.0,
+        initial_condition="balanced_random_pv",
+        parameters_range={
+            "initial_bandwidth": (bandwidth, bandwidth),
+            "amp": (0.1, 0.1),
+            "initial_wavenumber": (
+                2.0 * fundamental_wavenumber,
+                6.0 * fundamental_wavenumber,
+            ),
+        },
+    )
+    result = sim.forward_samples_spatiotemporal(n=8, random_seed=7)
+    states = result["data"][:, 0]
+    parameters = result["constant_scalars"]
+
+    sampled_wavenumbers = parameters[:, sim.get_parameter_idx("initial_wavenumber")]
+    sampled_bandwidths = parameters[:, sim.get_parameter_idx("initial_bandwidth")]
+    speed_rms = torch.sqrt(states[..., 1:].square().sum(dim=-1).mean(dim=(1, 2)))
+
+    kx = 2.0 * torch.pi * torch.fft.fftfreq(nx, d=domain_size / nx)
+    ky = 2.0 * torch.pi * torch.fft.fftfreq(ny, d=domain_size / ny)
+    Kx, Ky = torch.meshgrid(kx, ky, indexing="ij")
+    wavenumber_magnitude = torch.sqrt(Kx.square() + Ky.square())
+    velocity_power = torch.fft.fft2(states[..., 1:], dim=(1, 2)).abs().square()
+    velocity_power = velocity_power.sum(dim=-1)
+    spectral_centroids = (velocity_power * wavenumber_magnitude.unsqueeze(0)).sum(
+        dim=(1, 2)
+    ) / velocity_power.sum(dim=(1, 2))
+
+    assert sampled_wavenumbers.std().item() > 0
+    torch.testing.assert_close(
+        sampled_bandwidths, torch.full_like(sampled_bandwidths, bandwidth)
+    )
+    torch.testing.assert_close(
+        speed_rms, torch.full_like(speed_rms, 0.1), rtol=1e-5, atol=1e-6
+    )
+    correlation = torch.corrcoef(
+        torch.stack((sampled_wavenumbers, spectral_centroids))
+    )[0, 1]
+    assert correlation.item() > 0.9
+
+
+def test_balanced_random_pv_sampled_bandwidth_controls_spectral_width() -> None:
+    nx = ny = 24
+    domain_size = 24.0
+    fundamental_wavenumber = float(2.0 * torch.pi / domain_size)
+    central_wavenumber = 4.0 * fundamental_wavenumber
+    sim = _small_simulator(
+        nx=nx,
+        ny=ny,
+        Lx=domain_size,
+        Ly=domain_size,
+        T=0.0,
+        initial_condition="balanced_random_pv",
+        parameters_range={
+            "initial_bandwidth": (
+                0.2 * fundamental_wavenumber,
+                1.5 * fundamental_wavenumber,
+            ),
+            "amp": (0.1, 0.1),
+            "initial_wavenumber": (central_wavenumber, central_wavenumber),
+        },
+    )
+
+    def run_with_bandwidth(bandwidth: float) -> torch.Tensor:
+        inputs = torch.tensor([[bandwidth, 0.1, central_wavenumber]])
+        torch.manual_seed(7)
+        output = sim.forward(inputs, allow_failures=False)
+        assert output is not None
+        return output.reshape(nx, ny, 3)
+
+    narrow = run_with_bandwidth(0.2 * fundamental_wavenumber)
+    broad = run_with_bandwidth(1.5 * fundamental_wavenumber)
+
+    kx = 2.0 * torch.pi * torch.fft.fftfreq(nx, d=domain_size / nx)
+    ky = 2.0 * torch.pi * torch.fft.fftfreq(ny, d=domain_size / ny)
+    Kx, Ky = torch.meshgrid(kx, ky, indexing="ij")
+    wavenumber_magnitude = torch.sqrt(Kx.square() + Ky.square())
+
+    def spectral_width(state: torch.Tensor) -> torch.Tensor:
+        power = torch.fft.fft2(state[..., 1:], dim=(0, 1)).abs().square().sum(dim=-1)
+        centroid = (power * wavenumber_magnitude).sum() / power.sum()
+        return torch.sqrt(
+            (power * (wavenumber_magnitude - centroid).square()).sum() / power.sum()
+        )
+
+    assert float(spectral_width(broad)) > 2.0 * float(spectral_width(narrow))
+
+
+def test_restart_initial_condition_preserves_supplied_state() -> None:
+    source = _run_small_swe(T=0.0)[0]
+    restarted = _run_small_swe(
+        T=0.0,
+        initial_condition="restart",
+        initial_state=source,
+    )[0]
+
+    torch.testing.assert_close(restarted, source, rtol=0.0, atol=0.0)
+
+
+def test_restart_accepts_singleton_batch_dimension() -> None:
+    source = _run_small_swe(T=0.0)
+    restarted = _run_small_swe(
+        T=0.0,
+        initial_condition="restart",
+        initial_state=source,
+    )
+
+    torch.testing.assert_close(restarted, source, rtol=0.0, atol=0.0)
+
+
+def test_restart_requires_valid_initial_state() -> None:
+    with pytest.raises(ValueError, match="initial_state is required"):
+        ShallowWater2D(initial_condition="restart")
+
+    with pytest.raises(ValueError, match="initial_state must have shape"):
+        _run_small_swe(
+            initial_condition="restart",
+            initial_state=torch.zeros(4, 4, 3),
+        )
+
+    invalid_height = torch.zeros(18, 18, 3)
+    with pytest.raises(ValueError, match="height must be strictly positive"):
+        _run_small_swe(
+            initial_condition="restart",
+            initial_state=invalid_height,
+        )
+
+
+def test_invalid_initial_condition_raises() -> None:
+    with pytest.raises(ValueError, match="initial_condition must be one of"):
+        ShallowWater2D(initial_condition="jet")
+
+    with pytest.raises(ValueError, match="initial_wavenumber"):
+        ShallowWater2D(initial_wavenumber=0.0)
+
+    with pytest.raises(ValueError, match="initial_bandwidth"):
+        ShallowWater2D(initial_bandwidth=-1.0)
+
+    with pytest.raises(ValueError, match="finite positive interval"):
+        ShallowWater2D(
+            initial_condition="balanced_random_pv",
+            parameters_range={
+                "amp": (0.1, 0.1),
+                "initial_wavenumber": (0.0, 1.0),
+            },
+        )
+
+
 def test_vortical_forcing_is_divergence_free() -> None:
     energy_rate = 2e-3
     T = 0.01
@@ -300,7 +562,76 @@ def test_additional_input_fields_require_timeseries() -> None:
         ShallowWater2D(return_additional_input_fields=True)
 
 
-def test_balanced_forcing_is_geostrophic() -> None:
+def test_energy_budget_is_transition_aligned_and_closes() -> None:
+    sim = _small_simulator(
+        return_energy_budget=True,
+        return_additional_input_fields=True,
+        T=0.2,
+        dt_save=0.1,
+        forcing_type="vortical",
+        forcing_energy_rate=1e-4,
+        parameters_range={"amp": (0.05, 0.05)},
+    )
+    result = sim.forward_samples_spatiotemporal(n=1, random_seed=4)
+    data = result["data"]
+    budget = result["energy_budget"]
+
+    assert budget is not None
+    assert budget.shape == (1, data.shape[1], len(sim.energy_budget_names))
+    assert sim.energy_budget_names == [
+        "total_energy",
+        "deterministic_energy_change",
+        "hyperviscous_energy_change",
+        "forcing_energy_change",
+        "viscous_dissipation_estimate",
+        "drag_dissipation_estimate",
+        "effective_forcing_energy_rate",
+    ]
+    total_change = budget[:, 1:, 0] - budget[:, :-1, 0]
+    decomposed_change = budget[:, :-1, 1:4].sum(dim=-1)
+    torch.testing.assert_close(total_change, decomposed_change, rtol=2e-4, atol=2e-7)
+    torch.testing.assert_close(budget[:, -1, 1:], torch.zeros_like(budget[:, -1, 1:]))
+    assert torch.all(budget[:, :-1, 4:6] >= 0)
+    torch.testing.assert_close(
+        budget[:, :-1, 6],
+        torch.full_like(budget[:, :-1, 6], sim.forcing_energy_rate),
+    )
+
+
+def test_energy_budget_does_not_change_trajectory() -> None:
+    baseline = _small_simulator(
+        forcing_type="vortical",
+        forcing_energy_rate=1e-4,
+        parameters_range={"amp": (0.05, 0.05)},
+    )
+    diagnosed = _small_simulator(
+        return_energy_budget=True,
+        forcing_type="vortical",
+        forcing_energy_rate=1e-4,
+        parameters_range={"amp": (0.05, 0.05)},
+    )
+
+    expected = baseline.forward_samples_spatiotemporal(n=1, random_seed=4)["data"]
+    actual = diagnosed.forward_samples_spatiotemporal(n=1, random_seed=4)["data"]
+    torch.testing.assert_close(actual, expected, rtol=0.0, atol=0.0)
+
+
+def test_unforced_energy_budget_has_no_forcing_terms() -> None:
+    sim = _small_simulator(return_energy_budget=True)
+    budget = sim.forward_samples_spatiotemporal(n=1, random_seed=4)["energy_budget"]
+
+    assert budget is not None
+    assert torch.count_nonzero(budget[..., 3]) == 0
+    assert torch.count_nonzero(budget[..., 6]) == 0
+
+
+def test_energy_budget_requires_timeseries() -> None:
+    with pytest.raises(ValueError, match="requires return_timeseries=True"):
+        ShallowWater2D(return_energy_budget=True)
+
+
+@pytest.mark.parametrize("forcing_type", ["balanced", "pv_balanced"])
+def test_balanced_forcing_is_geostrophic(forcing_type: str) -> None:
     energy_rate = 2e-3
     T = 0.01
     g = 9.81
@@ -311,7 +642,7 @@ def test_balanced_forcing_is_geostrophic() -> None:
         dt_save=T,
         g=g,
         h_mean=h_mean,
-        forcing_type="balanced",
+        forcing_type=forcing_type,
         forcing_energy_rate=energy_rate,
         **FORCING_OPTIONS,
     )
@@ -339,7 +670,10 @@ def test_balanced_forcing_is_geostrophic() -> None:
 
 
 @pytest.mark.parametrize("g", [0.0, 9.81])
-def test_balanced_forcing_matches_vortical_when_f0_is_zero(g: float) -> None:
+@pytest.mark.parametrize("forcing_type", ["balanced", "pv_balanced"])
+def test_balanced_forcing_matches_vortical_when_f0_is_zero(
+    g: float, forcing_type: str
+) -> None:
     forcing_options: dict[str, Any] = {
         "amp": 0.0,
         "T": 0.01,
@@ -354,7 +688,7 @@ def test_balanced_forcing_matches_vortical_when_f0_is_zero(g: float) -> None:
     torch.manual_seed(7)
     vortical = _run_small_swe(**forcing_options, forcing_type="vortical")
     torch.manual_seed(7)
-    balanced = _run_small_swe(**forcing_options, forcing_type="balanced")
+    balanced = _run_small_swe(**forcing_options, forcing_type=forcing_type)
 
     torch.testing.assert_close(balanced, vortical)
 
@@ -385,12 +719,13 @@ def test_zero_gravity_velocity_is_independent_of_height() -> None:
     torch.testing.assert_close(shallow[0, ..., 0], torch.ones_like(shallow[0, ..., 0]))
 
 
-def test_zero_gravity_balanced_forcing_requires_zero_f0() -> None:
-    with pytest.raises(ValueError, match="balanced forcing with g=0 requires f0=0"):
+@pytest.mark.parametrize("forcing_type", ["balanced", "pv_balanced"])
+def test_zero_gravity_balanced_forcing_requires_zero_f0(forcing_type: str) -> None:
+    with pytest.raises(ValueError, match="forcing with g=0 requires f0=0"):
         _run_small_swe(
             g=0.0,
             f0=1.0,
-            forcing_type="balanced",
+            forcing_type=forcing_type,
         )
 
 
@@ -425,7 +760,9 @@ def test_momentum_forcing_includes_divergent_velocity() -> None:
     assert divergence.std().item() > 0
 
 
-@pytest.mark.parametrize("forcing_type", ["vortical", "balanced", "momentum"])
+@pytest.mark.parametrize(
+    "forcing_type", ["vortical", "balanced", "pv_balanced", "momentum"]
+)
 def test_forcing_energy_is_an_ensemble_mean(forcing_type: str) -> None:
     nx = ny = 24
     Lx = Ly = 24.0
@@ -442,7 +779,7 @@ def test_forcing_energy_is_an_ensemble_mean(forcing_type: str) -> None:
         1.5 * 2.0 * torch.pi / Lx,
         mask,
     )
-    f0 = (g * h_mean) ** 0.5 / 8.0
+    f0 = 2.0 if forcing_type == "pv_balanced" else (g * h_mean) ** 0.5 / 8.0
     expected_unit_energy = _swe_forcing_expected_unit_energy(
         forcing_type=forcing_type,
         nx=nx,
@@ -618,3 +955,72 @@ def test_zero_rate_forcing_matches_unforced_solver() -> None:
     expected = unforced.forward_samples_spatiotemporal(n=1, random_seed=6)["data"]
     actual = zero_rate.forward_samples_spatiotemporal(n=1, random_seed=6)["data"]
     torch.testing.assert_close(actual, expected)
+
+
+def test_dissipation_backscatter_drives_zero_base_rate() -> None:
+    sim = _small_simulator(
+        return_energy_budget=True,
+        return_additional_input_fields=True,
+        T=0.1,
+        dt_save=0.1,
+        nu=0.05,
+        forcing_type="pv_balanced",
+        forcing_energy_rate=0.0,
+        forcing_backscatter_fraction=0.5,
+        parameters_range={"amp": (0.1, 0.1)},
+    )
+    result = sim.forward_samples_spatiotemporal(n=1, random_seed=8)
+    budget = result["energy_budget"]
+    additional = result["additional_input_fields"]
+
+    assert budget is not None
+    assert additional is not None
+    assert float(budget[0, 0, 6]) > 0
+    assert torch.count_nonzero(additional[0, 0]) > 0
+
+
+def test_backscatter_fraction_scales_diagnosed_rate() -> None:
+    common: dict[str, Any] = {
+        "return_energy_budget": True,
+        "T": 0.01,
+        "dt_save": 0.01,
+        "nu": 0.05,
+        "forcing_type": "vortical",
+        "forcing_energy_rate": 0.0,
+        "parameters_range": {"amp": (0.1, 0.1)},
+    }
+    weak = _small_simulator(**common, forcing_backscatter_fraction=0.25)
+    strong = _small_simulator(**common, forcing_backscatter_fraction=0.5)
+
+    weak_budget = weak.forward_samples_spatiotemporal(n=1, random_seed=8)[
+        "energy_budget"
+    ]
+    strong_budget = strong.forward_samples_spatiotemporal(n=1, random_seed=8)[
+        "energy_budget"
+    ]
+
+    assert weak_budget is not None
+    assert strong_budget is not None
+    assert float(weak_budget[0, 0, 6]) > 0
+    assert float(strong_budget[0, 0, 6]) == pytest.approx(
+        2.0 * float(weak_budget[0, 0, 6]), rel=1e-5
+    )
+
+
+def test_zero_backscatter_fraction_preserves_fixed_forcing() -> None:
+    common: dict[str, Any] = {
+        "forcing_type": "vortical",
+        "forcing_energy_rate": 1e-4,
+        "parameters_range": {"amp": (0.05, 0.05)},
+    }
+    default = _small_simulator(**common)
+    explicit_zero = _small_simulator(**common, forcing_backscatter_fraction=0.0)
+
+    expected = default.forward_samples_spatiotemporal(n=1, random_seed=6)["data"]
+    actual = explicit_zero.forward_samples_spatiotemporal(n=1, random_seed=6)["data"]
+    torch.testing.assert_close(actual, expected, rtol=0.0, atol=0.0)
+
+
+def test_negative_backscatter_fraction_raises() -> None:
+    with pytest.raises(ValueError, match="forcing_backscatter_fraction"):
+        ShallowWater2D(forcing_backscatter_fraction=-0.1)

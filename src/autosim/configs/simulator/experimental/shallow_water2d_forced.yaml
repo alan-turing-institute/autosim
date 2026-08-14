@@ -2,6 +2,7 @@ _target_: autosim.experimental.simulations.ShallowWater2D
 return_timeseries: true
 # Opt in only for forcing diagnostics; ML targets default to the physical state.
 return_additional_input_fields: false
+return_energy_budget: false
 log_level: warning
 nx: 64
 ny: 64
@@ -19,13 +20,22 @@ nu: 0.0005
 drag: 0.002
 coriolis_mode: periodic_beta
 dealias: true
-# Options: vortical, balanced, momentum, or none.
+# Options: random, balanced_random_pv, balanced_double_jet, or restart.
+initial_condition: random
+# null selects mode 4 with a 1.5-mode bandwidth for balanced_random_pv.
+initial_wavenumber: null
+initial_bandwidth: null
+# Options: vortical, balanced, pv_balanced, momentum, or none.
 forcing_type: vortical
 # Mode 4 gives a coherent 16-grid-point wavelength on this 64 x 64 domain.
 forcing_wavenumber: 0.39269908169872414
 forcing_bandwidth: 0.09817477042468103
 # OU e-folding time; set to 0.0 for independent white-in-time impulses.
 forcing_correlation_time: 1.0
+# Add a fraction of diagnosed viscosity and hyperviscosity losses to forcing.
+forcing_backscatter_fraction: 0.0
+# Drag is a physical large-scale sink, so exclude it from backscatter by default.
+backscatter_include_drag: false
 parameters_range:
   amp: [0.07, 0.14]
   forcing_energy_rate: [1.0e-5, 5.0e-5]
