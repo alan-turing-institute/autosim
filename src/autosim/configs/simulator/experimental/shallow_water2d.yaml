@@ -17,5 +17,10 @@ nu: 0.0005
 drag: 0.002
 coriolis_mode: periodic_beta
 dealias: true
+# Options: random, balanced_random_pv, balanced_double_jet, or restart.
+initial_condition: random
+# null selects mode 4 with a 1.5-mode bandwidth for balanced_random_pv.
+initial_wavenumber: null
+initial_bandwidth: null
 parameters_range:
   amp: [0.07, 0.14]
