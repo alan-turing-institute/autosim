@@ -15,7 +15,7 @@ uv run autosim [...] ++visualize.enabled=false
 You can generate visualizations for the 1st and 3rd training trajectories by specifying:
 
 ```bash
-uv run autosim [...] ++visualize.split=train ++visualize.batch_indices[0,2]
+uv run autosim [...] ++visualize.split=train '++visualize.batch_indices=[0,2]'
 ```
 
 ## Changing the file output

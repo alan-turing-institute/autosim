@@ -69,7 +69,9 @@ The generated dataset has the following structure:
     └── data.pt
 ```
 
-The actual data is stored in the `data.pt` files, which are PyTorch tensors containing the simulation results.
+The `data.pt` files are PyTorch-serialized dictionaries.
+The simulation trajectories are stored as tensors under the `data` key, alongside
+the `constant_scalars` and `constant_fields` entries.
 The `examples` directory contains a video of the training example, which can be used to visualize the simulation.
 
 `cli.log` is just the output of the `uv run autosim` command.

@@ -10,7 +10,7 @@ uv run autosim \
     simulator=spatiotemporal/gray_scott \
     stratify.enabled=true \
     stratify.key=simulator.pattern \
-    stratify.values=[gliders,bubbles,maze,worms,spirals,spots] \
+    'stratify.values=[gliders,bubbles,maze,worms,spirals,spots]' \
     dataset.n_train=240 dataset.n_valid=24 dataset.n_test=24 \
     dataset.output_dir=outputs/gray_scott_combined
 ```
