@@ -1,0 +1,972 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>autosim.simulations.base &#8212; AutoSim: simulation data generation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=7f8ff830"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../../../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../../../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/autosim/simulations/base';</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/AS.png" class="logo__image only-light" alt="AutoSim: simulation data generation - Home"/>
+    <img src="../../../_static/AS.png" class="logo__image only-dark pst-js-only" alt="AutoSim: simulation data generation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../../index.html">
+                    Welcome to AutoSim
+                </a>
+            </li>
+        </ul>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorials/visualize.html">Visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../tutorials/stratified.html">Stratified sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../reference/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../reference/core/index.html">Core Modules</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/core/cli.html">autosim.cli</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/core/device.html">autosim.device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/core/logging.html">autosim.logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/core/types.html">autosim.types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/core/utils.html">autosim.utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/core/validation.html">autosim.validation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../reference/simulations/index.html">Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/simulations/base.html">autosim.simulations.base</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../../reference/simulations/spatiotemporal/index.html">Spatiotemporal Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../reference/simulations/spatiotemporal/advection_diffusion.html">autosim.simulations.spatiotemporal.advection_diffusion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../reference/simulations/spatiotemporal/advection_diffusion_multichannel.html">autosim.simulations.spatiotemporal.advection_diffusion_multichannel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../reference/simulations/spatiotemporal/gray_scott.html">autosim.simulations.spatiotemporal.gray_scott</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../reference/simulations/spatiotemporal/gross_pitaevskii.html">autosim.simulations.spatiotemporal.gross_pitaevskii</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../reference/simulations/spatiotemporal/navier_stokes_conditioned.html">autosim.simulations.spatiotemporal.navier_stokes_conditioned</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../reference/simulations/spatiotemporal/reaction_diffusion.html">autosim.simulations.spatiotemporal.reaction_diffusion</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/simulations/double_pendulum.html">autosim.simulations.double_pendulum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/simulations/epidemic.html">autosim.simulations.epidemic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/simulations/flow_problem.html">autosim.simulations.flow_problem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/simulations/projectile.html">autosim.simulations.projectile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/simulations/seir.html">autosim.simulations.seir</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../reference/experimental/index.html">Experimental Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/experimental/compressible_fluid.html">autosim.experimental.simulations.compressible_fluid</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/experimental/hydrodynamics_2d.html">autosim.experimental.simulations.hydrodynamics_2d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/experimental/lattice_boltzmann.html">autosim.experimental.simulations.lattice_boltzmann</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../reference/experimental/shallow_water.html">autosim.experimental.simulations.shallow_water</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim/issues/new?title=Issue%20on%20page%20%2F_modules/autosim/simulations/base.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for autosim.simulations.base</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Base simulator interfaces and batching helpers.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">abc</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">qmc</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.device</span><span class="w"> </span><span class="kn">import</span> <span class="n">TorchDeviceMixin</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_configured_logger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeviceLike</span><span class="p">,</span> <span class="n">TensorLike</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">ValidationMixin</span><span class="p">,</span> <span class="n">set_random_seed</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;autosim&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Simulator">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.Simulator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Simulator</span><span class="p">(</span><span class="n">ABC</span><span class="p">,</span> <span class="n">ValidationMixin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for simulations. All simulators should inherit from this class.</span>
+
+<span class="sd">    This class provides the interface and common functionality for different</span>
+<span class="sd">    simulation implementations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">parameters_range</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+        <span class="n">output_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">log_level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;progress_bar&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the simulator with parameter ranges and output names.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            parameters_range: Dictionary mapping input parameter names to their (min,</span>
+<span class="sd">                max) ranges.</span>
+<span class="sd">            output_names: List of output parameters&#39; names.</span>
+<span class="sd">            log_level: Logging level for the simulator. Can be one of:</span>
+<span class="sd">                - &quot;progress_bar&quot;: shows a progress bar during batch simulations</span>
+<span class="sd">                - &quot;debug&quot;: shows debug messages</span>
+<span class="sd">                - &quot;info&quot;: shows informational messages</span>
+<span class="sd">                - &quot;warning&quot;: shows warning messages</span>
+<span class="sd">                - &quot;error&quot;: shows error messages</span>
+<span class="sd">                - &quot;critical&quot;: shows critical messages</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parameters_range</span> <span class="o">=</span> <span class="n">parameters_range</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">parameters_range</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param_bounds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">parameters_range</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="c1"># separate out param bounds to sample from and constants</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_param_bounds</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_bounds</span> <span class="k">if</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant_params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">idx</span><span class="p">:</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_bounds</span><span class="p">)</span> <span class="k">if</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output_names</span> <span class="o">=</span> <span class="n">output_names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_names</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_names</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_sample_forward</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span> <span class="o">=</span> <span class="n">get_configured_logger</span><span class="p">(</span><span class="n">log_level</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Simulator.simulator_name">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.Simulator.simulator_name">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">simulator_name</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the name of the simulator class.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">parameters_range</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dictionary mapping input parameter names to their (min, max) ranges.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parameters_range</span>
+
+    <span class="nd">@parameters_range</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">parameters_range</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">parameters_range</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the range of input parameters for the simulator.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            parameters_range: Dictionary mapping input parameter names to their (min,</span>
+<span class="sd">                max) ranges.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parameters_range</span> <span class="o">=</span> <span class="n">parameters_range</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">parameters_range</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param_bounds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">parameters_range</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_names</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_param_bounds</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_bounds</span> <span class="k">if</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant_params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">idx</span><span class="p">:</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_bounds</span><span class="p">)</span> <span class="k">if</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="p">}</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">param_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List of parameter names.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_names</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">param_bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List of parameter bounds.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_bounds</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">output_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List of output parameter names.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_names</span>
+
+    <span class="nd">@output_names</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">output_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the names of output parameters for the simulator.</span>
+
+<span class="sd">        This setter allows renaming the output parameters but does not allow</span>
+<span class="sd">        changing the number of outputs (dimensionality is fixed after initialization).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            output_names: List of output parameter names. Must have the same length as</span>
+<span class="sd">                the current number of outputs.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError</span>
+<span class="sd">                If the number of output names differs from the simulator&#39;s fixed output</span>
+<span class="sd">                dimension.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_names</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Number of output names (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">output_names</span><span class="p">)</span><span class="si">}</span><span class="s2">) must match &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;simulator output dimension (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span><span class="si">}</span><span class="s2">). Cannot change &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;dimensionality after initialization.&quot;</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output_names</span> <span class="o">=</span> <span class="n">output_names</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">in_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Input dimensionality.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_dim</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">out_dim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Output dimensionality.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out_dim</span>
+
+<div class="viewcode-block" id="Simulator.sample_inputs">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.Simulator.sample_inputs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sample_inputs</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">random_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;lhs&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorLike</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate random samples using Quasi-Monte Carlo methods.</span>
+
+<span class="sd">        Available methods are Sobol or Latin Hypercube Sampling. For overview, see</span>
+<span class="sd">        the scipy documentation:</span>
+<span class="sd">        https://docs.scipy.org/doc/scipy/reference/stats.qmc.html</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            n_samples: Number of samples to generate.</span>
+<span class="sd">            random_seed: Random seed for reproducibility. If None, no seed is set.</span>
+<span class="sd">            method: Sampling method to use. One of [&quot;lhs&quot;, &quot;sobol&quot;].</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Parameter samples (column order is given by self.param_names)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">random_seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">set_random_seed</span><span class="p">(</span><span class="n">random_seed</span><span class="p">)</span>  <span class="c1"># type: ignore PGH003</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_param_bounds</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># All parameters are constant - broadcast to n_samples</span>
+            <span class="n">const_vals</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constant_params</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+            <span class="k">return</span> <span class="n">const_vals</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;lhs&quot;</span><span class="p">:</span>
+            <span class="c1"># scipy&gt;=1.15 renamed the QMC seeding kwarg from ``seed`` to ``rng``.</span>
+            <span class="n">sampler</span> <span class="o">=</span> <span class="n">qmc</span><span class="o">.</span><span class="n">LatinHypercube</span><span class="p">(</span>
+                <span class="n">d</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_param_bounds</span><span class="p">),</span> <span class="n">rng</span><span class="o">=</span><span class="n">random_seed</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;sobol&quot;</span><span class="p">:</span>
+            <span class="n">sampler</span> <span class="o">=</span> <span class="n">qmc</span><span class="o">.</span><span class="n">Sobol</span><span class="p">(</span><span class="n">d</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_param_bounds</span><span class="p">),</span> <span class="n">rng</span><span class="o">=</span><span class="n">random_seed</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid sampling method: </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="s2">&quot;Supported methods are &#39;lhs&#39; and &#39;sobol&#39;.&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="c1"># Samples are drawn from [0, 1]^d so need to scale them</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">sampler</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">n_samples</span><span class="p">)</span>
+        <span class="n">scaled_samples</span> <span class="o">=</span> <span class="n">qmc</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span>
+            <span class="n">samples</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_param_bounds</span><span class="p">],</span>
+            <span class="p">[</span><span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_param_bounds</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">scaled_samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">scaled_samples</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="c1"># Insert constant parameters at correct indices</span>
+        <span class="n">full_samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">sample_idx</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant_params</span><span class="p">:</span>
+                <span class="n">full_samples</span><span class="p">[:,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant_params</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">full_samples</span><span class="p">[:,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">scaled_samples</span><span class="p">[:,</span> <span class="n">sample_idx</span><span class="p">]</span>
+                <span class="n">sample_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">full_samples</span></div>
+
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">TensorLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorLike</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Abstract method to perform the forward simulation.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: Input parameters into the simulation forward run.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Simulated output tensor. Shape = (1, self.out_dim).</span>
+<span class="sd">            For example, if the simulator outputs two simulated variables,</span>
+<span class="sd">            then the shape would be (1, 2).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Simulator.forward">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.Simulator.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">TensorLike</span><span class="p">,</span> <span class="n">allow_failures</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorLike</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate samples from input data using the simulator.</span>
+
+<span class="sd">        Combines the abstract method `_forward` with some validation checks.</span>
+<span class="sd">        If there is a failure during the forward pass of the simulation,</span>
+<span class="sd">        the error is logged and None is returned.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: Input tensor of shape (n_samples, self.in_dim).</span>
+<span class="sd">            allow_failures: Whether to allow failures during simulation. Default is</span>
+<span class="sd">                True. When true, failed simulations will return None instead of raising</span>
+<span class="sd">                an error. When False, error is raised.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Simulated output tensor. None if the simulation failed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">check_tensor_is_2d</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">TensorLike</span><span class="p">):</span>
+                <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_pair</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">y</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">allow_failures</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Error occurred during simulation: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+                <span class="k">raise</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Simulation failed with error </span><span class="si">%s</span><span class="s2">. Returning None&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="Simulator.forward_batch">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.Simulator.forward_batch">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward_batch</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">TensorLike</span><span class="p">,</span> <span class="n">allow_failures</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">TensorLike</span><span class="p">,</span> <span class="n">TensorLike</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run multiple simulations.</span>
+
+<span class="sd">        If allow_failures is False, failed simulations will raise an error.</span>
+<span class="sd">        Otherwise, failed simulations are skipped, and only successful results</span>
+<span class="sd">        are returned along with their corresponding input parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: Tensor of input parameters to make predictions for.</span>
+<span class="sd">            allow_failures: Whether to allow failures during simulation. Default is</span>
+<span class="sd">                True. When true, failed simulations will return None instead of raising</span>
+<span class="sd">                an error. When False, error is raised.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of (simulation_results, valid_input_parameters).</span>
+<span class="sd">            Only successful simulations are included.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Running batch simulation for </span><span class="si">%d</span><span class="s2"> samples&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">successful</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">valid_idx</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Process each sample with progress tracking</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span>
+            <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span>
+            <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Running simulations&quot;</span><span class="p">,</span>
+            <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="p">,</span>
+            <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+            <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;sample&quot;</span><span class="p">,</span>
+            <span class="n">unit_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Running simulation for sample </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">],</span> <span class="n">allow_failures</span><span class="o">=</span><span class="n">allow_failures</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+                <span class="n">valid_idx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="n">successful</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Simulation </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2"> successful&quot;</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">&quot;Simulation </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2"> failed. Result is None&quot;</span>
+                    <span class="s2">&quot; and is not appended to the results&quot;</span><span class="p">,</span>
+                    <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+                <span class="p">)</span>
+
+        <span class="c1"># Report results</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Successfully completed </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2"> simulations (</span><span class="si">%.1f%%</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="n">successful</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">successful</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># handle no simulation results</span>
+        <span class="k">if</span> <span class="n">results</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_dim</span><span class="p">)),</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_dim</span><span class="p">))</span>
+
+        <span class="c1"># stack results into a 2D array on first dim using torch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">results_tensor</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">valid_idx</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Simulator.get_parameter_idx">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.Simulator.get_parameter_idx">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_parameter_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the index of a specific parameter.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name: Name of the parameter to retrieve.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Index of the specified parameter.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_names</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Parameter </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> not found.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Simulator.get_outputs_as_dict">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.Simulator.get_outputs_as_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_outputs_as_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TensorLike</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return simulation results as a dictionary with output names as keys.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary where keys are output names and values are tensors</span>
+<span class="sd">            of shape (n_samples,) for each output dimension.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Create dictionary mapping output names to their corresponding columns</span>
+        <span class="n">output_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">output_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_names</span><span class="p">):</span>
+            <span class="n">output_dict</span><span class="p">[</span><span class="n">output_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">results_tensor</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">output_dict</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="TorchSimulator">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.TorchSimulator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TorchSimulator</span><span class="p">(</span><span class="n">Simulator</span><span class="p">,</span> <span class="n">TorchDeviceMixin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simulator that runs computations on a specified torch device.</span>
+
+<span class="sd">    This subclass extends :class:`Simulator` with the :class:`TorchDeviceMixin`</span>
+<span class="sd">    so that simulators implemented in PyTorch (e.g., ``torchcor``) can run on</span>
+<span class="sd">    CPU or accelerator hardware. Inputs are moved to ``self.device`` before the</span>
+<span class="sd">    forward pass and the resulting tensors are kept on the same device.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">parameters_range</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+        <span class="n">output_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">log_level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;progress_bar&quot;</span><span class="p">,</span>
+        <span class="n">device</span><span class="p">:</span> <span class="n">DeviceLike</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a simulator with torch device management.&quot;&quot;&quot;</span>
+        <span class="n">Simulator</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameters_range</span><span class="p">,</span> <span class="n">output_names</span><span class="p">,</span> <span class="n">log_level</span><span class="p">)</span>
+        <span class="n">TorchDeviceMixin</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TorchSimulator.sample_inputs">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.TorchSimulator.sample_inputs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sample_inputs</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">random_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;lhs&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorLike</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sample inputs and move them to the simulator&#39;s device.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            n_samples: Number of samples to generate.</span>
+<span class="sd">            random_seed: Optional random seed to make sampling reproducible.</span>
+<span class="sd">            method: Sampling method, one of ``&quot;lhs&quot;`` or ``&quot;sobol&quot;``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Sampled inputs located on ``self.device``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">sample_inputs</span><span class="p">(</span>
+            <span class="n">n_samples</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="n">random_seed</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span>
+        <span class="p">)</span>
+        <span class="p">(</span><span class="n">samples_device</span><span class="p">,)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_move_tensors_to_device</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">samples_device</span></div>
+
+
+<div class="viewcode-block" id="TorchSimulator.forward">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.TorchSimulator.forward">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">TensorLike</span><span class="p">,</span> <span class="n">allow_failures</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorLike</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run a single simulation on the configured device.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: Input tensor with shape ``(n_samples, in_dim)``.</span>
+<span class="sd">            allow_failures: When True, failures return ``None`` instead of raising.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Simulation result on ``self.device`` or ``None`` on failure.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">x_device</span><span class="p">,)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_move_tensors_to_device</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">x_device</span><span class="p">,</span> <span class="n">allow_failures</span><span class="o">=</span><span class="n">allow_failures</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">y</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">y</span></div>
+
+
+<div class="viewcode-block" id="TorchSimulator.forward_batch">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.TorchSimulator.forward_batch">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward_batch</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">TensorLike</span><span class="p">,</span> <span class="n">allow_failures</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">TensorLike</span><span class="p">,</span> <span class="n">TensorLike</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run a batch of simulations with device management.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: Batch of inputs with shape ``(batch_size, in_dim)``.</span>
+<span class="sd">            allow_failures: Whether to skip failures (True) or raise immediately</span>
+<span class="sd">                (False).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of ``(results, valid_inputs)`` residing on ``self.device``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">x_device</span><span class="p">,)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_move_tensors_to_device</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">results</span><span class="p">,</span> <span class="n">valid_inputs</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">forward_batch</span><span class="p">(</span>
+            <span class="n">x_device</span><span class="p">,</span> <span class="n">allow_failures</span><span class="o">=</span><span class="n">allow_failures</span>
+        <span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_tensor</span> <span class="o">=</span> <span class="n">results</span>
+        <span class="n">valid_inputs</span> <span class="o">=</span> <span class="n">valid_inputs</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">results</span><span class="p">,</span> <span class="n">valid_inputs</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="SpatioTemporalSimulator">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.SpatioTemporalSimulator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SpatioTemporalSimulator</span><span class="p">(</span><span class="n">Simulator</span><span class="p">,</span> <span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for simulators that output spatiotemporal data.</span>
+
+<span class="sd">    This class extends the base Simulator with additional functionality for</span>
+<span class="sd">    handling spatiotemporal outputs, such as reshaping to spatiotemporal format</span>
+<span class="sd">    and returning constant fields.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SpatioTemporalSimulator.forward_samples_spatiotemporal">
+<a class="viewcode-back" href="../../../reference/simulations/base.html#autosim.simulations.base.SpatioTemporalSimulator.forward_samples_spatiotemporal">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward_samples_spatiotemporal</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">random_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ensure_exact_n</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate spatiotemporal samples from the simulator.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            n: Number of samples to generate.</span>
+<span class="sd">            random_seed: Random seed for reproducibility. Defaults to None.</span>
+<span class="sd">            ensure_exact_n: When True, retry failed simulations until exactly ``n``</span>
+<span class="sd">                successful samples are collected. Defaults to False.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary containing the reshaped spatiotemporal data, constant</span>
+<span class="sd">            scalars, and constant fields.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_retry_budget</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Max retry rounds when collecting ``n`` samples with ``ensure_exact_n``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">20</span> <span class="o">*</span> <span class="n">n</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_forward_batch_with_optional_retries</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">random_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ensure_exact_n</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">TensorLike</span><span class="p">,</span> <span class="n">TensorLike</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run a batch and optionally retry until exactly ``n`` successes.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            n: Number of successful samples requested.</span>
+<span class="sd">            random_seed: Base random seed for deterministic sampling.</span>
+<span class="sd">            ensure_exact_n: Whether to keep resampling failed simulations.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of ``(simulation_results, valid_input_parameters)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_inputs</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">random_seed</span><span class="p">)</span>
+        <span class="n">y</span><span class="p">,</span> <span class="n">x_valid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_batch</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ensure_exact_n</span> <span class="ow">or</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">n</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">y</span><span class="p">,</span> <span class="n">x_valid</span>
+
+        <span class="n">y_parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">y</span><span class="p">]</span> <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="n">x_parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">x_valid</span><span class="p">]</span> <span class="k">if</span> <span class="n">x_valid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="n">successful</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Retrying failed simulations to reach n=</span><span class="si">%d</span><span class="s2">: currently </span><span class="si">%d</span><span class="s2"> successful,&quot;</span>
+            <span class="s2">&quot;</span><span class="si">%d</span><span class="s2"> remaining.&quot;</span><span class="p">,</span>
+            <span class="n">n</span><span class="p">,</span>
+            <span class="n">successful</span><span class="p">,</span>
+            <span class="n">n</span> <span class="o">-</span> <span class="n">successful</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">retry_round</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_retry_budget</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">remaining</span> <span class="o">=</span> <span class="n">n</span> <span class="o">-</span> <span class="n">successful</span>
+            <span class="n">retry_seed</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">random_seed</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">random_seed</span> <span class="o">+</span> <span class="n">retry_round</span>
+            <span class="n">y_b</span><span class="p">,</span> <span class="n">x_b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_batch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_inputs</span><span class="p">(</span><span class="n">remaining</span><span class="p">,</span> <span class="n">retry_seed</span><span class="p">))</span>
+            <span class="n">recovered</span> <span class="o">=</span> <span class="n">y_b</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">failed</span> <span class="o">=</span> <span class="n">remaining</span> <span class="o">-</span> <span class="n">recovered</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;Retry round </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2">: requested=</span><span class="si">%d</span><span class="s2"> recovered=</span><span class="si">%d</span><span class="s2"> failed=</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">retry_round</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_retry_budget</span><span class="p">(</span><span class="n">n</span><span class="p">),</span>
+                <span class="n">remaining</span><span class="p">,</span>
+                <span class="n">recovered</span><span class="p">,</span>
+                <span class="n">failed</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">y_b</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">y_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y_b</span><span class="p">)</span>
+                <span class="n">x_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x_b</span><span class="p">)</span>
+                <span class="n">successful</span> <span class="o">+=</span> <span class="n">y_b</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">successful</span> <span class="o">&gt;=</span> <span class="n">n</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Could not collect exactly n=</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> successful samples after &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_retry_budget</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="si">}</span><span class="s2"> retry rounds. Collected </span><span class="si">{</span><span class="n">successful</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">y_parts</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:</span><span class="n">n</span><span class="p">],</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">x_parts</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:</span><span class="n">n</span><span class="p">]</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The Alan Turing Institute
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Copyright &copy; 2026
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

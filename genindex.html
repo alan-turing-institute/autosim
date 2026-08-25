@@ -1,0 +1,994 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index &#8212; AutoSim: simulation data generation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=7f8ff830"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/AS.png" class="logo__image only-light" alt="AutoSim: simulation data generation - Home"/>
+    <img src="_static/AS.png" class="logo__image only-dark pst-js-only" alt="AutoSim: simulation data generation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="index.html">
+                    Welcome to AutoSim
+                </a>
+            </li>
+        </ul>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/visualize.html">Visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/stratified.html">Stratified sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="reference/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="reference/core/index.html">Core Modules</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/core/cli.html">autosim.cli</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/core/device.html">autosim.device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/core/logging.html">autosim.logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/core/types.html">autosim.types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/core/utils.html">autosim.utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/core/validation.html">autosim.validation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="reference/simulations/index.html">Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/simulations/base.html">autosim.simulations.base</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="reference/simulations/spatiotemporal/index.html">Spatiotemporal Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="reference/simulations/spatiotemporal/advection_diffusion.html">autosim.simulations.spatiotemporal.advection_diffusion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/simulations/spatiotemporal/advection_diffusion_multichannel.html">autosim.simulations.spatiotemporal.advection_diffusion_multichannel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/simulations/spatiotemporal/gray_scott.html">autosim.simulations.spatiotemporal.gray_scott</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/simulations/spatiotemporal/gross_pitaevskii.html">autosim.simulations.spatiotemporal.gross_pitaevskii</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/simulations/spatiotemporal/navier_stokes_conditioned.html">autosim.simulations.spatiotemporal.navier_stokes_conditioned</a></li>
+<li class="toctree-l4"><a class="reference internal" href="reference/simulations/spatiotemporal/reaction_diffusion.html">autosim.simulations.spatiotemporal.reaction_diffusion</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/simulations/double_pendulum.html">autosim.simulations.double_pendulum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/simulations/epidemic.html">autosim.simulations.epidemic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/simulations/flow_problem.html">autosim.simulations.flow_problem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/simulations/projectile.html">autosim.simulations.projectile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/simulations/seir.html">autosim.simulations.seir</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="reference/experimental/index.html">Experimental Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/experimental/compressible_fluid.html">autosim.experimental.simulations.compressible_fluid</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/experimental/hydrodynamics_2d.html">autosim.experimental.simulations.hydrodynamics_2d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/experimental/lattice_boltzmann.html">autosim.experimental.simulations.lattice_boltzmann</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/experimental/shallow_water.html">autosim.experimental.simulations.shallow_water</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim/issues/new?title=Issue%20on%20page%20%2Fgenindex.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#O"><strong>O</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ 
+</div>
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/spatiotemporal/advection_diffusion_multichannel.html#autosim.simulations.spatiotemporal.advection_diffusion_multichannel.advection_diffusion_rhs">advection_diffusion_rhs() (in module autosim.simulations.spatiotemporal.advection_diffusion_multichannel)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/advection_diffusion.html#autosim.simulations.spatiotemporal.advection_diffusion.AdvectionDiffusion">AdvectionDiffusion (class in autosim.simulations.spatiotemporal.advection_diffusion)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/advection_diffusion_multichannel.html#autosim.simulations.spatiotemporal.advection_diffusion_multichannel.AdvectionDiffusionMultichannel">AdvectionDiffusionMultichannel (class in autosim.simulations.spatiotemporal.advection_diffusion_multichannel)</a>
+</li>
+      <li>
+    autosim.cli
+
+      <ul>
+        <li><a href="reference/core/cli.html#module-autosim.cli">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.device
+
+      <ul>
+        <li><a href="reference/core/device.html#module-autosim.device">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.experimental.simulations.compressible_fluid
+
+      <ul>
+        <li><a href="reference/experimental/compressible_fluid.html#module-autosim.experimental.simulations.compressible_fluid">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.experimental.simulations.hydrodynamics_2d
+
+      <ul>
+        <li><a href="reference/experimental/hydrodynamics_2d.html#module-autosim.experimental.simulations.hydrodynamics_2d">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.experimental.simulations.lattice_boltzmann
+
+      <ul>
+        <li><a href="reference/experimental/lattice_boltzmann.html#module-autosim.experimental.simulations.lattice_boltzmann">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.experimental.simulations.shallow_water
+
+      <ul>
+        <li><a href="reference/experimental/shallow_water.html#module-autosim.experimental.simulations.shallow_water">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.logging
+
+      <ul>
+        <li><a href="reference/core/logging.html#module-autosim.logging">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.simulations.base
+
+      <ul>
+        <li><a href="reference/simulations/base.html#module-autosim.simulations.base">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.simulations.double_pendulum
+
+      <ul>
+        <li><a href="reference/simulations/double_pendulum.html#module-autosim.simulations.double_pendulum">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.simulations.epidemic
+
+      <ul>
+        <li><a href="reference/simulations/epidemic.html#module-autosim.simulations.epidemic">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    autosim.simulations.flow_problem
+
+      <ul>
+        <li><a href="reference/simulations/flow_problem.html#module-autosim.simulations.flow_problem">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.simulations.projectile
+
+      <ul>
+        <li><a href="reference/simulations/projectile.html#module-autosim.simulations.projectile">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.simulations.seir
+
+      <ul>
+        <li><a href="reference/simulations/seir.html#module-autosim.simulations.seir">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.simulations.spatiotemporal.advection_diffusion
+
+      <ul>
+        <li><a href="reference/simulations/spatiotemporal/advection_diffusion.html#module-autosim.simulations.spatiotemporal.advection_diffusion">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.simulations.spatiotemporal.advection_diffusion_multichannel
+
+      <ul>
+        <li><a href="reference/simulations/spatiotemporal/advection_diffusion_multichannel.html#module-autosim.simulations.spatiotemporal.advection_diffusion_multichannel">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.simulations.spatiotemporal.gray_scott
+
+      <ul>
+        <li><a href="reference/simulations/spatiotemporal/gray_scott.html#module-autosim.simulations.spatiotemporal.gray_scott">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.simulations.spatiotemporal.gross_pitaevskii
+
+      <ul>
+        <li><a href="reference/simulations/spatiotemporal/gross_pitaevskii.html#module-autosim.simulations.spatiotemporal.gross_pitaevskii">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.simulations.spatiotemporal.navier_stokes_conditioned
+
+      <ul>
+        <li><a href="reference/simulations/spatiotemporal/navier_stokes_conditioned.html#module-autosim.simulations.spatiotemporal.navier_stokes_conditioned">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.simulations.spatiotemporal.reaction_diffusion
+
+      <ul>
+        <li><a href="reference/simulations/spatiotemporal/reaction_diffusion.html#module-autosim.simulations.spatiotemporal.reaction_diffusion">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.types
+
+      <ul>
+        <li><a href="reference/core/types.html#module-autosim.types">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.utils
+
+      <ul>
+        <li><a href="reference/core/utils.html#module-autosim.utils">module</a>
+</li>
+      </ul></li>
+      <li>
+    autosim.validation
+
+      <ul>
+        <li><a href="reference/core/validation.html#module-autosim.validation">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/core/cli.html#autosim.cli.build_simulator">build_simulator() (in module autosim.cli)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/core/validation.html#autosim.validation.ValidationMixin.check_covariance">check_covariance() (ValidationMixin static method)</a>
+</li>
+      <li><a href="reference/core/device.html#autosim.device.check_model_device">check_model_device() (in module autosim.device)</a>
+</li>
+      <li><a href="reference/core/validation.html#autosim.validation.ValidationMixin.check_pair">check_pair() (ValidationMixin static method)</a>
+</li>
+      <li><a href="reference/core/validation.html#autosim.validation.ValidationMixin.check_tensor_is_2d">check_tensor_is_2d() (ValidationMixin static method)</a>
+</li>
+      <li><a href="reference/core/device.html#autosim.device.check_torch_device_is_available">check_torch_device_is_available() (in module autosim.device)</a>
+</li>
+      <li><a href="reference/core/validation.html#autosim.validation.ValidationMixin.check_vector">check_vector() (ValidationMixin static method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/core/cli.html#autosim.cli.combine_stratified_splits">combine_stratified_splits() (in module autosim.cli)</a>
+</li>
+      <li><a href="reference/experimental/compressible_fluid.html#autosim.experimental.simulations.compressible_fluid.CompressibleFluid2D">CompressibleFluid2D (class in autosim.experimental.simulations.compressible_fluid)</a>
+</li>
+      <li><a href="reference/simulations/double_pendulum.html#autosim.simulations.double_pendulum.compute_kinetic_energy">compute_kinetic_energy() (in module autosim.simulations.double_pendulum)</a>
+</li>
+      <li><a href="reference/core/cli.html#autosim.cli.compute_normalization_stats">compute_normalization_stats() (in module autosim.cli)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/navier_stokes_conditioned.html#autosim.simulations.spatiotemporal.navier_stokes_conditioned.ConditionedNavierStokes2D">ConditionedNavierStokes2D (class in autosim.simulations.spatiotemporal.navier_stokes_conditioned)</a>
+</li>
+      <li><a href="reference/core/logging.html#autosim.logging.configure_logging">configure_logging() (in module autosim.logging)</a>
+</li>
+      <li><a href="reference/experimental/lattice_boltzmann.html#autosim.experimental.simulations.lattice_boltzmann.curl_2d">curl_2d() (in module autosim.experimental.simulations.lattice_boltzmann)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/core/device.html#autosim.device.TorchDeviceMixin.device">device (TorchDeviceMixin attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/double_pendulum.html#autosim.simulations.double_pendulum.double_pendulum_equations">double_pendulum_equations() (in module autosim.simulations.double_pendulum)</a>
+</li>
+      <li><a href="reference/simulations/double_pendulum.html#autosim.simulations.double_pendulum.DoublePendulum">DoublePendulum (class in autosim.simulations.double_pendulum)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/epidemic.html#autosim.simulations.epidemic.Epidemic">Epidemic (class in autosim.simulations.epidemic)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/projectile.html#autosim.simulations.projectile.event">event() (in module autosim.simulations.projectile)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/projectile.html#autosim.simulations.projectile.f">f() (in module autosim.simulations.projectile)</a>
+</li>
+      <li><a href="reference/simulations/flow_problem.html#autosim.simulations.flow_problem.FlowProblem">FlowProblem (class in autosim.simulations.flow_problem)</a>
+</li>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.forward">forward() (Simulator method)</a>
+
+      <ul>
+        <li><a href="reference/simulations/base.html#autosim.simulations.base.TorchSimulator.forward">(TorchSimulator method)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.forward_batch">forward_batch() (Simulator method)</a>
+
+      <ul>
+        <li><a href="reference/simulations/base.html#autosim.simulations.base.TorchSimulator.forward_batch">(TorchSimulator method)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/simulations/spatiotemporal/advection_diffusion_multichannel.html#autosim.simulations.spatiotemporal.advection_diffusion_multichannel.AdvectionDiffusionMultichannel.forward_samples_spatiotemporal">forward_samples_spatiotemporal() (AdvectionDiffusionMultichannel method)</a>
+
+      <ul>
+        <li><a href="reference/experimental/compressible_fluid.html#autosim.experimental.simulations.compressible_fluid.CompressibleFluid2D.forward_samples_spatiotemporal">(CompressibleFluid2D method)</a>
+</li>
+        <li><a href="reference/simulations/spatiotemporal/navier_stokes_conditioned.html#autosim.simulations.spatiotemporal.navier_stokes_conditioned.ConditionedNavierStokes2D.forward_samples_spatiotemporal">(ConditionedNavierStokes2D method)</a>
+</li>
+        <li><a href="reference/simulations/spatiotemporal/gray_scott.html#autosim.simulations.spatiotemporal.gray_scott.GrayScott.forward_samples_spatiotemporal">(GrayScott method)</a>
+</li>
+        <li><a href="reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.GrossPitaevskiiEquation2D.forward_samples_spatiotemporal">(GrossPitaevskiiEquation2D method)</a>
+</li>
+        <li><a href="reference/experimental/hydrodynamics_2d.html#autosim.experimental.simulations.hydrodynamics_2d.Hydrodynamics2D.forward_samples_spatiotemporal">(Hydrodynamics2D method)</a>
+</li>
+        <li><a href="reference/experimental/lattice_boltzmann.html#autosim.experimental.simulations.lattice_boltzmann.LatticeBoltzmann.forward_samples_spatiotemporal">(LatticeBoltzmann method)</a>
+</li>
+        <li><a href="reference/simulations/spatiotemporal/reaction_diffusion.html#autosim.simulations.spatiotemporal.reaction_diffusion.ReactionDiffusion.forward_samples_spatiotemporal">(ReactionDiffusion method)</a>
+</li>
+        <li><a href="reference/experimental/shallow_water.html#autosim.experimental.simulations.shallow_water.ShallowWater2D.forward_samples_spatiotemporal">(ShallowWater2D method)</a>
+</li>
+        <li><a href="reference/simulations/base.html#autosim.simulations.base.SpatioTemporalSimulator.forward_samples_spatiotemporal">(SpatioTemporalSimulator method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.generate_complex_potential">generate_complex_potential() (in module autosim.simulations.spatiotemporal.gross_pitaevskii)</a>
+</li>
+      <li><a href="reference/core/cli.html#autosim.cli.generate_dataset_splits">generate_dataset_splits() (in module autosim.cli)</a>
+</li>
+      <li><a href="reference/core/cli.html#autosim.cli.generate_normalization_stats_yaml">generate_normalization_stats_yaml() (in module autosim.cli)</a>
+</li>
+      <li><a href="reference/core/utils.html#autosim.utils.generate_output_data">generate_output_data() (in module autosim.utils)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.generate_static_disorder">generate_static_disorder() (in module autosim.simulations.spatiotemporal.gross_pitaevskii)</a>
+</li>
+      <li><a href="reference/core/logging.html#autosim.logging.get_configured_logger">get_configured_logger() (in module autosim.logging)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.get_outputs_as_dict">get_outputs_as_dict() (Simulator method)</a>
+</li>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.get_parameter_idx">get_parameter_idx() (Simulator method)</a>
+</li>
+      <li><a href="reference/core/cli.html#autosim.cli.get_per_strata_counts">get_per_strata_counts() (in module autosim.cli)</a>
+</li>
+      <li><a href="reference/core/device.html#autosim.device.get_torch_device">get_torch_device() (in module autosim.device)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.GPESimulator2D">GPESimulator2D (class in autosim.simulations.spatiotemporal.gross_pitaevskii)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/gray_scott.html#autosim.simulations.spatiotemporal.gray_scott.GrayScott">GrayScott (class in autosim.simulations.spatiotemporal.gray_scott)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.GrossPitaevskiiEquation2D">GrossPitaevskiiEquation2D (class in autosim.simulations.spatiotemporal.gross_pitaevskii)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/experimental/hydrodynamics_2d.html#autosim.experimental.simulations.hydrodynamics_2d.Hydrodynamics2D">Hydrodynamics2D (class in autosim.experimental.simulations.hydrodynamics_2d)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.in_dim">in_dim (Simulator property)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.GPESimulator2D.initialize_state">initialize_state() (GPESimulator2D method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/experimental/lattice_boltzmann.html#autosim.experimental.simulations.lattice_boltzmann.LatticeBoltzmann">LatticeBoltzmann (class in autosim.experimental.simulations.lattice_boltzmann)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/core/cli.html#autosim.cli.list_simulators">list_simulators() (in module autosim.cli)</a>
+</li>
+      <li><a href="reference/core/validation.html#autosim.validation.ValidationMixin.logdet">logdet() (ValidationMixin static method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/core/cli.html#autosim.cli.main">main() (in module autosim.cli)</a>
+</li>
+      <li><a href="reference/core/validation.html#autosim.validation.ValidationMixin.max_eigval">max_eigval() (ValidationMixin static method)</a>
+</li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="reference/core/cli.html#module-autosim.cli">autosim.cli</a>
+</li>
+        <li><a href="reference/core/device.html#module-autosim.device">autosim.device</a>
+</li>
+        <li><a href="reference/experimental/compressible_fluid.html#module-autosim.experimental.simulations.compressible_fluid">autosim.experimental.simulations.compressible_fluid</a>
+</li>
+        <li><a href="reference/experimental/hydrodynamics_2d.html#module-autosim.experimental.simulations.hydrodynamics_2d">autosim.experimental.simulations.hydrodynamics_2d</a>
+</li>
+        <li><a href="reference/experimental/lattice_boltzmann.html#module-autosim.experimental.simulations.lattice_boltzmann">autosim.experimental.simulations.lattice_boltzmann</a>
+</li>
+        <li><a href="reference/experimental/shallow_water.html#module-autosim.experimental.simulations.shallow_water">autosim.experimental.simulations.shallow_water</a>
+</li>
+        <li><a href="reference/core/logging.html#module-autosim.logging">autosim.logging</a>
+</li>
+        <li><a href="reference/simulations/base.html#module-autosim.simulations.base">autosim.simulations.base</a>
+</li>
+        <li><a href="reference/simulations/double_pendulum.html#module-autosim.simulations.double_pendulum">autosim.simulations.double_pendulum</a>
+</li>
+        <li><a href="reference/simulations/epidemic.html#module-autosim.simulations.epidemic">autosim.simulations.epidemic</a>
+</li>
+        <li><a href="reference/simulations/flow_problem.html#module-autosim.simulations.flow_problem">autosim.simulations.flow_problem</a>
+</li>
+        <li><a href="reference/simulations/projectile.html#module-autosim.simulations.projectile">autosim.simulations.projectile</a>
+</li>
+        <li><a href="reference/simulations/seir.html#module-autosim.simulations.seir">autosim.simulations.seir</a>
+</li>
+        <li><a href="reference/simulations/spatiotemporal/advection_diffusion.html#module-autosim.simulations.spatiotemporal.advection_diffusion">autosim.simulations.spatiotemporal.advection_diffusion</a>
+</li>
+        <li><a href="reference/simulations/spatiotemporal/advection_diffusion_multichannel.html#module-autosim.simulations.spatiotemporal.advection_diffusion_multichannel">autosim.simulations.spatiotemporal.advection_diffusion_multichannel</a>
+</li>
+        <li><a href="reference/simulations/spatiotemporal/gray_scott.html#module-autosim.simulations.spatiotemporal.gray_scott">autosim.simulations.spatiotemporal.gray_scott</a>
+</li>
+        <li><a href="reference/simulations/spatiotemporal/gross_pitaevskii.html#module-autosim.simulations.spatiotemporal.gross_pitaevskii">autosim.simulations.spatiotemporal.gross_pitaevskii</a>
+</li>
+        <li><a href="reference/simulations/spatiotemporal/navier_stokes_conditioned.html#module-autosim.simulations.spatiotemporal.navier_stokes_conditioned">autosim.simulations.spatiotemporal.navier_stokes_conditioned</a>
+</li>
+        <li><a href="reference/simulations/spatiotemporal/reaction_diffusion.html#module-autosim.simulations.spatiotemporal.reaction_diffusion">autosim.simulations.spatiotemporal.reaction_diffusion</a>
+</li>
+        <li><a href="reference/core/types.html#module-autosim.types">autosim.types</a>
+</li>
+        <li><a href="reference/core/utils.html#module-autosim.utils">autosim.utils</a>
+</li>
+        <li><a href="reference/core/validation.html#module-autosim.validation">autosim.validation</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/core/device.html#autosim.device.move_tensors_to_device">move_tensors_to_device() (in module autosim.device)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.out_dim">out_dim (Simulator property)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.output_names">output_names (Simulator property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.param_bounds">param_bounds (Simulator property)</a>
+</li>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.param_names">param_names (Simulator property)</a>
+</li>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.parameters_range">parameters_range (Simulator property)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/core/utils.html#autosim.utils.plot_spatiotemporal_video">plot_spatiotemporal_video() (in module autosim.utils)</a>
+</li>
+      <li><a href="reference/simulations/projectile.html#autosim.simulations.projectile.Projectile">Projectile (class in autosim.simulations.projectile)</a>
+</li>
+      <li><a href="reference/simulations/projectile.html#autosim.simulations.projectile.ProjectileMultioutput">ProjectileMultioutput (class in autosim.simulations.projectile)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/spatiotemporal/reaction_diffusion.html#autosim.simulations.spatiotemporal.reaction_diffusion.reaction_diffusion">reaction_diffusion() (in module autosim.simulations.spatiotemporal.reaction_diffusion)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/spatiotemporal/reaction_diffusion.html#autosim.simulations.spatiotemporal.reaction_diffusion.ReactionDiffusion">ReactionDiffusion (class in autosim.simulations.spatiotemporal.reaction_diffusion)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.sample_inputs">sample_inputs() (Simulator method)</a>
+
+      <ul>
+        <li><a href="reference/simulations/base.html#autosim.simulations.base.TorchSimulator.sample_inputs">(TorchSimulator method)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/core/cli.html#autosim.cli.save_dataset_splits">save_dataset_splits() (in module autosim.cli)</a>
+</li>
+      <li><a href="reference/core/cli.html#autosim.cli.save_example_videos">save_example_videos() (in module autosim.cli)</a>
+</li>
+      <li><a href="reference/core/cli.html#autosim.cli.save_normalization_stats">save_normalization_stats() (in module autosim.cli)</a>
+</li>
+      <li><a href="reference/core/cli.html#autosim.cli.save_resolved_config">save_resolved_config() (in module autosim.cli)</a>
+</li>
+      <li><a href="reference/simulations/seir.html#autosim.simulations.seir.SEIRSimulator">SEIRSimulator (class in autosim.simulations.seir)</a>
+</li>
+      <li><a href="reference/core/validation.html#autosim.validation.set_random_seed">set_random_seed() (in module autosim.validation)</a>
+</li>
+      <li><a href="reference/experimental/shallow_water.html#autosim.experimental.simulations.shallow_water.ShallowWater2D">ShallowWater2D (class in autosim.experimental.simulations.shallow_water)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/advection_diffusion_multichannel.html#autosim.simulations.spatiotemporal.advection_diffusion_multichannel.simulate_advection_diffusion">simulate_advection_diffusion() (in module autosim.simulations.spatiotemporal.advection_diffusion_multichannel)</a>
+</li>
+      <li><a href="reference/experimental/compressible_fluid.html#autosim.experimental.simulations.compressible_fluid.simulate_compressible_fluid_2d">simulate_compressible_fluid_2d() (in module autosim.experimental.simulations.compressible_fluid)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/navier_stokes_conditioned.html#autosim.simulations.spatiotemporal.navier_stokes_conditioned.simulate_conditioned_navier_stokes_2d">simulate_conditioned_navier_stokes_2d() (in module autosim.simulations.spatiotemporal.navier_stokes_conditioned)</a>
+</li>
+      <li><a href="reference/simulations/double_pendulum.html#autosim.simulations.double_pendulum.simulate_double_pendulum">simulate_double_pendulum() (in module autosim.simulations.double_pendulum)</a>
+</li>
+      <li><a href="reference/simulations/epidemic.html#autosim.simulations.epidemic.simulate_epidemic">simulate_epidemic() (in module autosim.simulations.epidemic)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.simulate_gpe_2d">simulate_gpe_2d() (in module autosim.simulations.spatiotemporal.gross_pitaevskii)</a>
+</li>
+      <li><a href="reference/experimental/hydrodynamics_2d.html#autosim.experimental.simulations.hydrodynamics_2d.simulate_hydrodynamics_2d">simulate_hydrodynamics_2d() (in module autosim.experimental.simulations.hydrodynamics_2d)</a>
+</li>
+      <li><a href="reference/experimental/lattice_boltzmann.html#autosim.experimental.simulations.lattice_boltzmann.simulate_lbm_cylinder">simulate_lbm_cylinder() (in module autosim.experimental.simulations.lattice_boltzmann)</a>
+</li>
+      <li><a href="reference/simulations/projectile.html#autosim.simulations.projectile.simulate_projectile">simulate_projectile() (in module autosim.simulations.projectile)</a>
+</li>
+      <li><a href="reference/simulations/projectile.html#autosim.simulations.projectile.simulate_projectile_multioutput">simulate_projectile_multioutput() (in module autosim.simulations.projectile)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/reaction_diffusion.html#autosim.simulations.spatiotemporal.reaction_diffusion.simulate_reaction_diffusion">simulate_reaction_diffusion() (in module autosim.simulations.spatiotemporal.reaction_diffusion)</a>
+</li>
+      <li><a href="reference/simulations/seir.html#autosim.simulations.seir.simulate_seir_epidemic">simulate_seir_epidemic() (in module autosim.simulations.seir)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/gray_scott.html#autosim.simulations.spatiotemporal.gray_scott.simulate_spectral_gray_scott">simulate_spectral_gray_scott() (in module autosim.simulations.spatiotemporal.gray_scott)</a>
+</li>
+      <li><a href="reference/experimental/shallow_water.html#autosim.experimental.simulations.shallow_water.simulate_swe_2d">simulate_swe_2d() (in module autosim.experimental.simulations.shallow_water)</a>
+</li>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator">Simulator (class in autosim.simulations.base)</a>
+</li>
+      <li><a href="reference/simulations/projectile.html#autosim.simulations.projectile.simulator_base">simulator_base() (in module autosim.simulations.projectile)</a>
+</li>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.Simulator.simulator_name">simulator_name() (Simulator class method)</a>
+</li>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.SpatioTemporalSimulator">SpatioTemporalSimulator (class in autosim.simulations.base)</a>
+</li>
+      <li><a href="reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.GPESimulator2D.step">step() (GPESimulator2D method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/core/device.html#autosim.device.TorchDeviceError">TorchDeviceError</a>
+</li>
+      <li><a href="reference/core/device.html#autosim.device.TorchDeviceMixin">TorchDeviceMixin (class in autosim.device)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/simulations/base.html#autosim.simulations.base.TorchSimulator">TorchSimulator (class in autosim.simulations.base)</a>
+</li>
+      <li><a href="reference/core/validation.html#autosim.validation.ValidationMixin.trace">trace() (ValidationMixin static method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/core/validation.html#autosim.validation.ValidationMixin">ValidationMixin (class in autosim.validation)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The Alan Turing Institute
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Copyright &copy; 2026
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
