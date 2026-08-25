@@ -1,0 +1,9 @@
+_target_: autosim.experimental.simulations.Lorenz96
+log_level: warning
+n_steps: 128
+n_sites: 40
+forcing: 8.0
+c: 0.5
+dt: 0.01
+parameters_range:
+  ic_scale: [0.0, 1.0]

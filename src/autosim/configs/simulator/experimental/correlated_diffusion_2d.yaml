@@ -1,0 +1,14 @@
+_target_: autosim.experimental.simulations.CorrelatedDiffusion2D
+log_level: warning
+n_steps: 128
+burn: 200
+n_side: 8
+dt: 1.0
+gamma: 0.2
+kappa: 0.05
+ell: 1.5
+sigma0: 0.35
+beta: 1.5
+delta: 0.12
+parameters_range:
+  x0: [-1.0, 1.0]

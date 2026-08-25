@@ -1,0 +1,14 @@
+_target_: autosim.experimental.simulations.MultivariateOULens
+log_level: warning
+obs_dim: 16
+tail_alpha: 0.7
+mixing_seed: 0
+latent_noise: gaussian
+student_t_dof: 4.0
+ic_bound: 1.5
+n_steps: 64
+parameters_range:
+  z0_0: [-1.5, 1.5]
+  z0_1: [-1.5, 1.5]
+  z0_2: [-1.5, 1.5]
+  z0_3: [-1.5, 1.5]

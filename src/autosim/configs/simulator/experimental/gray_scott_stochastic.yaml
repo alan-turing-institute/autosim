@@ -1,0 +1,12 @@
+_target_: autosim.experimental.simulations.GrayScottStochastic
+log_level: warning
+n_steps: 96
+grid_size: 8
+diffusion_u: 0.16
+diffusion_v: 0.08
+feed: 0.06
+kill: 0.062
+c: 0.03
+dt: 1.0
+parameters_range:
+  ic_scale: [0.0, 1.0]

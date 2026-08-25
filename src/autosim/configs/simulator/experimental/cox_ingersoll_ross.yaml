@@ -1,0 +1,9 @@
+_target_: autosim.experimental.simulations.CoxIngersollRoss
+log_level: warning
+n_steps: 64
+kappa: 1.0
+theta: 1.0
+sigma: 0.3
+dt: 0.05
+parameters_range:
+  x0: [0.5, 2.0]

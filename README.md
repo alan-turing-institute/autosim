@@ -30,3 +30,17 @@ uv run autosim \
 ```
 
 Do check out the [documentation](https://alan-turing-institute.github.io/autosim/) for more information on configuration options and simulators!
+
+## Citation
+
+```bibtex
+@misc{greenbury-etal-2026-reliability,
+      title={Reliability of Probabilistic Emulation of Physical Systems},
+      author={Sam F. Greenbury and Radka Jersakova and Paolo Conti and Marjan Famili and Christopher Iliffe Sprague and Edwin Brown and Jason D. McEwen},
+      year={2026},
+      eprint={2606.12997},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2606.12997},
+}
+```
