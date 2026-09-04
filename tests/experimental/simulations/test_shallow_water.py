@@ -562,6 +562,68 @@ def test_invalid_forcing_scale_raises(name: str, value: float) -> None:
         ShallowWater2D(**options)
 
 
+def test_constructor_validates_grid_before_spectral_ring() -> None:
+    with pytest.raises(ValueError, match="nx and ny must be at least 6"):
+        ShallowWater2D(nx=5)
+
+    with pytest.raises(ValueError, match="Lx and Ly must be positive"):
+        ShallowWater2D(Lx=0.0)
+
+
+@pytest.mark.parametrize(
+    ("ring_name", "options"),
+    [
+        (
+            "forcing_wavenumber",
+            {
+                "forcing_type": "vortical",
+                "parameters_range": {
+                    "amp": (0.1, 0.1),
+                    "forcing_wavenumber": (4.0, 20.0),
+                },
+            },
+        ),
+        (
+            "initial_wavenumber",
+            {
+                "initial_condition": "balanced_random_pv",
+                "parameters_range": {
+                    "amp": (0.1, 0.1),
+                    "initial_wavenumber": (4.0, 20.0),
+                },
+            },
+        ),
+    ],
+)
+def test_sampled_spectral_ring_must_fit_isotropic_band(
+    ring_name: str, options: dict[str, Any]
+) -> None:
+    with pytest.raises(ValueError, match=f"{ring_name}.*isotropically retained"):
+        ShallowWater2D(
+            nx=24,
+            ny=24,
+            Lx=2.0 * math.pi,
+            Ly=2.0 * math.pi,
+            **options,
+        )
+
+
+def test_direct_forcing_ring_must_fit_isotropic_band() -> None:
+    fundamental_wavenumber = 2.0 * math.pi / 24.0
+
+    with pytest.raises(ValueError, match=r"forcing_wavenumber.*isotropically retained"):
+        _run_small_swe(
+            nx=24,
+            ny=24,
+            Lx=24.0,
+            Ly=24.0,
+            T=0.0,
+            forcing_type="vortical",
+            forcing_wavenumber=8.0 * fundamental_wavenumber,
+            forcing_bandwidth=0.5 * fundamental_wavenumber,
+        )
+
+
 def test_vortical_forcing_is_divergence_free() -> None:
     energy_rate = 2e-3
     T = 0.01
