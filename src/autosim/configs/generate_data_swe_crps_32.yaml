@@ -4,9 +4,9 @@ defaults:
 
 dataset:
   output_dir: outputs/${now:%Y-%m-%d}/swe_crps_32_${shortuuid:7}
-  n_train: 4000
-  n_valid: 400
-  n_test: 400
+  n_train: 64
+  n_valid: 8
+  n_test: 8
   ensure_exact_n: true
 
 seed: 0
@@ -18,8 +18,8 @@ stratify:
   values: []
 
 visualize:
-  enabled: false
-  split: train
+  enabled: true
+  split: test
   batch_indices: null
   max_examples: 4
   fps: 5

@@ -10,10 +10,10 @@ nx: 64
 ny: 64
 Lx: 6.283185307179586
 Ly: 6.283185307179586
-T: 5.25
+T: 71.75
 dt_save: 0.25
-# Retain only the states at t=5.0 and t=5.25.
-skip_nt: 20
+# Discard the spin-up and retain 128 states from t=40.0 through t=71.75.
+skip_nt: 160
 cfl: 0.12
 
 g: 9.81
@@ -30,9 +30,9 @@ initial_condition: balanced_random_pv
 initial_wavenumber: 4.0
 initial_bandwidth: 1.5
 
-# Match the 32 x 32 forcing scale while reducing the nominal diffusion rate.
+# Match the 32 x 32 forcing scale and resolved-scale energy injection.
 forcing_type: vortical
-forcing_energy_rate: 1.0e-3
+forcing_energy_rate: 1.5e-3
 forcing_wavenumber: 3.0
 forcing_bandwidth: 0.7
 forcing_correlation_time: 0.0
