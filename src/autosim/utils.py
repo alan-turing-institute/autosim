@@ -39,6 +39,8 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
     cmap: str = "viridis",
     save_path: str | None = None,
     title: str = "Ground Truth vs Prediction",
+    true_label: str = "Ground Truth",
+    pred_label: str = "Prediction",
     pred_uq_label: str = "Prediction UQ",
     colorbar_mode: Literal["none", "row", "column", "all"] = "none",
     colorbar_mode_uq: Literal["none", "row"] = "none",
@@ -58,6 +60,8 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
         cmap: Colormap to use (default: "viridis").
         save_path: Optional path to save the video (e.g., "output.mp4").
         title: Title for the video (default: "Ground Truth vs Prediction").
+        true_label: Row label used for ``true``.
+        pred_label: Row label used for ``pred``.
         pred_uq_label: Row label used when plotting prediction uncertainty.
         colorbar_mode: Select how colorbars (and underlying color scales) are shared for
             the first two rows (true vs prediction):
@@ -154,11 +158,13 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
         diff_norm = TwoSlopeNorm(vmin=-diff_span, vcenter=0, vmax=diff_span)
 
     rows_to_plot: list[tuple[np.ndarray | Tensor | None, str, str]] = [
-        (true_batch, "Ground Truth", cmap),
+        (true_batch, true_label, cmap),
     ]
     if pred is not None:
-        rows_to_plot.append((pred_batch, "Prediction", cmap))
-        rows_to_plot.append((diff_batch, "Difference (True - Pred)", "RdBu"))
+        rows_to_plot.append((pred_batch, pred_label, cmap))
+        rows_to_plot.append(
+            (diff_batch, f"Difference ({true_label} - {pred_label})", "RdBu")
+        )
     if pred_uq is not None:
         rows_to_plot.append((pred_uq_batch, pred_uq_label, "inferno"))
     total_rows = len(rows_to_plot)
