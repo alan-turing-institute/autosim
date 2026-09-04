@@ -172,6 +172,7 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
     assert "experimental/shallow_water2d_forced" in output_lines
     assert "experimental/shallow_water2d_crps_32" in output_lines
     assert "experimental/shallow_water2d_crps_64" in output_lines
+    assert "experimental/shallow_water2d_crps_deterministic_32" in output_lines
     assert all("\\" not in line for line in output_lines)
 
 
@@ -213,11 +214,58 @@ def test_swe_crps_simulator_configs(
     assert sim.return_energy_budget is False
 
 
+def test_swe_crps_deterministic_simulator_config() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    config_dir = repo_root / "src/autosim/configs/simulator/experimental"
+    deterministic_cfg = OmegaConf.load(
+        config_dir / "shallow_water2d_crps_deterministic_32.yaml"
+    )
+    aleatoric_cfg = OmegaConf.load(config_dir / "shallow_water2d_crps_32.yaml")
+    sim = build_simulator(deterministic_cfg)
+
+    assert isinstance(sim, ShallowWater2D)
+    assert (sim.T, sim.dt_save, sim.skip_nt) == pytest.approx((36.75, 0.25, 20))
+    assert sim.forcing_type == "none"
+    assert sim.parameters_range == {"amp": [0.1, 0.1]}
+    assert sim.output_names == ["h", "u", "v"]
+    assert sim.return_timeseries is True
+    assert sim.return_additional_input_fields is False
+    assert sim.return_energy_budget is False
+
+    matching_fields = (
+        "nx",
+        "ny",
+        "Lx",
+        "Ly",
+        "dt_save",
+        "cfl",
+        "g",
+        "h_mean",
+        "f0",
+        "beta",
+        "nu",
+        "drag",
+        "coriolis_mode",
+        "dealias",
+        "initial_condition",
+        "initial_wavenumber",
+        "initial_bandwidth",
+        "forcing_backscatter_fraction",
+        "backscatter_include_drag",
+        "parameters_range",
+    )
+    for field in matching_fields:
+        assert OmegaConf.select(deterministic_cfg, field) == OmegaConf.select(
+            aleatoric_cfg, field
+        )
+
+
 @pytest.mark.parametrize(
     ("config_name", "resolution", "split_sizes"),
     [
         ("generate_data_swe_crps_32", 32, (64, 8, 8)),
         ("generate_data_swe_crps_64", 64, (64, 8, 8)),
+        ("generate_data_swe_crps_deterministic_32", 32, (64, 8, 8)),
     ],
 )
 def test_cli_generates_dataset_with_swe_crps_config(
