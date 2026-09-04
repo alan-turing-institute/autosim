@@ -21,7 +21,9 @@ state. ``"balanced_random_pv"`` samples an isotropic Gaussian ring of
 potential-vorticity modes, applies deformation-radius-aware inversion, and
 normalizes the RMS speed to ``amp``. ``initial_wavenumber`` and
 ``initial_bandwidth`` control its central scale and spectral width; their
-defaults correspond to modes 4 and 1.5 on the longest domain side.
+defaults prefer modes 4 and 1.5 on the longest domain side. On a small grid
+that cannot retain mode 4 isotropically, the default centre is clamped to the
+largest isotropically retained mode.
 Either value may instead be included in ``parameters_range``. It is then
 sampled independently for every trajectory and returned in
 ``constant_scalars``, allowing emulator datasets to span multiple resolved
@@ -100,8 +102,9 @@ eddy stirring. ``forcing_bandwidth`` controls how many neighbouring scales are
 excited. Spectral forcing is a standard choice on this periodic FFT grid and
 also makes the vortical constraint exact up to numerical precision.
 The ring centre must fit inside the largest circular band retained in every
-Fourier direction. Fixed values and sampled ranges that place the peak only in
-the rectangular mask's diagonal corners are rejected before generation.
+Fourier direction. Internally selected defaults are clamped to that band on
+small grids. Fixed values and sampled ranges that place the peak only in the
+rectangular mask's diagonal corners are rejected before generation.
 
 The Fourier ring is an idealized homogeneous, direction-neutral covariance:
 it controls the injected scale, not the location of storms, coastlines, or
