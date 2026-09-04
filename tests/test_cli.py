@@ -179,7 +179,7 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
     ("config_name", "resolution", "nu", "forcing_energy_rate"),
     [
         ("shallow_water2d_crps_32", 32, 1.0e-4, 1.5e-3),
-        ("shallow_water2d_crps_64", 64, 5.0e-5, 1.0e-3),
+        ("shallow_water2d_crps_64", 64, 5.0e-5, 1.5e-3),
     ],
 )
 def test_swe_crps_simulator_configs(
@@ -198,7 +198,7 @@ def test_swe_crps_simulator_configs(
     assert isinstance(sim, ShallowWater2D)
     assert (sim.nx, sim.ny) == (resolution, resolution)
     assert (sim.Lx, sim.Ly) == pytest.approx((6.283185307179586,) * 2)
-    assert (sim.T, sim.dt_save, sim.skip_nt) == pytest.approx((5.25, 0.25, 20))
+    assert (sim.T, sim.dt_save, sim.skip_nt) == pytest.approx((71.75, 0.25, 160))
     assert sim.initial_condition == "balanced_random_pv"
     assert sim.forcing_type == "vortical"
     assert sim.forcing_wavenumber == pytest.approx(3.0)
@@ -216,8 +216,8 @@ def test_swe_crps_simulator_configs(
 @pytest.mark.parametrize(
     ("config_name", "resolution", "split_sizes"),
     [
-        ("generate_data_swe_crps_32", 32, (4000, 400, 400)),
-        ("generate_data_swe_crps_64", 64, (8000, 800, 800)),
+        ("generate_data_swe_crps_32", 32, (64, 8, 8)),
+        ("generate_data_swe_crps_64", 64, (64, 8, 8)),
     ],
 )
 def test_cli_generates_dataset_with_swe_crps_config(
@@ -239,7 +239,8 @@ def test_cli_generates_dataset_with_swe_crps_config(
     ) == split_sizes
     assert generation_cfg.dataset.ensure_exact_n is True
     assert generation_cfg.seed == 0
-    assert generation_cfg.visualize.enabled is False
+    assert generation_cfg.visualize.enabled is True
+    assert generation_cfg.visualize.split == "test"
 
     command = [
         sys.executable,

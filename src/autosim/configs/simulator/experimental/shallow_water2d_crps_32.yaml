@@ -10,10 +10,10 @@ nx: 32
 ny: 32
 Lx: 6.283185307179586
 Ly: 6.283185307179586
-T: 5.25
+T: 71.75
 dt_save: 0.25
-# Retain only the states at t=5.0 and t=5.25.
-skip_nt: 20
+# Discard the spin-up and retain 128 states from t=40.0 through t=71.75.
+skip_nt: 160
 cfl: 0.12
 
 g: 9.81
