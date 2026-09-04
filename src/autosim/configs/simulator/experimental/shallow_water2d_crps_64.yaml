@@ -1,0 +1,44 @@
+_target_: autosim.experimental.simulations.ShallowWater2D
+return_timeseries: true
+# Keep realized forcing and energy diagnostics out of the ML dataset.
+return_additional_input_fields: false
+return_energy_budget: false
+log_level: warning
+
+# Scale up the benchmark while retaining the same physical forcing scale.
+nx: 64
+ny: 64
+Lx: 6.283185307179586
+Ly: 6.283185307179586
+T: 71.75
+dt_save: 0.25
+# Discard the spin-up and retain 128 states from t=40.0 through t=71.75.
+skip_nt: 160
+cfl: 0.12
+
+g: 9.81
+h_mean: 1.0
+f0: 1.0
+beta: 0.5
+nu: 5.0e-5
+drag: 0.05
+coriolis_mode: periodic_beta
+dealias: true
+
+# Random balanced states avoid a shared zonal-jet template across trajectories.
+initial_condition: balanced_random_pv
+initial_wavenumber: 4.0
+initial_bandwidth: 1.5
+
+# Match the 32 x 32 forcing scale and resolved-scale energy injection.
+forcing_type: vortical
+forcing_energy_rate: 1.5e-3
+forcing_wavenumber: 3.0
+forcing_bandwidth: 0.7
+forcing_correlation_time: 0.0
+forcing_backscatter_fraction: 0.0
+backscatter_include_drag: false
+
+# Fix the initial RMS speed while retaining independently sampled PV fields.
+parameters_range:
+  amp: [0.1, 0.1]
