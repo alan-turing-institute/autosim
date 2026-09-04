@@ -571,6 +571,31 @@ def test_constructor_validates_grid_before_spectral_ring() -> None:
 
 
 @pytest.mark.parametrize(
+    ("grid_size", "options"),
+    [
+        (6, {"forcing_type": "vortical"}),
+        (12, {"initial_condition": "balanced_random_pv"}),
+    ],
+)
+def test_small_grid_spectral_ring_defaults_are_clamped(
+    grid_size: int, options: dict[str, Any]
+) -> None:
+    sim = _small_simulator(
+        nx=grid_size,
+        ny=grid_size,
+        Lx=float(grid_size),
+        Ly=float(grid_size),
+        T=0.0,
+        **options,
+    )
+
+    data = sim.forward_samples_spatiotemporal(n=1, random_seed=0)["data"]
+
+    assert data.shape == (1, 1, grid_size, grid_size, 3)
+    assert torch.isfinite(data).all()
+
+
+@pytest.mark.parametrize(
     ("ring_name", "options"),
     [
         (

@@ -34,9 +34,8 @@ PERT_WIDTH_FRAC = 0.10  # Gaussian width y/Ly
 WAVE_ZONAL_MODE = 6  # zonal wavenumber for mid-lat perturbation
 N_JET_MODES = 4  # Fourier modes per column for jet
 N_HYPERVISC = 4  # hyperviscosity exponent
-# The random-IC low-pass uses min(nx, ny) // K_CUT_FACTOR, so this is also the
-# minimum supported grid size needed to keep that cutoff nonzero.
-K_CUT_FACTOR = 6
+MIN_GRID_SIZE = 6  # existing lower bound of the supported solver grid
+K_CUT_FACTOR = 6  # divisor controlling the random-IC low-pass cutoff
 H_MIN_CLIP = 1e-4
 H_MAX_CLIP = 100.0
 UV_ABS_CLIP = 100.0
@@ -101,6 +100,44 @@ def _validate_ring_wavenumber(
             f"retained wavenumber {max_wavenumber:.6g} for this grid"
         )
         raise ValueError(msg)
+
+
+def _default_initial_ring_wavenumber(
+    *, nx: int, ny: int, Lx: float, Ly: float, dealias: bool
+) -> float:
+    """Resolve the initial-PV ring default within the isotropic band."""
+    preferred = DEFAULT_INITIAL_RING_MODE * 2.0 * math.pi / max(Lx, Ly)
+    return min(
+        preferred,
+        _max_isotropic_retained_wavenumber(
+            nx=nx,
+            ny=ny,
+            Lx=Lx,
+            Ly=Ly,
+            dealias=dealias,
+        ),
+    )
+
+
+def _default_forcing_ring_wavenumber(
+    *, nx: int, ny: int, Lx: float, Ly: float, dealias: bool
+) -> float:
+    """Resolve the forcing-ring default within the isotropic band."""
+    fundamental_wavenumber = 2.0 * math.pi / max(Lx, Ly)
+    preferred_mode = min(
+        DEFAULT_FORCING_RING_MODE_CAP,
+        DEFAULT_FORCING_RING_GRID_FRACTION * min(nx, ny),
+    )
+    return min(
+        preferred_mode * fundamental_wavenumber,
+        _max_isotropic_retained_wavenumber(
+            nx=nx,
+            ny=ny,
+            Lx=Lx,
+            Ly=Ly,
+            dealias=dealias,
+        ),
+    )
 
 
 class ShallowWater2D(SpatioTemporalSimulator):
@@ -303,8 +340,8 @@ class ShallowWater2D(SpatioTemporalSimulator):
             parameters_range = dict(parameters_range)
         if output_names is None:
             output_names = ["h", "u", "v"]
-        if nx < K_CUT_FACTOR or ny < K_CUT_FACTOR:
-            msg = f"nx and ny must be at least {K_CUT_FACTOR}"
+        if nx < MIN_GRID_SIZE or ny < MIN_GRID_SIZE:
+            msg = f"nx and ny must be at least {MIN_GRID_SIZE}"
             raise ValueError(msg)
         if Lx <= 0 or Ly <= 0:
             msg = "Lx and Ly must be positive"
@@ -415,7 +452,6 @@ class ShallowWater2D(SpatioTemporalSimulator):
         if forcing_type == "none" and configured_backscatter_upper > 0:
             msg = "forcing_backscatter_fraction requires stochastic forcing"
             raise ValueError(msg)
-        fundamental_wavenumber = 2.0 * math.pi / max(Lx, Ly)
         if forcing_type != "none":
             maximum_forcing_wavenumber = (
                 parameters_range["forcing_wavenumber"][1]
@@ -423,11 +459,13 @@ class ShallowWater2D(SpatioTemporalSimulator):
                 else (
                     forcing_wavenumber
                     if forcing_wavenumber is not None
-                    else min(
-                        DEFAULT_FORCING_RING_MODE_CAP,
-                        DEFAULT_FORCING_RING_GRID_FRACTION * min(nx, ny),
+                    else _default_forcing_ring_wavenumber(
+                        nx=nx,
+                        ny=ny,
+                        Lx=Lx,
+                        Ly=Ly,
+                        dealias=dealias,
                     )
-                    * fundamental_wavenumber
                 )
             )
             _validate_ring_wavenumber(
@@ -446,7 +484,13 @@ class ShallowWater2D(SpatioTemporalSimulator):
                 else (
                     initial_wavenumber
                     if initial_wavenumber is not None
-                    else DEFAULT_INITIAL_RING_MODE * fundamental_wavenumber
+                    else _default_initial_ring_wavenumber(
+                        nx=nx,
+                        ny=ny,
+                        Lx=Lx,
+                        Ly=Ly,
+                        dealias=dealias,
+                    )
                 )
             )
             _validate_ring_wavenumber(
@@ -1029,8 +1073,8 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     if return_energy_budget and not return_timeseries:
         msg = "return_energy_budget requires return_timeseries=True"
         raise ValueError(msg)
-    if nx < K_CUT_FACTOR or ny < K_CUT_FACTOR:
-        msg = f"nx and ny must be at least {K_CUT_FACTOR}"
+    if nx < MIN_GRID_SIZE or ny < MIN_GRID_SIZE:
+        msg = f"nx and ny must be at least {MIN_GRID_SIZE}"
         raise ValueError(msg)
     if Lx <= 0 or Ly <= 0:
         msg = "Lx and Ly must be positive"
@@ -1094,11 +1138,13 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     if forcing_type != "none":
         fundamental_wavenumber = 2.0 * math.pi / max(Lx, Ly)
         if forcing_wavenumber is None:
-            forcing_mode = min(
-                DEFAULT_FORCING_RING_MODE_CAP,
-                DEFAULT_FORCING_RING_GRID_FRACTION * min(nx, ny),
+            forcing_wavenumber = _default_forcing_ring_wavenumber(
+                nx=nx,
+                ny=ny,
+                Lx=Lx,
+                Ly=Ly,
+                dealias=dealias,
             )
-            forcing_wavenumber = forcing_mode * fundamental_wavenumber
         if forcing_bandwidth is None:
             forcing_bandwidth = DEFAULT_RING_BANDWIDTH_MODES * fundamental_wavenumber
         _validate_ring_wavenumber(
@@ -1190,7 +1236,13 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     elif initial_condition == "balanced_random_pv":
         fundamental_wavenumber = 2.0 * math.pi / max(Lx, Ly)
         pv_wavenumber = (
-            DEFAULT_INITIAL_RING_MODE * fundamental_wavenumber
+            _default_initial_ring_wavenumber(
+                nx=nx,
+                ny=ny,
+                Lx=Lx,
+                Ly=Ly,
+                dealias=dealias,
+            )
             if initial_wavenumber is None
             else initial_wavenumber
         )
