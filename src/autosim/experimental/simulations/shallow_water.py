@@ -260,7 +260,8 @@ class ShallowWater2D(SpatioTemporalSimulator):
         forcing_wavenumber, forcing_bandwidth
             Central angular wavenumber and width of the Gaussian spectral
             ring. A central wavenumber ``k`` corresponds to wavelength
-            ``2 * pi / k``.
+            ``2 * pi / k``. An internally selected centre is clamped on small
+            grids to remain isotropically resolved.
         forcing_correlation_time
             OU e-folding time in simulation-time units. Zero retains
             independent white-in-time increments.
@@ -282,8 +283,9 @@ class ShallowWater2D(SpatioTemporalSimulator):
             OU forcing is initialized anew for the restarted forecast.
         initial_wavenumber, initial_bandwidth
             Central angular wavenumber and Gaussian-ring width for
-            ``"balanced_random_pv"``. Defaults correspond to mode 4 and a
-            1.5-mode bandwidth on the longest domain side.
+            ``"balanced_random_pv"``. Defaults prefer mode 4 and a 1.5-mode
+            bandwidth on the longest domain side; the centre is clamped on
+            small grids to remain isotropically resolved.
         jet_mode, jet_perturbation_mode, jet_perturbation_fraction
             Meridional double-jet mode, zonal perturbation mode, and relative
             perturbation velocity scale for ``"balanced_double_jet"``.
