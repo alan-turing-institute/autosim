@@ -21,6 +21,10 @@ DEFAULT_AMP_RANGE: tuple[float, float] = (0.05, 0.14)
 DEFAULT_H_MEAN_RANGE: tuple[float, float] = (0.7, 1.5)
 DEFAULT_DRAG_RANGE: tuple[float, float] = (1e-3, 4e-3)
 DEFAULT_NU_RANGE: tuple[float, float] = (2e-4, 8e-4)
+DEFAULT_INITIAL_RING_MODE = 4.0  # large-scale random-PV seed
+DEFAULT_FORCING_RING_MODE_CAP = 16.0  # avoid a resolution-driven tiny scale
+DEFAULT_FORCING_RING_GRID_FRACTION = 0.25  # remain below the 2/3 cutoff
+DEFAULT_RING_BANDWIDTH_MODES = 1.5  # excite neighbouring Fourier shells
 
 # IC and solver tuning (used in simulate_swe_2d).
 U_SCALE = 0.5  # streamfunction amplitude scale for random component
@@ -30,7 +34,9 @@ PERT_WIDTH_FRAC = 0.10  # Gaussian width y/Ly
 WAVE_ZONAL_MODE = 6  # zonal wavenumber for mid-lat perturbation
 N_JET_MODES = 4  # Fourier modes per column for jet
 N_HYPERVISC = 4  # hyperviscosity exponent
-K_CUT_FACTOR = 6  # k_cut = k_min * min(nx,ny) // K_CUT_FACTOR
+# The random-IC low-pass uses min(nx, ny) // K_CUT_FACTOR, so this is also the
+# minimum supported grid size needed to keep that cutoff nonzero.
+K_CUT_FACTOR = 6
 H_MIN_CLIP = 1e-4
 H_MAX_CLIP = 100.0
 UV_ABS_CLIP = 100.0
@@ -54,6 +60,47 @@ ENERGY_BUDGET_NAMES = (
     "drag_dissipation_estimate",
     "effective_forcing_energy_rate",
 )
+
+
+def _max_isotropic_retained_wavenumber(
+    *, nx: int, ny: int, Lx: float, Ly: float, dealias: bool
+) -> float:
+    """Return the largest radial wavenumber retained in every direction."""
+    if dealias:
+        max_mode_x = (nx - 1) // 3
+        max_mode_y = (ny - 1) // 3
+    else:
+        # Even-grid Nyquist derivatives are zero, so stop at the largest
+        # non-Nyquist mode even when spectral dealiasing is disabled.
+        max_mode_x = (nx - 1) // 2
+        max_mode_y = (ny - 1) // 2
+    return 2.0 * math.pi * min(max_mode_x / Lx, max_mode_y / Ly)
+
+
+def _validate_ring_wavenumber(
+    *,
+    name: str,
+    wavenumber: float,
+    nx: int,
+    ny: int,
+    Lx: float,
+    Ly: float,
+    dealias: bool,
+) -> None:
+    """Reject a ring whose peak is clipped in some Fourier directions."""
+    max_wavenumber = _max_isotropic_retained_wavenumber(
+        nx=nx,
+        ny=ny,
+        Lx=Lx,
+        Ly=Ly,
+        dealias=dealias,
+    )
+    if wavenumber > max_wavenumber:
+        msg = (
+            f"{name}={wavenumber:.6g} exceeds the maximum isotropically "
+            f"retained wavenumber {max_wavenumber:.6g} for this grid"
+        )
+        raise ValueError(msg)
 
 
 class ShallowWater2D(SpatioTemporalSimulator):
@@ -103,7 +150,8 @@ class ShallowWater2D(SpatioTemporalSimulator):
     ``forcing_correlation_time=0`` gives independent white-in-time impulses.
     A positive value evolves a persistent Ornstein-Uhlenbeck (OU) forcing
     tendency with e-folding time :math:`\tau` and integrates that tendency
-    exactly over each adaptive step. Larger :math:`\tau` produces more
+    exactly over each adaptive step, conditional on the incoming tendency and
+    that step's effective diffusion rate. Larger :math:`\tau` produces more
     persistent, longer-correlated forcing.
 
     Initial states can use the original random balanced flow, an isotropic
@@ -255,6 +303,12 @@ class ShallowWater2D(SpatioTemporalSimulator):
             parameters_range = dict(parameters_range)
         if output_names is None:
             output_names = ["h", "u", "v"]
+        if nx < K_CUT_FACTOR or ny < K_CUT_FACTOR:
+            msg = f"nx and ny must be at least {K_CUT_FACTOR}"
+            raise ValueError(msg)
+        if Lx <= 0 or Ly <= 0:
+            msg = "Lx and Ly must be positive"
+            raise ValueError(msg)
 
         if initial_condition == "restart":
             if "amp" in parameters_range:
@@ -361,6 +415,49 @@ class ShallowWater2D(SpatioTemporalSimulator):
         if forcing_type == "none" and configured_backscatter_upper > 0:
             msg = "forcing_backscatter_fraction requires stochastic forcing"
             raise ValueError(msg)
+        fundamental_wavenumber = 2.0 * math.pi / max(Lx, Ly)
+        if forcing_type != "none":
+            maximum_forcing_wavenumber = (
+                parameters_range["forcing_wavenumber"][1]
+                if "forcing_wavenumber" in parameters_range
+                else (
+                    forcing_wavenumber
+                    if forcing_wavenumber is not None
+                    else min(
+                        DEFAULT_FORCING_RING_MODE_CAP,
+                        DEFAULT_FORCING_RING_GRID_FRACTION * min(nx, ny),
+                    )
+                    * fundamental_wavenumber
+                )
+            )
+            _validate_ring_wavenumber(
+                name="forcing_wavenumber",
+                wavenumber=maximum_forcing_wavenumber,
+                nx=nx,
+                ny=ny,
+                Lx=Lx,
+                Ly=Ly,
+                dealias=dealias,
+            )
+        if initial_condition == "balanced_random_pv":
+            maximum_initial_wavenumber = (
+                parameters_range["initial_wavenumber"][1]
+                if "initial_wavenumber" in parameters_range
+                else (
+                    initial_wavenumber
+                    if initial_wavenumber is not None
+                    else DEFAULT_INITIAL_RING_MODE * fundamental_wavenumber
+                )
+            )
+            _validate_ring_wavenumber(
+                name="initial_wavenumber",
+                wavenumber=maximum_initial_wavenumber,
+                nx=nx,
+                ny=ny,
+                Lx=Lx,
+                Ly=Ly,
+                dealias=dealias,
+            )
         self.return_timeseries = return_timeseries
         self.return_additional_input_fields = return_additional_input_fields
         self.additional_input_names = ["forcing_h", "forcing_u", "forcing_v"]
@@ -855,7 +952,9 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     ``forcing_correlation_time=0`` uses independent white-in-time increments.
     Positive correlation time evolves an OU forcing tendency with exact
     exponential memory and samples its exact time integral at each adaptive
-    step. Its stationary linearized expected specific energy is
+    step, conditional on the incoming tendency and the effective diffusion
+    rate held over that step. Its stationary linearized expected specific
+    energy is
     ``forcing_energy_rate / (2 * correlation_time)``, so its long-time
     integrated diffusion rate is ``forcing_energy_rate``. The exact integral
     also converges to the white-noise increment as the correlation time tends
@@ -930,8 +1029,8 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     if return_energy_budget and not return_timeseries:
         msg = "return_energy_budget requires return_timeseries=True"
         raise ValueError(msg)
-    if nx < 6 or ny < 6:
-        msg = "nx and ny must be at least 6"
+    if nx < K_CUT_FACTOR or ny < K_CUT_FACTOR:
+        msg = f"nx and ny must be at least {K_CUT_FACTOR}"
         raise ValueError(msg)
     if Lx <= 0 or Ly <= 0:
         msg = "Lx and Ly must be positive"
@@ -995,10 +1094,22 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     if forcing_type != "none":
         fundamental_wavenumber = 2.0 * math.pi / max(Lx, Ly)
         if forcing_wavenumber is None:
-            forcing_mode = min(16.0, 0.25 * min(nx, ny))
+            forcing_mode = min(
+                DEFAULT_FORCING_RING_MODE_CAP,
+                DEFAULT_FORCING_RING_GRID_FRACTION * min(nx, ny),
+            )
             forcing_wavenumber = forcing_mode * fundamental_wavenumber
         if forcing_bandwidth is None:
-            forcing_bandwidth = 1.5 * fundamental_wavenumber
+            forcing_bandwidth = DEFAULT_RING_BANDWIDTH_MODES * fundamental_wavenumber
+        _validate_ring_wavenumber(
+            name="forcing_wavenumber",
+            wavenumber=forcing_wavenumber,
+            nx=nx,
+            ny=ny,
+            Lx=Lx,
+            Ly=Ly,
+            dealias=dealias,
+        )
         forcing_spectrum = gaussian_ring_spectrum(
             K2, forcing_wavenumber, forcing_bandwidth, dealias_mask
         )
@@ -1079,14 +1190,23 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     elif initial_condition == "balanced_random_pv":
         fundamental_wavenumber = 2.0 * math.pi / max(Lx, Ly)
         pv_wavenumber = (
-            4.0 * fundamental_wavenumber
+            DEFAULT_INITIAL_RING_MODE * fundamental_wavenumber
             if initial_wavenumber is None
             else initial_wavenumber
         )
         pv_bandwidth = (
-            1.5 * fundamental_wavenumber
+            DEFAULT_RING_BANDWIDTH_MODES * fundamental_wavenumber
             if initial_bandwidth is None
             else initial_bandwidth
+        )
+        _validate_ring_wavenumber(
+            name="initial_wavenumber",
+            wavenumber=pv_wavenumber,
+            nx=nx,
+            ny=ny,
+            Lx=Lx,
+            Ly=Ly,
+            dealias=dealias,
         )
         pv_spectrum = gaussian_ring_spectrum(
             K2, pv_wavenumber, pv_bandwidth, dealias_mask

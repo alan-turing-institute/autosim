@@ -99,6 +99,9 @@ coherent weather or wind-stress patterns; higher modes represent smaller-scale
 eddy stirring. ``forcing_bandwidth`` controls how many neighbouring scales are
 excited. Spectral forcing is a standard choice on this periodic FFT grid and
 also makes the vortical constraint exact up to numerical precision.
+The ring centre must fit inside the largest circular band retained in every
+Fourier direction. Fixed values and sampled ranges that place the peak only in
+the rectangular mask's diagonal corners are rejected before generation.
 
 The Fourier ring is an idealized homogeneous, direction-neutral covariance:
 it controls the injected scale, not the location of storms, coastlines, or
@@ -111,8 +114,9 @@ prediction system.
 A positive value selects an Ornstein-Uhlenbeck forcing tendency with that
 e-folding time in simulator time units. Increasing it produces longer-lived
 temporal correlations without changing the target long-time energy diffusion
-rate. The OU time integral is sampled exactly on each adaptive step and
-converges to the white-noise increment as the correlation time tends to zero.
+rate. Conditional on the incoming tendency and the effective diffusion rate
+held over a step, the OU time integral is sampled exactly. It converges to the
+white-noise increment as the correlation time tends to zero.
 Set ``return_additional_input_fields=True`` to store the realized
 ``[dh, du, dv]`` impulse accumulated over every saved transition as an opt-in
 diagnostic. It is not included in the default forced dataset or its
