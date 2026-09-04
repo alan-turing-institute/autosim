@@ -18,6 +18,7 @@ from autosim.cli import (
     save_dataset_splits,
     save_example_videos,
 )
+from autosim.experimental.simulations import ShallowWater2D
 from autosim.simulations.base import SpatioTemporalSimulator
 
 
@@ -169,7 +170,105 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
     assert "spatiotemporal/advection_diffusion" in output_lines
     assert "experimental/shallow_water2d" in output_lines
     assert "experimental/shallow_water2d_forced" in output_lines
+    assert "experimental/shallow_water2d_crps_32" in output_lines
+    assert "experimental/shallow_water2d_crps_64" in output_lines
     assert all("\\" not in line for line in output_lines)
+
+
+@pytest.mark.parametrize(
+    ("config_name", "resolution", "nu", "forcing_energy_rate"),
+    [
+        ("shallow_water2d_crps_32", 32, 1.0e-4, 1.5e-3),
+        ("shallow_water2d_crps_64", 64, 5.0e-5, 1.0e-3),
+    ],
+)
+def test_swe_crps_simulator_configs(
+    config_name: str,
+    resolution: int,
+    nu: float,
+    forcing_energy_rate: float,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    config_path = (
+        repo_root / "src/autosim/configs/simulator/experimental" / f"{config_name}.yaml"
+    )
+
+    sim = build_simulator(OmegaConf.load(config_path))
+
+    assert isinstance(sim, ShallowWater2D)
+    assert (sim.nx, sim.ny) == (resolution, resolution)
+    assert (sim.Lx, sim.Ly) == pytest.approx((6.283185307179586,) * 2)
+    assert (sim.T, sim.dt_save, sim.skip_nt) == pytest.approx((5.25, 0.25, 20))
+    assert sim.initial_condition == "balanced_random_pv"
+    assert sim.forcing_type == "vortical"
+    assert sim.forcing_wavenumber == pytest.approx(3.0)
+    assert sim.forcing_bandwidth == pytest.approx(0.7)
+    assert sim.forcing_correlation_time == pytest.approx(0.0)
+    assert sim.nu == pytest.approx(nu)
+    assert sim.forcing_energy_rate == pytest.approx(forcing_energy_rate)
+    assert sim.parameters_range == {"amp": [0.1, 0.1]}
+    assert sim.output_names == ["h", "u", "v"]
+    assert sim.return_timeseries is True
+    assert sim.return_additional_input_fields is False
+    assert sim.return_energy_budget is False
+
+
+@pytest.mark.parametrize(
+    ("config_name", "resolution", "split_sizes"),
+    [
+        ("generate_data_swe_crps_32", 32, (4000, 400, 400)),
+        ("generate_data_swe_crps_64", 64, (8000, 800, 800)),
+    ],
+)
+def test_cli_generates_dataset_with_swe_crps_config(
+    tmp_path: Path,
+    config_name: str,
+    resolution: int,
+    split_sizes: tuple[int, int, int],
+) -> None:
+    output_dir = tmp_path / "generated"
+    hydra_run_dir = tmp_path / "hydra_run"
+    repo_root = Path(__file__).resolve().parents[1]
+    generation_cfg = OmegaConf.load(
+        repo_root / "src/autosim/configs" / f"{config_name}.yaml"
+    )
+    assert (
+        generation_cfg.dataset.n_train,
+        generation_cfg.dataset.n_valid,
+        generation_cfg.dataset.n_test,
+    ) == split_sizes
+    assert generation_cfg.dataset.ensure_exact_n is True
+    assert generation_cfg.seed == 0
+    assert generation_cfg.visualize.enabled is False
+
+    command = [
+        sys.executable,
+        "-m",
+        "autosim.cli",
+        f"--config-name={config_name}",
+        f"dataset.output_dir={output_dir.as_posix()}",
+        "dataset.n_train=1",
+        "dataset.n_valid=1",
+        "dataset.n_test=1",
+        "simulator.T=0.25",
+        "simulator.skip_nt=0",
+        "overwrite=true",
+        "visualize.enabled=false",
+        f"hydra.run.dir={hydra_run_dir.as_posix()}",
+        "hydra.output_subdir=null",
+    ]
+
+    subprocess.run(command, check=True, cwd=repo_root)
+
+    for split in ("train", "valid", "test"):
+        payload = torch.load(output_dir / split / "data.pt")
+        data = payload["data"]
+        assert data.shape == (1, 2, resolution, resolution, 3)
+        assert torch.isfinite(data).all()
+
+    stats = OmegaConf.load(output_dir / "stats.yml")
+    assert list(stats.core_field_names) == ["h", "u", "v"]
+    assert (output_dir / "resolved_config.yaml").exists()
 
 
 def test_compute_normalization_stats_includes_temporal_deltas() -> None:
