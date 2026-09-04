@@ -153,6 +153,45 @@ the interval-mean effective forcing diffusion rate are also returned. These
 estimates explain the source used by dissipation-linked forcing but are not
 extra terms in the exact closure.
 
+CRPS spatial-coherence benchmark presets
+-----------------------------------------
+
+The ``shallow_water2d_crps_32`` and ``shallow_water2d_crps_64`` simulator
+presets provide the data substrate for testing whether pointwise probabilistic
+losses produce spatially patchy ensemble spread. They generate independent
+trajectories with ``balanced_random_pv`` initial conditions and a coherent
+vortical forcing ring centred on Fourier mode 3. All physical parameters are
+fixed within each dataset, including ``amp=0.1``.
+
+The forcing is white in time (``forcing_correlation_time=0``), so the returned
+``[h, u, v]`` fields form the complete state for a one-step conditional model.
+After spin-up, each sample contains the states at times 5.0 and 5.25. The
+training data deliberately contain one future per independently sampled input;
+they do not contain repeated restart anchors. These presets are designed to
+expose patchiness learned by a model, not to insert grid-scale patchiness into
+the simulator truth.
+
+Run a small 32 by 32 pilot before generating either full dataset:
+
+.. code-block:: console
+
+   uv run autosim --config-name=generate_data_swe_crps_32 \
+     dataset.n_train=8 dataset.n_valid=2 dataset.n_test=2
+
+The production commands are:
+
+.. code-block:: console
+
+   uv run autosim --config-name=generate_data_swe_crps_32
+   uv run autosim --config-name=generate_data_swe_crps_64
+
+The corresponding split sizes are 4000/400/400 and 8000/800/800. Generation
+is serial, so the 64 by 64 dataset should only be started after inspecting the
+32 by 32 pilot. ``forcing_energy_rate`` controls the forcing diffusion scale;
+it should not be interpreted as a direct target for the ratio of stochastic to
+deterministic forecast spread. Nor should these forced, dissipative presets be
+expected to exhibit a ``k^-3`` inertial range.
+
 .. automodule:: autosim.experimental.simulations.shallow_water
    :members:
    :undoc-members:
