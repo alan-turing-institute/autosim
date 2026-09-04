@@ -188,6 +188,18 @@ diffusion scale; it should not be interpreted as a direct target for the ratio
 of stochastic to deterministic forecast spread. Nor should these forced,
 dissipative presets be expected to exhibit a ``k^-3`` inertial range.
 
+The ``shallow_water2d_crps_deterministic_32`` preset provides a matched
+deterministic control. It keeps the 32 by 32 physical parameters, initial-state
+distribution, sampling interval, trajectory length, split sizes, and seed, but
+sets ``forcing_type=none``. An unforced trajectory decays under the retained
+drag and viscosity, so the control uses a shorter spin-up and returns 128 states
+from time 5.0 through 36.75; the original time-40 sampling window would be
+almost static. Generate it with:
+
+.. code-block:: console
+
+   uv run autosim --config-name=generate_data_swe_crps_deterministic_32
+
 .. automodule:: autosim.experimental.simulations.shallow_water
    :members:
    :undoc-members:
