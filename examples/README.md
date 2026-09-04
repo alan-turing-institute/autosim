@@ -30,6 +30,7 @@ These examples use simulators that are still under `autosim.experimental`.
 ### Weather-like and transport families
 
 - [Shallow-Water 2D](experimental/01_01_shallow_water_equation.ipynb): A geophysical fluid model with deterministic, vortical, geostrophically balanced, and wind-stress-like momentum forcing, including optional white or temporally correlated Ornstein-Uhlenbeck noise.
+- [Long-Horizon Stochastic Shallow Water](experimental/01_03_shallow_water_long_horizon.ipynb): A paired forced-versus-control experiment on the periodic plane, with restart, energy-budget, and long-rollout diagnostics.
 
 ### Classical fluid dynamics families
 
