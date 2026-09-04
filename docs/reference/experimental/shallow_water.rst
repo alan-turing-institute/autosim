@@ -33,7 +33,10 @@ generated states construct height in constant-``f`` geostrophic balance,
 which is approximate when evolved with ``periodic_beta``. ``"restart"``
 accepts a finite ``[nx, ny, 3]`` tensor in ``[h, u, v]`` order, which is useful
 for branching deterministic and stochastic runs from exactly the same
-spun-up state.
+spun-up physical state. A restart does not preserve the latent OU forcing
+tendency, so correlated forcing is initialized anew rather than continuing an
+interrupted stochastic path exactly. Because the supplied state already fixes
+its amplitude, restart datasets omit ``amp`` from ``parameters_range``.
 
 Zero-gravity limit
 ------------------
@@ -77,8 +80,9 @@ to the deterministic ``none`` mode:
 
 All modes use a configurable Gaussian ring in spatial Fourier space. For
 ``vortical`` and ``balanced`` forcing, the ring filters a sampled vorticity
-field before streamfunction inversion; for ``momentum`` it filters two sampled
-velocity components directly.
+field before streamfunction inversion; for ``pv_balanced`` it filters a
+sampled potential-vorticity field before Helmholtz inversion; and for
+``momentum`` it filters two sampled velocity components directly.
 ``forcing_energy_rate`` is a diffusion scale in the linearized SWE energy
 norm. For white noise it sets the expected increment energy per unit time; for
 OU forcing it sets the long-time diffusion rate. It does not prescribe the
@@ -137,9 +141,10 @@ Energy diagnostics
 energy changes across the deterministic RK4 step, spectral hyperviscosity,
 and stochastic increment for each saved transition. Their sum closes the
 recorded total-energy change up to floating-point precision. Positive
-viscosity and drag work estimates and the interval-mean effective forcing
-diffusion rate are also returned. These estimates explain the source used by
-dissipation-linked forcing but are not extra terms in the exact closure.
+viscosity and drag loss estimates accumulated over the saved transition and
+the interval-mean effective forcing diffusion rate are also returned. These
+estimates explain the source used by dissipation-linked forcing but are not
+extra terms in the exact closure.
 
 .. automodule:: autosim.experimental.simulations.shallow_water
    :members:

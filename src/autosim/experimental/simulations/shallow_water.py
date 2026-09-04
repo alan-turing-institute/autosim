@@ -16,7 +16,7 @@ from autosim.experimental.simulations._spectral import (
 from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
-# Default param ranges when not overridden (amp required; h_mean, drag, nu optional).
+# Default ranges for generated initial conditions and optional physics parameters.
 DEFAULT_AMP_RANGE: tuple[float, float] = (0.05, 0.14)
 DEFAULT_H_MEAN_RANGE: tuple[float, float] = (0.7, 1.5)
 DEFAULT_DRAG_RANGE: tuple[float, float] = (1e-3, 4e-3)
@@ -114,7 +114,9 @@ class ShallowWater2D(SpatioTemporalSimulator):
     Args:
         parameters_range: Input parameter (min, max) ranges. Supported keys:
 
-            - ``amp`` (required): initial-condition amplitude scale.
+            - ``amp``: initial-condition amplitude scale. Required for generated
+              initial conditions and invalid for ``"restart"`` because a
+              supplied state already fixes the amplitude.
             - ``h_mean``: mean layer depth (scalar) around which spatial
               variations are generated (default 1.0 if omitted).
             - ``drag``: linear drag coefficient (default 2e-3).
@@ -130,10 +132,16 @@ class ShallowWater2D(SpatioTemporalSimulator):
               specific-energy norm.
             - ``forcing_correlation_time``: OU e-folding time; zero selects
               white noise.
+            - ``forcing_wavenumber``: central angular wavenumber for the
+              stochastic forcing spectrum.
+            - ``forcing_bandwidth``: Gaussian-ring width for the stochastic
+              forcing spectrum.
             - ``forcing_backscatter_fraction``: fraction of diagnosed
               viscosity and hyperviscosity losses returned through forcing.
 
-            If None, uses ``{"amp": (0.05, 0.14)}`` only.
+            If None, generated initial conditions use
+            ``{"amp": (0.05, 0.14)}``; restart mode uses no sampled scalar
+            parameters.
         output_names, return_timeseries, log_level
             Passed to base. Default outputs: ["h", "u", "v"].
         return_additional_input_fields
@@ -184,7 +192,9 @@ class ShallowWater2D(SpatioTemporalSimulator):
             ``"balanced_double_jet"``, or ``"restart"``.
         initial_state
             Restart tensor with shape ``[nx, ny, 3]`` in ``[h, u, v]`` order.
-            Required only for ``initial_condition="restart"``.
+            Required only for ``initial_condition="restart"``. This restores
+            the physical state, but not a latent correlated-forcing tendency;
+            OU forcing is initialized anew for the restarted forecast.
         initial_wavenumber, initial_bandwidth
             Central angular wavenumber and Gaussian-ring width for
             ``"balanced_random_pv"``. Defaults correspond to mode 4 and a
@@ -238,11 +248,28 @@ class ShallowWater2D(SpatioTemporalSimulator):
     ) -> None:
         """Initialize the planar shallow-water simulator."""
         if parameters_range is None:
-            parameters_range = {"amp": DEFAULT_AMP_RANGE}
+            parameters_range = (
+                {} if initial_condition == "restart" else {"amp": DEFAULT_AMP_RANGE}
+            )
+        else:
+            parameters_range = dict(parameters_range)
         if output_names is None:
             output_names = ["h", "u", "v"]
 
-        for name in ("initial_wavenumber", "initial_bandwidth"):
+        if initial_condition == "restart":
+            if "amp" in parameters_range:
+                msg = "amp is not valid for initial_condition='restart'"
+                raise ValueError(msg)
+        elif "amp" not in parameters_range:
+            msg = "amp is required for generated initial conditions"
+            raise ValueError(msg)
+
+        for name in (
+            "initial_wavenumber",
+            "initial_bandwidth",
+            "forcing_wavenumber",
+            "forcing_bandwidth",
+        ):
             if name not in parameters_range:
                 continue
             lower, upper = parameters_range[name]
@@ -254,6 +281,20 @@ class ShallowWater2D(SpatioTemporalSimulator):
                 or lower > upper
             ):
                 msg = f"{name} range must be a finite positive interval"
+                raise ValueError(msg)
+
+        if "forcing_backscatter_fraction" in parameters_range:
+            lower, upper = parameters_range["forcing_backscatter_fraction"]
+            if (
+                not math.isfinite(lower)
+                or not math.isfinite(upper)
+                or lower < 0
+                or lower > upper
+            ):
+                msg = (
+                    "forcing_backscatter_fraction range must be a finite "
+                    "non-negative interval"
+                )
                 raise ValueError(msg)
 
         super().__init__(parameters_range, output_names, log_level)
@@ -291,14 +332,34 @@ class ShallowWater2D(SpatioTemporalSimulator):
         ):
             msg = "initial_bandwidth must be positive or None"
             raise ValueError(msg)
+        if forcing_wavenumber is not None and (
+            not math.isfinite(forcing_wavenumber) or forcing_wavenumber <= 0
+        ):
+            msg = "forcing_wavenumber must be positive or None"
+            raise ValueError(msg)
+        if forcing_bandwidth is not None and (
+            not math.isfinite(forcing_bandwidth) or forcing_bandwidth <= 0
+        ):
+            msg = "forcing_bandwidth must be positive or None"
+            raise ValueError(msg)
         if jet_mode <= 0 or jet_perturbation_mode <= 0:
             msg = "jet_mode and jet_perturbation_mode must be positive"
             raise ValueError(msg)
         if jet_perturbation_fraction < 0:
             msg = "jet_perturbation_fraction must be non-negative"
             raise ValueError(msg)
-        if forcing_backscatter_fraction < 0:
+        if not math.isfinite(forcing_backscatter_fraction) or (
+            forcing_backscatter_fraction < 0
+        ):
             msg = "forcing_backscatter_fraction must be non-negative"
+            raise ValueError(msg)
+        configured_backscatter_upper = (
+            parameters_range["forcing_backscatter_fraction"][1]
+            if "forcing_backscatter_fraction" in parameters_range
+            else forcing_backscatter_fraction
+        )
+        if forcing_type == "none" and configured_backscatter_upper > 0:
+            msg = "forcing_backscatter_fraction requires stochastic forcing"
             raise ValueError(msg)
         self.return_timeseries = return_timeseries
         self.return_additional_input_fields = return_additional_input_fields
@@ -348,7 +409,11 @@ class ShallowWater2D(SpatioTemporalSimulator):
             )
             raise ValueError(msg)
         # Parse by name so parameter order is irrelevant and optional params clear.
-        amp = float(x[0, self.get_parameter_idx("amp")].item())
+        amp = (
+            0.0
+            if self.initial_condition == "restart"
+            else float(x[0, self.get_parameter_idx("amp")].item())
+        )
         h_mean = (
             float(x[0, self.get_parameter_idx("h_mean")].item())
             if "h_mean" in self.param_names
@@ -383,6 +448,16 @@ class ShallowWater2D(SpatioTemporalSimulator):
             float(x[0, self.get_parameter_idx("forcing_correlation_time")].item())
             if "forcing_correlation_time" in self.param_names
             else self.forcing_correlation_time
+        )
+        forcing_wavenumber = (
+            float(x[0, self.get_parameter_idx("forcing_wavenumber")].item())
+            if "forcing_wavenumber" in self.param_names
+            else self.forcing_wavenumber
+        )
+        forcing_bandwidth = (
+            float(x[0, self.get_parameter_idx("forcing_bandwidth")].item())
+            if "forcing_bandwidth" in self.param_names
+            else self.forcing_bandwidth
         )
         forcing_backscatter_fraction = (
             float(x[0, self.get_parameter_idx("forcing_backscatter_fraction")].item())
@@ -421,8 +496,8 @@ class ShallowWater2D(SpatioTemporalSimulator):
             dealias=self.dealias,
             forcing_type=self.forcing_type,
             forcing_energy_rate=forcing_energy_rate,
-            forcing_wavenumber=self.forcing_wavenumber,
-            forcing_bandwidth=self.forcing_bandwidth,
+            forcing_wavenumber=forcing_wavenumber,
+            forcing_bandwidth=forcing_bandwidth,
             dtype=self.dtype,
             forcing_correlation_time=forcing_correlation_time,
             f0=f0,
@@ -566,19 +641,17 @@ def _swe_forcing_streamfunction_transfer(
     g: float,
     h_mean: float,
     f0: float,
+    K2: torch.Tensor,
     K2_inv: torch.Tensor,
-    dKx: torch.Tensor,
-    dKy: torch.Tensor,
 ) -> torch.Tensor:
     """Return the scalar-to-streamfunction transfer for a forcing geometry."""
     if forcing_type != "pv_balanced":
         return K2_inv
 
     deformation_wavenumber_squared = f0**2 / (g * h_mean) if g > 0 else 0.0
-    wave_wavenumber_squared = dKx.square() + dKy.square()
     return torch.where(
-        wave_wavenumber_squared > 0,
-        -h_mean / (wave_wavenumber_squared + deformation_wavenumber_squared),
+        K2 > 0,
+        -h_mean / (K2 + deformation_wavenumber_squared),
         torch.zeros_like(K2_inv),
     )
 
@@ -592,6 +665,7 @@ def _swe_forcing_expected_unit_energy(
     h_mean: float,
     f0: float,
     spectrum: torch.Tensor,
+    K2: torch.Tensor,
     K2_inv: torch.Tensor,
     dKx: torch.Tensor,
     dKy: torch.Tensor,
@@ -603,9 +677,8 @@ def _swe_forcing_expected_unit_energy(
             g=g,
             h_mean=h_mean,
             f0=f0,
+            K2=K2,
             K2_inv=K2_inv,
-            dKx=dKx,
-            dKy=dKy,
         )
         energy_transfer = 0.5 * psi_transfer.square() * (dKx.square() + dKy.square())
         if forcing_type != "vortical":
@@ -650,6 +723,7 @@ def _sample_swe_forcing_field(
     dtype: torch.dtype,
     spectrum: torch.Tensor,
     mask: torch.Tensor,
+    K2: torch.Tensor,
     K2_inv: torch.Tensor,
     dKx: torch.Tensor,
     dKy: torch.Tensor,
@@ -679,9 +753,8 @@ def _sample_swe_forcing_field(
             g=g,
             h_mean=h_mean,
             f0=f0,
+            K2=K2,
             K2_inv=K2_inv,
-            dKx=dKx,
-            dKy=dKy,
         )
         psi_increment_hat = psi_transfer * scalar_increment_hat
         du = to_phys(-1j * dKy * psi_increment_hat)
@@ -730,6 +803,7 @@ def _sample_swe_forcing_field(
             h_mean=h_mean,
             f0=f0,
             spectrum=spectrum,
+            K2=K2,
             K2_inv=K2_inv,
             dKx=dKx,
             dKy=dKy,
@@ -801,8 +875,10 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     total energy at every saved state followed by transition-aligned energy
     changes from deterministic RK4 evolution, hyperviscosity, and stochastic
     forcing. Their sum exactly closes the numerical total-energy change. The
-    reported Laplacian-viscosity and drag losses are positive tendency-based
-    estimates used to interpret dissipation, not extra terms in that closure.
+    reported Laplacian-viscosity and drag entries are positive loss estimates
+    accumulated over each saved transition. They are used to interpret
+    dissipation, not as extra terms in that closure. The effective forcing
+    energy rate is an interval mean.
     """
     if forcing_type not in FORCING_TYPES:
         msg = f"forcing_type must be one of {FORCING_TYPES}"
@@ -825,6 +901,16 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         not math.isfinite(initial_bandwidth) or initial_bandwidth <= 0
     ):
         msg = "initial_bandwidth must be positive or None"
+        raise ValueError(msg)
+    if forcing_wavenumber is not None and (
+        not math.isfinite(forcing_wavenumber) or forcing_wavenumber <= 0
+    ):
+        msg = "forcing_wavenumber must be positive or None"
+        raise ValueError(msg)
+    if forcing_bandwidth is not None and (
+        not math.isfinite(forcing_bandwidth) or forcing_bandwidth <= 0
+    ):
+        msg = "forcing_bandwidth must be positive or None"
         raise ValueError(msg)
     if jet_mode <= 0 or jet_perturbation_mode <= 0:
         msg = "jet_mode and jet_perturbation_mode must be positive"
@@ -865,8 +951,13 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     if forcing_correlation_time < 0:
         msg = "forcing_correlation_time must be non-negative"
         raise ValueError(msg)
-    if forcing_backscatter_fraction < 0:
+    if not math.isfinite(forcing_backscatter_fraction) or (
+        forcing_backscatter_fraction < 0
+    ):
         msg = "forcing_backscatter_fraction must be non-negative"
+        raise ValueError(msg)
+    if forcing_type == "none" and forcing_backscatter_fraction > 0:
+        msg = "forcing_backscatter_fraction requires stochastic forcing"
         raise ValueError(msg)
     if f0 is not None and not math.isfinite(f0):
         msg = "f0 must be finite or None"
@@ -919,6 +1010,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
             h_mean=h_mean,
             f0=f0,
             spectrum=forcing_spectrum,
+            K2=K2,
             K2_inv=K2_inv,
             dKx=dKx,
             dKy=dKy,
@@ -940,6 +1032,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
                 dtype=dtype,
                 spectrum=forcing_spectrum,
                 mask=dealias_mask,
+                K2=K2,
                 K2_inv=K2_inv,
                 dKx=dKx,
                 dKy=dKy,
@@ -1005,11 +1098,13 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
             spectrum=pv_spectrum,
             mask=dealias_mask,
         )
-        deformation_wavenumber_squared = f0**2 / (g * h_mean) if g > 0 else 0.0
-        psi_transfer = torch.where(
-            K2 > 0,
-            -h_mean / (K2 + deformation_wavenumber_squared),
-            torch.zeros_like(K2),
+        psi_transfer = _swe_forcing_streamfunction_transfer(
+            forcing_type="pv_balanced",
+            g=g,
+            h_mean=h_mean,
+            f0=f0,
+            K2=K2,
+            K2_inv=K2_inv,
         )
         psi_h = psi_transfer * pv_hat
         u0 = to_phys(-iKy * psi_h)
@@ -1249,7 +1344,9 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     energy_since_save = torch.zeros(len(ENERGY_BUDGET_NAMES) - 1, dtype=dtype)
     energy_interval_duration = 0.0
     zero_energy = torch.zeros((), dtype=dtype)
-    track_dissipation = return_energy_budget or forcing_backscatter_fraction > 0
+    track_dissipation = return_energy_budget or (
+        forcing_type != "none" and forcing_backscatter_fraction > 0
+    )
     forcing_tendency: torch.Tensor | None = None
     if forcing_type != "none" and forcing_correlation_time > 0:
         stationary_energy = forcing_energy_rate / (2.0 * forcing_correlation_time)

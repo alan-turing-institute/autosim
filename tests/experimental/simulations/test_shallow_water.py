@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 import torch
 
+import autosim.experimental.simulations.shallow_water as shallow_water_module
 from autosim.experimental.simulations import ShallowWater2D
 from autosim.experimental.simulations._spectral import (
     gaussian_ring_spectrum,
@@ -16,6 +17,7 @@ from autosim.experimental.simulations.shallow_water import (
     _ou_step_coefficients,
     _sample_swe_forcing_field,
     _swe_forcing_expected_unit_energy,
+    _swe_forcing_streamfunction_transfer,
     simulate_swe_2d,
 )
 
@@ -460,6 +462,42 @@ def test_restart_accepts_singleton_batch_dimension() -> None:
     torch.testing.assert_close(restarted, source, rtol=0.0, atol=0.0)
 
 
+def test_restart_dataset_omits_dead_amp_conditioning() -> None:
+    source = _run_small_swe(T=0.0)[0]
+    simulator = _small_simulator(
+        initial_condition="restart",
+        initial_state=source,
+        parameters_range={},
+    )
+
+    result = simulator.forward_samples_spatiotemporal(n=4, random_seed=7)
+
+    assert result["constant_scalars"].shape == (4, 0)
+    expected = result["data"][:1].expand_as(result["data"])
+    torch.testing.assert_close(result["data"], expected, rtol=0.0, atol=0.0)
+
+
+def test_restart_batch_branches_into_distinct_stochastic_futures() -> None:
+    source = _run_small_swe(T=0.0)[0]
+    simulator = _small_simulator(
+        T=0.05,
+        dt_save=0.05,
+        initial_condition="restart",
+        initial_state=source,
+        forcing_type="vortical",
+        forcing_energy_rate=1e-3,
+        forcing_correlation_time=0.1,
+        parameters_range={},
+    )
+
+    data = simulator.forward_samples_spatiotemporal(n=4, random_seed=7)["data"]
+
+    torch.testing.assert_close(
+        data[:, 0], source.unsqueeze(0).expand_as(data[:, 0]), rtol=0.0, atol=0.0
+    )
+    assert all(not torch.equal(data[0, -1], data[index, -1]) for index in range(1, 4))
+
+
 def test_restart_requires_valid_initial_state() -> None:
     with pytest.raises(ValueError, match="initial_state is required"):
         ShallowWater2D(initial_condition="restart")
@@ -477,6 +515,14 @@ def test_restart_requires_valid_initial_state() -> None:
             initial_state=invalid_height,
         )
 
+    source = _run_small_swe(T=0.0)[0]
+    with pytest.raises(ValueError, match="amp is not valid"):
+        ShallowWater2D(
+            initial_condition="restart",
+            initial_state=source,
+            parameters_range={"amp": (0.1, 0.2)},
+        )
+
 
 def test_invalid_initial_condition_raises() -> None:
     with pytest.raises(ValueError, match="initial_condition must be one of"):
@@ -488,7 +534,7 @@ def test_invalid_initial_condition_raises() -> None:
     with pytest.raises(ValueError, match="initial_bandwidth"):
         ShallowWater2D(initial_bandwidth=-1.0)
 
-    with pytest.raises(ValueError, match="finite positive interval"):
+    with pytest.raises(ValueError, match="initial_wavenumber range"):
         ShallowWater2D(
             initial_condition="balanced_random_pv",
             parameters_range={
@@ -496,6 +542,24 @@ def test_invalid_initial_condition_raises() -> None:
                 "initial_wavenumber": (0.0, 1.0),
             },
         )
+
+    with pytest.raises(ValueError, match="forcing_bandwidth range"):
+        ShallowWater2D(
+            parameters_range={
+                "amp": (0.1, 0.1),
+                "forcing_bandwidth": (float("nan"), 1.0),
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [("forcing_wavenumber", 0.0), ("forcing_bandwidth", float("nan"))],
+)
+def test_invalid_forcing_scale_raises(name: str, value: float) -> None:
+    options: dict[str, Any] = {name: value}
+    with pytest.raises(ValueError, match=name):
+        ShallowWater2D(**options)
 
 
 def test_vortical_forcing_is_divergence_free() -> None:
@@ -769,8 +833,8 @@ def test_forcing_energy_is_an_ensemble_mean(forcing_type: str) -> None:
     g = 9.81
     h_mean = 1.0
     target_energy = 2e-3
-    _, _, dKx, dKy = spectral_wavenumbers(nx, ny, Lx, Ly, dtype=torch.float64)
-    K2 = dKx.square() + dKy.square()
+    Kx, Ky, dKx, dKy = spectral_wavenumbers(nx, ny, Lx, Ly, dtype=torch.float64)
+    K2 = Kx.square() + Ky.square()
     K2_inv = torch.where(K2 > 0, -1.0 / K2, torch.zeros_like(K2))
     mask = two_thirds_mask(nx, ny)
     spectrum = gaussian_ring_spectrum(
@@ -788,6 +852,7 @@ def test_forcing_energy_is_an_ensemble_mean(forcing_type: str) -> None:
         h_mean=h_mean,
         f0=f0,
         spectrum=spectrum,
+        K2=K2,
         K2_inv=K2_inv,
         dKx=dKx,
         dKy=dKy,
@@ -804,6 +869,7 @@ def test_forcing_energy_is_an_ensemble_mean(forcing_type: str) -> None:
         "dtype": torch.float64,
         "spectrum": spectrum,
         "mask": mask,
+        "K2": K2,
         "K2_inv": K2_inv,
         "dKx": dKx,
         "dKy": dKy,
@@ -835,6 +901,33 @@ def test_forcing_energy_is_an_ensemble_mean(forcing_type: str) -> None:
     sampled_energies = torch.stack(energies)
     assert sampled_energies.mean().item() == pytest.approx(target_energy, rel=0.08)
     assert sampled_energies.std().item() > 0.02 * target_energy
+
+
+def test_pv_transfer_uses_true_laplacian_wavenumbers() -> None:
+    nx = ny = 12
+    Kx, Ky, dKx, dKy = spectral_wavenumbers(nx, ny, 12.0, 12.0, dtype=torch.float64)
+    K2 = Kx.square() + Ky.square()
+    K2_inv = torch.where(K2 > 0, -1.0 / K2, torch.zeros_like(K2))
+    h_mean = 2.0
+    g = 4.0
+    f0 = 3.0
+
+    transfer = _swe_forcing_streamfunction_transfer(
+        forcing_type="pv_balanced",
+        g=g,
+        h_mean=h_mean,
+        f0=f0,
+        K2=K2,
+        K2_inv=K2_inv,
+    )
+    expected = torch.where(
+        K2 > 0,
+        -h_mean / (K2 + f0**2 / (g * h_mean)),
+        torch.zeros_like(K2),
+    )
+
+    torch.testing.assert_close(transfer, expected, rtol=0.0, atol=0.0)
+    assert not torch.equal(K2, dKx.square() + dKy.square())
 
 
 def test_ou_forcing_is_temporally_correlated() -> None:
@@ -979,6 +1072,54 @@ def test_dissipation_backscatter_drives_zero_base_rate() -> None:
     assert torch.count_nonzero(additional[0, 0]) > 0
 
 
+def test_ou_backscatter_scales_both_exact_innovations(monkeypatch) -> None:
+    target_energies: list[float] = []
+    original_sampler = shallow_water_module._sample_swe_forcing_field
+
+    def record_target_energy(**kwargs: Any):
+        target_energies.append(kwargs["target_energy"])
+        return original_sampler(**kwargs)
+
+    monkeypatch.setattr(
+        shallow_water_module,
+        "_sample_swe_forcing_field",
+        record_target_energy,
+    )
+    correlation_time = 0.1
+    step_dt = 0.01
+    simulator = _small_simulator(
+        return_energy_budget=True,
+        T=step_dt,
+        dt_save=step_dt,
+        nu=0.05,
+        forcing_type="vortical",
+        forcing_energy_rate=0.0,
+        forcing_correlation_time=correlation_time,
+        forcing_backscatter_fraction=0.5,
+        parameters_range={"amp": (0.1, 0.1)},
+    )
+
+    budget = simulator.forward_samples_spatiotemporal(n=1, random_seed=8)[
+        "energy_budget"
+    ]
+
+    assert budget is not None
+    effective_rate = float(budget[0, 0, 6])
+    _, _, _, integral_innovation_variance = _ou_step_coefficients(
+        step_dt=step_dt,
+        correlation_time=correlation_time,
+    )
+    assert target_energies == pytest.approx(
+        [
+            0.0,
+            effective_rate / (2.0 * correlation_time),
+            effective_rate * integral_innovation_variance,
+        ],
+        rel=1e-6,
+        abs=1e-12,
+    )
+
+
 def test_backscatter_fraction_scales_diagnosed_rate() -> None:
     common: dict[str, Any] = {
         "return_energy_budget": True,
@@ -1024,3 +1165,17 @@ def test_zero_backscatter_fraction_preserves_fixed_forcing() -> None:
 def test_negative_backscatter_fraction_raises() -> None:
     with pytest.raises(ValueError, match="forcing_backscatter_fraction"):
         ShallowWater2D(forcing_backscatter_fraction=-0.1)
+
+
+def test_backscatter_requires_stochastic_forcing() -> None:
+    with pytest.raises(ValueError, match="requires stochastic forcing"):
+        ShallowWater2D(
+            forcing_type="none",
+            forcing_backscatter_fraction=50.0,
+        )
+
+    with pytest.raises(ValueError, match="requires stochastic forcing"):
+        _run_small_swe(
+            forcing_type="none",
+            forcing_backscatter_fraction=50.0,
+        )
