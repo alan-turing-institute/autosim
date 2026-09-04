@@ -40,20 +40,24 @@ to the deterministic ``none`` mode:
 * ``vortical`` adds divergence-free velocity increments and is useful for
   unresolved rotational eddy stirring or wind-stress curl.
 * ``balanced`` adds vortical velocity together with its constant-Coriolis
-  geostrophic height perturbation. It is the preferred idealization for
-  large-scale weather-like flow, although its balance is approximate on the
+  geostrophic height perturbation. This experimental joint perturbation can
+  reduce immediate imbalance, although its balance is approximate on the
   periodic beta-plane.
 * ``momentum`` adds unconstrained horizontal-velocity increments containing
   rotational and divergent components. It is the most direct idealization of
   stochastic wind stress for ocean-atmosphere coupling.
 
-All modes use a configurable Gaussian ring in spatial Fourier space.
+All modes use a configurable Gaussian ring in spatial Fourier space. For
+``vortical`` and ``balanced`` forcing, the ring filters a sampled vorticity
+field before streamfunction inversion; for ``momentum`` it filters two sampled
+velocity components directly.
 ``forcing_energy_rate`` is a diffusion scale in the linearized SWE energy
 norm. For white noise it sets the expected increment energy per unit time; for
-OU forcing it sets the resolved long-time diffusion rate. It does not prescribe
-the realized energy transferred to the nonlinear flow. Individual Gaussian
+OU forcing it sets the long-time diffusion rate. It does not prescribe the
+realized energy transferred to the nonlinear flow. Individual Gaussian
 draws fluctuate around the target rather than being rescaled to identical
-energy.
+energy. Neither the total flow energy nor the energy of each forcing
+realization is held constant.
 
 ``forcing_wavenumber`` is an angular wavenumber. On a square domain of side
 ``L``, Fourier mode ``m`` has ``k = 2 * pi * m / L`` and wavelength ``L / m``.
@@ -75,9 +79,12 @@ prediction system.
 A positive value selects an Ornstein-Uhlenbeck forcing tendency with that
 e-folding time in simulator time units. Increasing it produces longer-lived
 temporal correlations without changing the target long-time energy diffusion
-rate when the correlation time is resolved by the adaptive timestep. Set
-``return_additional_input_fields=True`` to store the realized ``[dh, du, dv]``
-impulse accumulated over every saved transition.
+rate. The OU time integral is sampled exactly on each adaptive step and
+converges to the white-noise increment as the correlation time tends to zero.
+Set ``return_additional_input_fields=True`` to store the realized
+``[dh, du, dv]`` impulse accumulated over every saved transition as an opt-in
+diagnostic. It is not included in the default forced dataset or its
+normalization statistics.
 
 OU forcing is a finite-persistence, Gaussian red-noise model rather than a
 claim that real weather follows a single correlation time. First-order

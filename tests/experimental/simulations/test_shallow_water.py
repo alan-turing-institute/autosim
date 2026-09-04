@@ -1,4 +1,5 @@
 import inspect
+import math
 from typing import Any
 
 import pytest
@@ -12,6 +13,7 @@ from autosim.experimental.simulations._spectral import (
 )
 from autosim.experimental.simulations.shallow_water import (
     _coriolis_grid,
+    _ou_step_coefficients,
     _sample_swe_forcing_field,
     simulate_swe_2d,
 )
@@ -169,6 +171,11 @@ def test_full_swe_terminal_only_run_is_finite() -> None:
     result = _run_small_swe(return_timeseries=False, dt_save=1.0)
     assert result.shape == (1, 18, 18, 3)
     assert torch.isfinite(result).all()
+
+
+def test_full_swe_validates_initial_state_when_t_is_zero() -> None:
+    with pytest.raises(RuntimeError, match="initial state saturated"):
+        _run_small_swe(amp=1e7, T=0.0)
 
 
 def test_full_swe_includes_non_regular_terminal_snapshot() -> None:
@@ -491,6 +498,50 @@ def test_ou_forcing_is_temporally_correlated() -> None:
 
     assert correlated_lag_one.item() > 0.5
     assert correlated_lag_one.item() > white_lag_one.item() + 0.4
+
+
+def test_ou_forcing_uses_exact_integrated_energy() -> None:
+    energy_rate = 2e-3
+    correlation_time = 1e-3
+    step_dt = 0.01
+    sim = _small_simulator(
+        return_additional_input_fields=True,
+        T=step_dt,
+        dt_save=step_dt,
+        g=0.0,
+        f0=0.0,
+        beta=0.0,
+        forcing_type="momentum",
+        forcing_energy_rate=energy_rate,
+        forcing_correlation_time=correlation_time,
+        parameters_range={"amp": (0.0, 0.0)},
+        **FORCING_OPTIONS,
+    )
+
+    impulses = sim.forward_samples_spatiotemporal(n=128, random_seed=12)[
+        "additional_input_fields"
+    ][:, 0]
+    sampled_energies = 0.5 * impulses[..., 1:].square().sum(dim=-1).mean(dim=(-2, -1))
+    expected_integrated_energy = energy_rate * (
+        step_dt - correlation_time * (1.0 - math.exp(-step_dt / correlation_time))
+    )
+
+    assert sampled_energies.mean().item() == pytest.approx(
+        expected_integrated_energy, rel=0.08
+    )
+    assert sampled_energies.std().item() > 0.02 * expected_integrated_energy
+
+
+def test_ou_integral_converges_to_white_noise_variance() -> None:
+    step_dt = 0.04
+    correlation_time = 1e-6
+    _, _, endpoint_weight, innovation_variance = _ou_step_coefficients(
+        step_dt=step_dt,
+        correlation_time=correlation_time,
+    )
+
+    assert endpoint_weight == pytest.approx(correlation_time)
+    assert innovation_variance == pytest.approx(step_dt, rel=1e-4)
 
 
 @pytest.mark.parametrize("forcing_type", ["thermal", "height"])

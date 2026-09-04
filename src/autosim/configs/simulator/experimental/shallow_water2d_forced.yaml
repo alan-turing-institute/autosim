@@ -1,6 +1,7 @@
 _target_: autosim.experimental.simulations.ShallowWater2D
 return_timeseries: true
-return_additional_input_fields: true
+# Opt in only for forcing diagnostics; ML targets default to the physical state.
+return_additional_input_fields: false
 log_level: warning
 nx: 64
 ny: 64

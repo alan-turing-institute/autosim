@@ -66,20 +66,23 @@ class ShallowWater2D(SpatioTemporalSimulator):
     - ``"vortical"`` injects divergence-free velocity and can represent
       unresolved rotational eddy stirring or wind-stress curl.
     - ``"balanced"`` adds the same rotational velocity together with its
-      constant-:math:`f` geostrophic height perturbation. It is most suitable
-      for large-scale weather-like flow, although balance is approximate with
-      spatially varying Coriolis parameter.
+      constant-:math:`f` geostrophic height perturbation. This experimental
+      joint perturbation can reduce immediate imbalance, although balance is
+      approximate with spatially varying Coriolis parameter.
     - ``"momentum"`` injects unconstrained horizontal velocity and therefore
       includes rotational and divergent components. It is the most direct
       idealization of stochastic wind stress in ocean-atmosphere coupling.
     - ``"none"`` leaves the SWE evolution deterministic after the random
       initial state is fixed.
 
-    Every stochastic mode uses a Gaussian ring in spatial Fourier space.
+    Every stochastic mode uses a Gaussian ring in spatial Fourier space. For
+    ``"vortical"`` and ``"balanced"`` forcing it filters sampled vorticity;
+    for ``"momentum"`` it filters two sampled velocity components directly.
     ``forcing_correlation_time=0`` gives independent white-in-time impulses.
     A positive value evolves a persistent Ornstein-Uhlenbeck (OU) forcing
-    tendency with e-folding time :math:`\tau`. Larger :math:`\tau` produces
-    more persistent, longer-correlated forcing.
+    tendency with e-folding time :math:`\tau` and integrates that tendency
+    exactly over each adaptive step. Larger :math:`\tau` produces more
+    persistent, longer-correlated forcing.
 
     Args:
         parameters_range: Input parameter (min, max) ranges. Supported keys:
@@ -123,7 +126,7 @@ class ShallowWater2D(SpatioTemporalSimulator):
         forcing_energy_rate
             Diffusion scale in the linearized SWE specific-energy norm. For
             white noise it sets the expected increment energy per unit time;
-            for resolved OU forcing it sets the long-time diffusion rate.
+            for OU forcing it sets the long-time diffusion rate.
         forcing_wavenumber, forcing_bandwidth
             Central angular wavenumber and width of the Gaussian spectral
             ring. A central wavenumber ``k`` corresponds to wavelength
@@ -353,6 +356,78 @@ def _coriolis_grid(
     raise ValueError(msg)
 
 
+def _ou_step_coefficients(
+    step_dt: float, correlation_time: float
+) -> tuple[float, float, float, float]:
+    """Return exact OU endpoint and time-integral coefficients.
+
+    The final two values multiply the sum of the old and new endpoints and an
+    independent spatial innovation, respectively, in the exact integral over
+    one step.
+    """
+    ratio = step_dt / correlation_time
+    decay = math.exp(-ratio)
+    endpoint_innovation_weight = math.sqrt(-math.expm1(-2.0 * ratio))
+    integral_endpoint_weight = correlation_time * math.tanh(0.5 * ratio)
+
+    # ratio - 2*tanh(ratio/2) loses precision for well-resolved OU steps.
+    if ratio < 1e-3:
+        residual_ratio = ratio**3 / 12.0 - ratio**5 / 120.0 + 17.0 * ratio**7 / 20160.0
+    else:
+        residual_ratio = ratio - 2.0 * math.tanh(0.5 * ratio)
+    integral_innovation_variance = correlation_time * max(residual_ratio, 0.0)
+    return (
+        decay,
+        endpoint_innovation_weight,
+        integral_endpoint_weight,
+        integral_innovation_variance,
+    )
+
+
+def _swe_forcing_expected_unit_energy(
+    *,
+    forcing_type: str,
+    nx: int,
+    ny: int,
+    g: float,
+    h_mean: float,
+    f0: float,
+    spectrum: torch.Tensor,
+    K2_inv: torch.Tensor,
+    dKx: torch.Tensor,
+    dKy: torch.Tensor,
+) -> float:
+    """Return expected energy before scaling a unit Gaussian forcing draw."""
+    if forcing_type in ("vortical", "balanced"):
+        energy_transfer = 0.5 * K2_inv.square() * (dKx.square() + dKy.square())
+        if forcing_type == "balanced":
+            if g > 0:
+                energy_transfer += 0.5 * (g / h_mean) * (f0 / g) ** 2 * K2_inv.square()
+            elif f0 != 0:
+                msg = "balanced forcing with g=0 requires f0=0"
+                raise ValueError(msg)
+        expected_energy = expected_filtered_variance(
+            nx=nx,
+            ny=ny,
+            spectrum=spectrum,
+            transfer_power=energy_transfer,
+        )
+    elif forcing_type == "momentum":
+        expected_energy = expected_filtered_variance(
+            nx=nx,
+            ny=ny,
+            spectrum=spectrum,
+        )
+    else:
+        msg = f"cannot normalize forcing_type={forcing_type!r}"
+        raise ValueError(msg)
+
+    if not math.isfinite(expected_energy) or expected_energy <= 0:
+        msg = "stochastic forcing has zero or non-finite expected energy"
+        raise RuntimeError(msg)
+    return expected_energy
+
+
 def _sample_swe_forcing_field(
     *,
     forcing_type: str,
@@ -368,6 +443,7 @@ def _sample_swe_forcing_field(
     K2_inv: torch.Tensor,
     dKx: torch.Tensor,
     dKy: torch.Tensor,
+    expected_unit_energy: float | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Sample Gaussian ``(dh, du, dv)`` with the target expected energy."""
     zero = torch.zeros((nx, ny), dtype=dtype)
@@ -391,25 +467,17 @@ def _sample_swe_forcing_field(
         psi_increment_hat = K2_inv * zeta_increment_hat
         du = to_phys(-1j * dKy * psi_increment_hat)
         dv = to_phys(1j * dKx * psi_increment_hat)
-        energy_transfer = 0.5 * K2_inv.square() * (dKx.square() + dKy.square())
         if forcing_type == "vortical":
             dh = zero
         elif g > 0:
             # Constant-f geostrophic balance: g * grad(dh) = f0 * grad(dpsi).
             dh = (f0 / g) * to_phys(psi_increment_hat)
-            energy_transfer += 0.5 * (g / h_mean) * (f0 / g) ** 2 * K2_inv.square()
         elif f0 == 0:
             # With no gravity or rotation, balanced forcing reduces to vortical.
             dh = zero
         else:
             msg = "balanced forcing with g=0 requires f0=0"
             raise ValueError(msg)
-        expected_energy = expected_filtered_variance(
-            nx=nx,
-            ny=ny,
-            spectrum=spectrum,
-            transfer_power=energy_transfer,
-        )
     elif forcing_type == "momentum":
         du = to_phys(
             sample_filtered_scalar_hat(
@@ -430,19 +498,24 @@ def _sample_swe_forcing_field(
             )
         )
         dh = zero
-        expected_energy = expected_filtered_variance(
-            nx=nx,
-            ny=ny,
-            spectrum=spectrum,
-        )
     else:
         msg = f"cannot sample forcing_type={forcing_type!r}"
         raise ValueError(msg)
 
-    if not math.isfinite(expected_energy) or expected_energy <= 0:
-        msg = "stochastic forcing has zero or non-finite expected energy"
-        raise RuntimeError(msg)
-    scale = math.sqrt(target_energy / expected_energy)
+    if expected_unit_energy is None:
+        expected_unit_energy = _swe_forcing_expected_unit_energy(
+            forcing_type=forcing_type,
+            nx=nx,
+            ny=ny,
+            g=g,
+            h_mean=h_mean,
+            f0=f0,
+            spectrum=spectrum,
+            K2_inv=K2_inv,
+            dKx=dKx,
+            dKy=dKy,
+        )
+    scale = math.sqrt(target_energy / expected_unit_energy)
     return dh * scale, du * scale, dv * scale
 
 
@@ -478,11 +551,12 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     Named stochastic forcing modes share a Gaussian spatial spectral ring.
     ``forcing_correlation_time=0`` uses independent white-in-time increments.
     Positive correlation time evolves an OU forcing tendency with exact
-    exponential memory at each adaptive step. Its stationary linearized
-    expected specific energy is
+    exponential memory and samples its exact time integral at each adaptive
+    step. Its stationary linearized expected specific energy is
     ``forcing_energy_rate / (2 * correlation_time)``, so its long-time
-    integrated diffusion rate is ``forcing_energy_rate`` when the correlation
-    time is resolved by the adaptive timestep.
+    integrated diffusion rate is ``forcing_energy_rate``. The exact integral
+    also converges to the white-noise increment as the correlation time tends
+    to zero.
 
     When ``return_additional_input_fields=True``, three forcing-impulse channels
     are appended after ``[h, u, v]``. At saved index ``i`` they contain the sum
@@ -554,6 +628,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     max_retained_k2 = float(K2[dealias_mask].max())
 
     forcing_spectrum: torch.Tensor | None = None
+    forcing_expected_unit_energy: float | None = None
     if forcing_type != "none":
         fundamental_wavenumber = 2.0 * math.pi / max(Lx, Ly)
         if forcing_wavenumber is None:
@@ -564,9 +639,21 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         forcing_spectrum = gaussian_ring_spectrum(
             K2, forcing_wavenumber, forcing_bandwidth, dealias_mask
         )
+        forcing_expected_unit_energy = _swe_forcing_expected_unit_energy(
+            forcing_type=forcing_type,
+            nx=nx,
+            ny=ny,
+            g=g,
+            h_mean=h_mean,
+            f0=f0,
+            spectrum=forcing_spectrum,
+            K2_inv=K2_inv,
+            dKx=dKx,
+            dKy=dKy,
+        )
 
     def sample_forcing_field(target_energy: float) -> torch.Tensor:
-        if forcing_spectrum is None:
+        if forcing_spectrum is None or forcing_expected_unit_energy is None:
             msg = "stochastic forcing spectrum was not initialized"
             raise RuntimeError(msg)
         return torch.stack(
@@ -584,6 +671,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
                 K2_inv=K2_inv,
                 dKx=dKx,
                 dKy=dKy,
+                expected_unit_energy=forcing_expected_unit_energy,
             ),
             dim=-1,
         )
@@ -759,6 +847,20 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         v_sat = (v_curr.abs() >= UV_ABS_CLIP).float().mean()
         return float(torch.maximum(torch.maximum(h_sat, u_sat), v_sat).item())
 
+    if not (
+        torch.isfinite(h).all() and torch.isfinite(u).all() and torch.isfinite(v).all()
+    ):
+        raise RuntimeError(
+            "ShallowWater2D simulation failed: "
+            f"non-finite initial state at t=0.000000 (amp={amp:.6f})."
+        )
+    if _saturation_fraction(h, u, v) >= SATURATION_THRESHOLD:
+        raise RuntimeError(
+            "ShallowWater2D simulation failed: "
+            f"initial state saturated at clipping bounds at t=0.000000 "
+            f"(amp={amp:.6f})."
+        )
+
     save_times = _save_times(T, dt_save)
     expected_frames = len(save_times)
     if return_timeseries and skip_nt >= expected_frames:
@@ -828,18 +930,30 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
                 if forcing_tendency is None:
                     msg = "OU forcing tendency was not initialized"
                     raise RuntimeError(msg)
-                decay = math.exp(-step_dt / forcing_correlation_time)
-                innovation_weight = math.sqrt(
-                    -math.expm1(-2.0 * step_dt / forcing_correlation_time)
+                (
+                    decay,
+                    endpoint_innovation_weight,
+                    integral_endpoint_weight,
+                    integral_innovation_variance,
+                ) = _ou_step_coefficients(
+                    step_dt=step_dt,
+                    correlation_time=forcing_correlation_time,
                 )
                 stationary_energy = forcing_energy_rate / (
                     2.0 * forcing_correlation_time
                 )
-                innovation = sample_forcing_field(stationary_energy)
-                forcing_tendency = (
-                    decay * forcing_tendency + innovation_weight * innovation
+                endpoint_innovation = sample_forcing_field(stationary_energy)
+                previous_tendency = forcing_tendency
+                forcing_tendency = decay * previous_tendency + (
+                    endpoint_innovation_weight * endpoint_innovation
                 )
-                forcing_increment = forcing_tendency * step_dt
+                integral_innovation = sample_forcing_field(
+                    forcing_energy_rate * integral_innovation_variance
+                )
+                forcing_increment = (
+                    integral_endpoint_weight * (previous_tendency + forcing_tendency)
+                    + integral_innovation
+                )
             dh, du, dv = forcing_increment.unbind(dim=-1)
             h += dh
             u += du
