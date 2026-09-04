@@ -15,6 +15,7 @@ from autosim.experimental.simulations.shallow_water import (
     _coriolis_grid,
     _ou_step_coefficients,
     _sample_swe_forcing_field,
+    _swe_forcing_expected_unit_energy,
     simulate_swe_2d,
 )
 
@@ -442,24 +443,53 @@ def test_forcing_energy_is_an_ensemble_mean(forcing_type: str) -> None:
         mask,
     )
     f0 = (g * h_mean) ** 0.5 / 8.0
+    expected_unit_energy = _swe_forcing_expected_unit_energy(
+        forcing_type=forcing_type,
+        nx=nx,
+        ny=ny,
+        g=g,
+        h_mean=h_mean,
+        f0=f0,
+        spectrum=spectrum,
+        K2_inv=K2_inv,
+        dKx=dKx,
+        dKy=dKy,
+    )
+
+    sample_options: dict[str, Any] = {
+        "forcing_type": forcing_type,
+        "nx": nx,
+        "ny": ny,
+        "target_energy": target_energy,
+        "g": g,
+        "h_mean": h_mean,
+        "f0": f0,
+        "dtype": torch.float64,
+        "spectrum": spectrum,
+        "mask": mask,
+        "K2_inv": K2_inv,
+        "dKx": dKx,
+        "dKy": dKy,
+    }
+
+    torch.manual_seed(122)
+    fallback_sample = _sample_swe_forcing_field(**sample_options)
+    torch.manual_seed(122)
+    cached_sample = _sample_swe_forcing_field(
+        **sample_options,
+        expected_unit_energy=expected_unit_energy,
+    )
+    for fallback_field, cached_field in zip(
+        fallback_sample, cached_sample, strict=True
+    ):
+        torch.testing.assert_close(cached_field, fallback_field, rtol=0.0, atol=0.0)
 
     torch.manual_seed(123)
     energies = []
     for _ in range(128):
         dh, du, dv = _sample_swe_forcing_field(
-            forcing_type=forcing_type,
-            nx=nx,
-            ny=ny,
-            target_energy=target_energy,
-            g=g,
-            h_mean=h_mean,
-            f0=f0,
-            dtype=torch.float64,
-            spectrum=spectrum,
-            mask=mask,
-            K2_inv=K2_inv,
-            dKx=dKx,
-            dKy=dKy,
+            **sample_options,
+            expected_unit_energy=expected_unit_energy,
         )
         energies.append(
             0.5 * (du.square() + dv.square() + (g / h_mean) * dh.square()).mean()

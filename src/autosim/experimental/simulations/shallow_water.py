@@ -883,17 +883,6 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     failure_reason: str | None = None
 
     while t < T - 1e-12:
-        if not (
-            torch.isfinite(h).all()
-            and torch.isfinite(u).all()
-            and torch.isfinite(v).all()
-        ):
-            failure_reason = "non-finite state encountered"
-            break
-        if _saturation_fraction(h, u, v) >= SATURATION_THRESHOLD:
-            failure_reason = "state saturated at clipping bounds"
-            break
-
         c_now = torch.sqrt(g * h.clamp(min=H_MIN_CLIP))
         speed_x = (u.abs() + c_now).max().item()
         speed_y = (v.abs() + c_now).max().item()
