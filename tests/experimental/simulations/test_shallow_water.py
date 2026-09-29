@@ -13,6 +13,8 @@ from autosim.experimental.simulations._spectral import (
     two_thirds_mask,
 )
 from autosim.experimental.simulations.shallow_water import (
+    H_MAX_CLIP,
+    H_MIN_CLIP,
     _coriolis_grid,
     _ou_step_coefficients,
     _sample_swe_forcing_field,
@@ -1375,3 +1377,53 @@ def test_generator_bounds_linear_damping_and_rotation(drag: float, f0: float) ->
     torch.testing.assert_close(
         fine[-1], expected.expand_as(fine[-1]), atol=2e-10, rtol=0
     )
+
+
+@pytest.mark.parametrize("forcing_type", ["balanced", "pv_balanced"])
+@pytest.mark.parametrize("correlation_time", [0.0, 0.1])
+@pytest.mark.parametrize(
+    ("depth", "target_height"),
+    [(1.0, -0.01), (1.0, H_MIN_CLIP / 2), (99.0, H_MAX_CLIP + 0.01)],
+)
+def test_height_forcing_rejects_isolated_clipping(
+    forcing_type: str, correlation_time: float, depth: float, target_height: float
+) -> None:
+    initial = torch.zeros(32, 32, 3, dtype=torch.float64)
+    initial[..., 0] = depth
+    options = {
+        "nx": 32,
+        "ny": 32,
+        "Lx": 2 * math.pi,
+        "Ly": 2 * math.pi,
+        "g": 1.0,
+        "h_mean": depth,
+        "nu": 0.0,
+        "drag": 0.0,
+        "f0": 3.0,
+        "beta": 0.0,
+        "coriolis_mode": "f_plane",
+        "initial_condition": "restart",
+        "initial_state": initial,
+        "T": 0.001,
+        "dt_save": 0.001,
+        "forcing_type": forcing_type,
+        "forcing_wavenumber": 8.0,
+        "forcing_bandwidth": 1.0,
+        "forcing_correlation_time": correlation_time,
+        "return_additional_input_fields": True,
+    }
+    # Scale an actual seeded Gaussian draw to just cross a height bound.
+    # This avoids mocking the forcing or depending on a hard-coded noise rate.
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        unit = _run_small_swe(**options, forcing_energy_rate=1.0)
+    dh = unit[0, ..., 3].double()
+    extreme = dh.min() if target_height < depth else dh.max()
+    scale = (target_height - depth) / float(extreme)
+    predicted_height = depth + scale * dh
+    invalid = (predicted_height < H_MIN_CLIP) | (predicted_height > H_MAX_CLIP)
+    assert 0 < int(invalid.sum()) < 0.01 * invalid.numel()
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        with pytest.raises(RuntimeError, match=r"height.*after stochastic forcing"):
+            _run_small_swe(**options, forcing_energy_rate=scale**2)
