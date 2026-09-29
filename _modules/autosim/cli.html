@@ -1,0 +1,1257 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>autosim.cli &#8212; AutoSim: simulation data generation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=7f8ff830"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/autosim/cli';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/AS.png" class="logo__image only-light" alt="AutoSim: simulation data generation - Home"/>
+    <img src="../../_static/AS.png" class="logo__image only-dark pst-js-only" alt="AutoSim: simulation data generation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    Welcome to AutoSim
+                </a>
+            </li>
+        </ul>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/visualize.html">Visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/stratified.html">Stratified sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../reference/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../reference/core/index.html">Core Modules</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/core/cli.html">autosim.cli</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/core/device.html">autosim.device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/core/logging.html">autosim.logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/core/types.html">autosim.types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/core/utils.html">autosim.utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/core/validation.html">autosim.validation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../reference/simulations/index.html">Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/simulations/base.html">autosim.simulations.base</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../reference/simulations/spatiotemporal/index.html">Spatiotemporal Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../reference/simulations/spatiotemporal/advection_diffusion.html">autosim.simulations.spatiotemporal.advection_diffusion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../reference/simulations/spatiotemporal/advection_diffusion_multichannel.html">autosim.simulations.spatiotemporal.advection_diffusion_multichannel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../reference/simulations/spatiotemporal/gray_scott.html">autosim.simulations.spatiotemporal.gray_scott</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../reference/simulations/spatiotemporal/gross_pitaevskii.html">autosim.simulations.spatiotemporal.gross_pitaevskii</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../reference/simulations/spatiotemporal/navier_stokes_conditioned.html">autosim.simulations.spatiotemporal.navier_stokes_conditioned</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../reference/simulations/spatiotemporal/reaction_diffusion.html">autosim.simulations.spatiotemporal.reaction_diffusion</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/simulations/double_pendulum.html">autosim.simulations.double_pendulum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/simulations/epidemic.html">autosim.simulations.epidemic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/simulations/flow_problem.html">autosim.simulations.flow_problem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/simulations/projectile.html">autosim.simulations.projectile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/simulations/seir.html">autosim.simulations.seir</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../reference/experimental/index.html">Experimental Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/experimental/compressible_fluid.html">autosim.experimental.simulations.compressible_fluid</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/experimental/hydrodynamics_2d.html">autosim.experimental.simulations.hydrodynamics_2d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/experimental/lattice_boltzmann.html">autosim.experimental.simulations.lattice_boltzmann</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../reference/experimental/shallow_water.html">autosim.experimental.simulations.shallow_water</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim/issues/new?title=Issue%20on%20page%20%2F_modules/autosim/cli.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for autosim.cli</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Command-line interface for generating and inspecting AutoSim datasets.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">hydra</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">hydra.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_original_cwd</span><span class="p">,</span> <span class="n">instantiate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">omegaconf</span><span class="w"> </span><span class="kn">import</span> <span class="n">DictConfig</span><span class="p">,</span> <span class="n">OmegaConf</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.simulations.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">SpatioTemporalSimulator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_spatiotemporal_video</span>
+
+<span class="k">if</span> <span class="ow">not</span> <span class="n">OmegaConf</span><span class="o">.</span><span class="n">has_resolver</span><span class="p">(</span><span class="s2">&quot;shortuuid&quot;</span><span class="p">):</span>
+    <span class="n">OmegaConf</span><span class="o">.</span><span class="n">register_new_resolver</span><span class="p">(</span>
+        <span class="s2">&quot;shortuuid&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">n</span><span class="o">=</span><span class="mi">7</span><span class="p">:</span> <span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="p">)],</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="build_simulator">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.build_simulator">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_simulator</span><span class="p">(</span><span class="n">simulator_cfg</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SpatioTemporalSimulator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Instantiate and validate a spatiotemporal simulator from Hydra config.&quot;&quot;&quot;</span>
+    <span class="n">simulator</span> <span class="o">=</span> <span class="n">instantiate</span><span class="p">(</span><span class="n">simulator_cfg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">simulator</span><span class="p">,</span> <span class="n">SpatioTemporalSimulator</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;Configured simulator must inherit from SpatioTemporalSimulator for &quot;</span>
+            <span class="s2">&quot;dataset generation. For non-spatiotemporal simulators, use their &quot;</span>
+            <span class="s2">&quot;forward/forward_batch API directly.&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">simulator</span></div>
+
+
+
+<div class="viewcode-block" id="generate_dataset_splits">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.generate_dataset_splits">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_dataset_splits</span><span class="p">(</span>
+    <span class="n">sim</span><span class="p">:</span> <span class="n">SpatioTemporalSimulator</span><span class="p">,</span>
+    <span class="n">n_train</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">n_valid</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">n_test</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">base_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">ensure_exact_n</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate train/valid/test splits from a simulator.&quot;&quot;&quot;</span>
+    <span class="c1"># Reserve disjoint seed ranges so retries in one split cannot collide with</span>
+    <span class="c1"># initial or retry seeds in another.</span>
+    <span class="n">split_seed_stride</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">SpatioTemporalSimulator</span><span class="o">.</span><span class="n">_retry_budget</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">n_train</span><span class="p">,</span> <span class="n">n_valid</span><span class="p">,</span> <span class="n">n_test</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_seed</span><span class="p">(</span><span class="n">offset</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">base_seed</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">base_seed</span> <span class="o">+</span> <span class="n">offset</span> <span class="o">*</span> <span class="n">split_seed_stride</span>
+
+    <span class="n">train</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">forward_samples_spatiotemporal</span><span class="p">(</span>
+        <span class="n">n</span><span class="o">=</span><span class="n">n_train</span><span class="p">,</span>
+        <span class="n">random_seed</span><span class="o">=</span><span class="n">get_seed</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+        <span class="n">ensure_exact_n</span><span class="o">=</span><span class="n">ensure_exact_n</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">valid</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">forward_samples_spatiotemporal</span><span class="p">(</span>
+        <span class="n">n</span><span class="o">=</span><span class="n">n_valid</span><span class="p">,</span>
+        <span class="n">random_seed</span><span class="o">=</span><span class="n">get_seed</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">ensure_exact_n</span><span class="o">=</span><span class="n">ensure_exact_n</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">test</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">forward_samples_spatiotemporal</span><span class="p">(</span>
+        <span class="n">n</span><span class="o">=</span><span class="n">n_test</span><span class="p">,</span>
+        <span class="n">random_seed</span><span class="o">=</span><span class="n">get_seed</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span>
+        <span class="n">ensure_exact_n</span><span class="o">=</span><span class="n">ensure_exact_n</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;train&quot;</span><span class="p">:</span> <span class="n">train</span><span class="p">,</span> <span class="s2">&quot;valid&quot;</span><span class="p">:</span> <span class="n">valid</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">:</span> <span class="n">test</span><span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="save_dataset_splits">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.save_dataset_splits">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_dataset_splits</span><span class="p">(</span>
+    <span class="n">splits</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Persist split dictionaries to `output_dir/{split}/data.pt`.&quot;&quot;&quot;</span>
+    <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="n">expected_files</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">output_path</span> <span class="o">/</span> <span class="n">split</span> <span class="o">/</span> <span class="s2">&quot;data.pt&quot;</span> <span class="k">for</span> <span class="n">split</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="s2">&quot;valid&quot;</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">overwrite</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">expected_files</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Refusing to overwrite existing dataset files in &#39;</span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
+            <span class="s2">&quot;Set overwrite=true to replace them.&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">split_name</span><span class="p">,</span> <span class="n">payload</span> <span class="ow">in</span> <span class="n">splits</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">split_dir</span> <span class="o">=</span> <span class="n">output_path</span> <span class="o">/</span> <span class="n">split_name</span>
+        <span class="n">split_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">split_dir</span> <span class="o">/</span> <span class="s2">&quot;data.pt&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="save_resolved_config">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.save_resolved_config">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_resolved_config</span><span class="p">(</span><span class="n">cfg</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Persist the fully resolved Hydra config next to generated datasets.&quot;&quot;&quot;</span>
+    <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="n">output_path</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">resolved_cfg_path</span> <span class="o">=</span> <span class="n">output_path</span> <span class="o">/</span> <span class="s2">&quot;resolved_config.yaml&quot;</span>
+    <span class="n">resolved_yaml</span> <span class="o">=</span> <span class="n">OmegaConf</span><span class="o">.</span><span class="n">to_yaml</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">resolve</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">resolved_cfg_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">resolved_yaml</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_visualize_batch_indices</span><span class="p">(</span>
+    <span class="n">visualize_cfg</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">split_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve configured video batch indices for a generated split.&quot;&quot;&quot;</span>
+    <span class="n">batch_indices_cfg</span> <span class="o">=</span> <span class="n">visualize_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;batch_indices&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">batch_indices_cfg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">max_examples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">visualize_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max_examples&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">max_examples</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;visualize.max_examples must be non-negative.&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">max_examples</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">)))</span>
+
+    <span class="n">batch_indices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">batch_indices_cfg</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">batch_indices</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">idx</span> <span class="o">&gt;=</span> <span class="n">batch_size</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;visualize batch index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> is out of range for split &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">split_name</span><span class="si">}</span><span class="s2">&#39; with batch size </span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">batch_indices</span>
+
+
+<div class="viewcode-block" id="save_example_videos">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.save_example_videos">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_example_videos</span><span class="p">(</span>
+    <span class="n">splits</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">visualize_cfg</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">channel_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Optionally render example videos for selected batch indices.</span>
+
+<span class="sd">    Expected data shape is ``[batch, time, x, y, channels]``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">visualize_cfg</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">visualize_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;enabled&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)):</span>
+        <span class="k">return</span>
+
+    <span class="n">split_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">visualize_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;split&quot;</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">split_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">splits</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;visualize.split=&#39;</span><span class="si">{</span><span class="n">split_name</span><span class="si">}</span><span class="s2">&#39; not found in generated splits.&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">split_payload</span> <span class="o">=</span> <span class="n">splits</span><span class="p">[</span><span class="n">split_name</span><span class="p">]</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">split_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">5</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;visualization expects split payload &#39;data&#39; as a 5D torch.Tensor &quot;</span>
+            <span class="s2">&quot;with shape [batch,time,x,y,channels].&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">batch_indices</span> <span class="o">=</span> <span class="n">_resolve_visualize_batch_indices</span><span class="p">(</span>
+        <span class="n">visualize_cfg</span><span class="o">=</span><span class="n">visualize_cfg</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">split_name</span><span class="o">=</span><span class="n">split_name</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">batch_indices</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="n">fps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">visualize_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fps&quot;</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">fps</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;visualize.fps must be positive.&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">file_ext</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">visualize_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;file_ext&quot;</span><span class="p">,</span> <span class="s2">&quot;gif&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">file_ext</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;gif&quot;</span><span class="p">,</span> <span class="s2">&quot;mp4&quot;</span><span class="p">}:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;visualize.file_ext must be one of [&#39;gif&#39;, &#39;mp4&#39;].&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">videos_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;examples&quot;</span> <span class="o">/</span> <span class="n">split_name</span>
+    <span class="n">videos_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">overwrite</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">visualize_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;overwrite&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>
+    <span class="n">preserve_aspect</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">visualize_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;preserve_aspect&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+
+    <span class="n">configured_channel_names</span> <span class="o">=</span> <span class="n">visualize_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;channel_names&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">resolved_channel_names</span> <span class="o">=</span> <span class="n">channel_names</span>
+    <span class="k">if</span> <span class="n">configured_channel_names</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">resolved_channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">configured_channel_names</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">batch_indices</span><span class="p">:</span>
+        <span class="n">save_path</span> <span class="o">=</span> <span class="n">videos_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;batch_</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">file_ext</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="n">save_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">overwrite</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">plot_spatiotemporal_video</span><span class="p">(</span>
+            <span class="n">true</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">batch_idx</span><span class="o">=</span><span class="n">idx</span><span class="p">,</span>
+            <span class="n">fps</span><span class="o">=</span><span class="n">fps</span><span class="p">,</span>
+            <span class="n">save_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">save_path</span><span class="p">),</span>
+            <span class="n">channel_names</span><span class="o">=</span><span class="n">resolved_channel_names</span><span class="p">,</span>
+            <span class="n">preserve_aspect</span><span class="o">=</span><span class="n">preserve_aspect</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_field_names_csv</span><span class="p">(</span><span class="n">field_names_csv</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse a comma-separated field-name string into a cleaned list.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">field_names_csv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">field_names_csv</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+    <span class="k">return</span> <span class="n">names</span> <span class="k">if</span> <span class="n">names</span> <span class="k">else</span> <span class="kc">None</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_infer_core_field_names_from_resolved_config</span><span class="p">(</span>
+    <span class="n">dataset_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">n_channels</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Infer channel names from `resolved_config.yaml` when available.&quot;&quot;&quot;</span>
+    <span class="n">resolved_cfg_path</span> <span class="o">=</span> <span class="n">dataset_dir</span> <span class="o">/</span> <span class="s2">&quot;resolved_config.yaml&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">resolved_cfg_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">cfg</span> <span class="o">=</span> <span class="n">OmegaConf</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">resolved_cfg_path</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">DictConfig</span><span class="p">)</span>
+        <span class="n">simulator_cfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;simulator&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">simulator_cfg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">sim</span> <span class="o">=</span> <span class="n">build_simulator</span><span class="p">(</span><span class="n">simulator_cfg</span><span class="p">)</span>
+        <span class="n">inferred_names</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">sim</span><span class="o">.</span><span class="n">output_names</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inferred_names</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_channels</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">inferred_names</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_shared_group_indices</span><span class="p">(</span>
+    <span class="n">shared_core_field_groups</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">core_field_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve named shared-stat groups into (apply_to_indices, pool_indices).</span>
+
+<span class="sd">    Stats are computed from pool_indices and assigned to apply_to_indices.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">shared_core_field_groups</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="n">field_to_idx</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">idx</span> <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">core_field_names</span><span class="p">)}</span>
+    <span class="n">resolved</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">assigned_group_by_name</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">group_idx</span><span class="p">,</span> <span class="p">(</span><span class="n">apply_to_names</span><span class="p">,</span> <span class="n">pool_from_names</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+        <span class="n">shared_core_field_groups</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">apply_to_names</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;Each shared normalization group apply_to must include at least one &quot;</span>
+                <span class="s2">&quot;field name.&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">apply_to_names</span><span class="p">]</span>
+        <span class="n">duplicate_names</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span> <span class="k">if</span> <span class="n">names</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">})</span>
+        <span class="k">if</span> <span class="n">duplicate_names</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;Shared normalization groups cannot repeat names inside apply_to. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Repeated in group </span><span class="si">{</span><span class="n">group_idx</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">duplicate_names</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">unknown</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">field_to_idx</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">unknown</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;Shared normalization groups reference unknown core field names. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Unknown in group </span><span class="si">{</span><span class="n">group_idx</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">unknown</span><span class="si">}</span><span class="s2">. Known: </span><span class="si">{</span><span class="n">core_field_names</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+            <span class="n">prior</span> <span class="o">=</span> <span class="n">assigned_group_by_name</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">prior</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s2">&quot;Shared normalization groups cannot overlap. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Field &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; appears in groups </span><span class="si">{</span><span class="n">prior</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">group_idx</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">assigned_group_by_name</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">group_idx</span>
+
+        <span class="n">apply_to_indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">field_to_idx</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span>
+        <span class="n">pool_indices</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">[</span><span class="n">field_to_idx</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">pool_from_names</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">pool_from_names</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">apply_to_indices</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">resolved</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">apply_to_indices</span><span class="p">,</span> <span class="n">pool_indices</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">resolved</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_shared_core_field_groups</span><span class="p">(</span>
+    <span class="n">normalization_cfg</span><span class="p">:</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse optional shared normalization groups from config.</span>
+
+<span class="sd">    Each group is (apply_to, pool_from). Stats are computed from pool_from</span>
+<span class="sd">    (or apply_to if pool_from is None) and assigned to apply_to.</span>
+<span class="sd">    Config items may be:</span>
+<span class="sd">    - A list of field names: pool and apply both use that list.</span>
+<span class="sd">    - A dict with &quot;apply_to&quot; (list) and optional &quot;pool_from&quot; (list, must be</span>
+<span class="sd">      a subset of apply_to): stats computed from pool_from only, applied to apply_to.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">normalization_cfg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">groups_cfg</span> <span class="o">=</span> <span class="n">normalization_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;shared_core_field_groups&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">groups_cfg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">OmegaConf</span><span class="o">.</span><span class="n">is_config</span><span class="p">(</span><span class="n">groups_cfg</span><span class="p">):</span>
+        <span class="n">groups_cfg</span> <span class="o">=</span> <span class="n">OmegaConf</span><span class="o">.</span><span class="n">to_container</span><span class="p">(</span><span class="n">groups_cfg</span><span class="p">,</span> <span class="n">resolve</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">groups_cfg</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;normalization.shared_core_field_groups must be a list.&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">result</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">group_idx</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">groups_cfg</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">group</span><span class="p">]</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">names</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>  <span class="c1"># pool from and apply to same</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">apply_to</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;apply_to&quot;</span><span class="p">)</span>
+            <span class="n">pool_from</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pool_from&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">apply_to</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s2">&quot;normalization.shared_core_field_groups: dict entry must have &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;&#39;apply_to&#39;. Group </span><span class="si">{</span><span class="n">group_idx</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">apply_to</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">(</span>
+                    <span class="n">apply_to</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">apply_to</span><span class="p">,</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">)</span> <span class="k">else</span> <span class="p">[</span><span class="n">apply_to</span><span class="p">]</span>
+                <span class="p">)</span>
+            <span class="p">]</span>
+            <span class="k">if</span> <span class="n">pool_from</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">pool_from</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">(</span>
+                        <span class="n">pool_from</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pool_from</span><span class="p">,</span> <span class="nb">list</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">)</span>
+                        <span class="k">else</span> <span class="p">[</span><span class="n">pool_from</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="p">]</span>
+                <span class="n">extra</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">pool_from</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">apply_to</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">extra</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="s2">&quot;normalization.shared_core_field_groups: &#39;pool_from&#39; must be &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;a subset of &#39;apply_to&#39;. &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;Group </span><span class="si">{</span><span class="n">group_idx</span><span class="si">}</span><span class="s2"> pool_from has: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">extra</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+                    <span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">pool_from</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">apply_to</span><span class="p">,</span> <span class="n">pool_from</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;normalization.shared_core_field_groups entries must be a list of &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;names or a dict with apply_to (and optional pool_from).&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Group </span><span class="si">{</span><span class="n">group_idx</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<div class="viewcode-block" id="compute_normalization_stats">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.compute_normalization_stats">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_normalization_stats</span><span class="p">(</span>
+    <span class="n">split_payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">core_field_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">constant_field_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">shared_core_field_groups</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute normalization statistics for one split payload.&quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">split_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">5</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;Normalization stats require split payload &#39;data&#39; as a 5D torch.Tensor &quot;</span>
+            <span class="s2">&quot;with shape [batch,time,x,y,channels].&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">_</span><span class="p">,</span> <span class="n">n_time</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">n_channels</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">if</span> <span class="n">n_time</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;Normalization delta stats require at least 2 time steps in &quot;</span>
+            <span class="s2">&quot;split payload &#39;data&#39;.&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">resolved_core_field_names</span> <span class="o">=</span> <span class="n">core_field_names</span>
+    <span class="k">if</span> <span class="n">resolved_core_field_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">resolved_core_field_names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;field_</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_channels</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">resolved_core_field_names</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_channels</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;Number of core field names must match data channel count. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Received </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">resolved_core_field_names</span><span class="p">)</span><span class="si">}</span><span class="s2"> names &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;for </span><span class="si">{</span><span class="n">n_channels</span><span class="si">}</span><span class="s2"> channels.&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">deltas</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="o">...</span><span class="p">]</span> <span class="o">-</span> <span class="n">data</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+
+    <span class="n">flattened_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_channels</span><span class="p">)</span>
+    <span class="n">flattened_deltas</span> <span class="o">=</span> <span class="n">deltas</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_channels</span><span class="p">)</span>
+    <span class="n">mean</span> <span class="o">=</span> <span class="n">flattened_data</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">std</span> <span class="o">=</span> <span class="n">flattened_data</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">unbiased</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">mean_delta</span> <span class="o">=</span> <span class="n">flattened_deltas</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">std_delta</span> <span class="o">=</span> <span class="n">flattened_deltas</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">unbiased</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="n">shared_group_indices</span> <span class="o">=</span> <span class="n">_resolve_shared_group_indices</span><span class="p">(</span>
+        <span class="n">shared_core_field_groups</span><span class="o">=</span><span class="n">shared_core_field_groups</span><span class="p">,</span>
+        <span class="n">core_field_names</span><span class="o">=</span><span class="n">resolved_core_field_names</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">shared_group_indices</span><span class="p">:</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="n">mean</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">std</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">mean_delta</span> <span class="o">=</span> <span class="n">mean_delta</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">std_delta</span> <span class="o">=</span> <span class="n">std_delta</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">apply_to_indices</span><span class="p">,</span> <span class="n">pool_indices</span> <span class="ow">in</span> <span class="n">shared_group_indices</span><span class="p">:</span>
+            <span class="n">group_data</span> <span class="o">=</span> <span class="n">flattened_data</span><span class="p">[:,</span> <span class="n">pool_indices</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">group_deltas</span> <span class="o">=</span> <span class="n">flattened_deltas</span><span class="p">[:,</span> <span class="n">pool_indices</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">shared_mean</span> <span class="o">=</span> <span class="n">group_data</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">shared_std</span> <span class="o">=</span> <span class="n">group_data</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">unbiased</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">shared_mean_delta</span> <span class="o">=</span> <span class="n">group_deltas</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">shared_std_delta</span> <span class="o">=</span> <span class="n">group_deltas</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">unbiased</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">mean</span><span class="p">[</span><span class="n">apply_to_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">shared_mean</span>
+            <span class="n">std</span><span class="p">[</span><span class="n">apply_to_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">shared_std</span>
+            <span class="n">mean_delta</span><span class="p">[</span><span class="n">apply_to_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">shared_mean_delta</span>
+            <span class="n">std_delta</span><span class="p">[</span><span class="n">apply_to_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">shared_std_delta</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_stats_by_channel</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">name</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">resolved_core_field_names</span> <span class="ow">or</span> <span class="p">[])</span>
+        <span class="p">}</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;stats&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="n">_stats_by_channel</span><span class="p">(</span><span class="n">mean</span><span class="p">),</span>
+            <span class="s2">&quot;std&quot;</span><span class="p">:</span> <span class="n">_stats_by_channel</span><span class="p">(</span><span class="n">std</span><span class="p">),</span>
+            <span class="s2">&quot;mean_delta&quot;</span><span class="p">:</span> <span class="n">_stats_by_channel</span><span class="p">(</span><span class="n">mean_delta</span><span class="p">),</span>
+            <span class="s2">&quot;std_delta&quot;</span><span class="p">:</span> <span class="n">_stats_by_channel</span><span class="p">(</span><span class="n">std_delta</span><span class="p">),</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;core_field_names&quot;</span><span class="p">:</span> <span class="n">resolved_core_field_names</span><span class="p">,</span>
+        <span class="s2">&quot;constant_field_names&quot;</span><span class="p">:</span> <span class="n">constant_field_names</span> <span class="ow">or</span> <span class="p">[],</span>
+    <span class="p">}</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_round_sigfigs</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">sig_figs</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Round a float to a fixed number of significant figures.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">sig_figs</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;sig_figs must be positive.&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="c1"># General format preserves significant figures; may emit scientific notation.</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">value</span><span class="si">:</span><span class="s2">.</span><span class="si">{</span><span class="n">sig_figs</span><span class="si">}</span><span class="s2">g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_rounded_normalization_stats_payload</span><span class="p">(</span>
+    <span class="n">stats_payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">sig_figs</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a copy of stats_payload with rounded float stat values.&quot;&quot;&quot;</span>
+    <span class="n">rounded</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span>
+        <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">OmegaConf</span><span class="o">.</span><span class="n">to_container</span><span class="p">(</span><span class="n">OmegaConf</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">stats_payload</span><span class="p">),</span> <span class="n">resolve</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">stats</span> <span class="o">=</span> <span class="n">rounded</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stats&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stats</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">rounded</span>
+
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;mean&quot;</span><span class="p">,</span> <span class="s2">&quot;std&quot;</span><span class="p">,</span> <span class="s2">&quot;mean_delta&quot;</span><span class="p">,</span> <span class="s2">&quot;std_delta&quot;</span><span class="p">):</span>
+        <span class="n">bucket</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">for</span> <span class="n">field_name</span><span class="p">,</span> <span class="n">field_value</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">bucket</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">field_value</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span><span class="p">):</span>
+                <span class="n">bucket</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">_round_sigfigs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">field_value</span><span class="p">),</span> <span class="n">sig_figs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">rounded</span>
+
+
+<div class="viewcode-block" id="save_normalization_stats">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.save_normalization_stats">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_normalization_stats</span><span class="p">(</span>
+    <span class="n">stats_payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">sig_figs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Persist normalization statistics as YAML.&quot;&quot;&quot;</span>
+    <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">rounded_payload</span> <span class="o">=</span> <span class="n">_rounded_normalization_stats_payload</span><span class="p">(</span>
+        <span class="n">stats_payload</span><span class="o">=</span><span class="n">stats_payload</span><span class="p">,</span> <span class="n">sig_figs</span><span class="o">=</span><span class="n">sig_figs</span>
+    <span class="p">)</span>
+    <span class="n">yaml_payload</span> <span class="o">=</span> <span class="n">OmegaConf</span><span class="o">.</span><span class="n">to_yaml</span><span class="p">(</span><span class="n">OmegaConf</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">rounded_payload</span><span class="p">),</span> <span class="n">resolve</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">output_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml_payload</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="generate_normalization_stats_yaml">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.generate_normalization_stats_yaml">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_normalization_stats_yaml</span><span class="p">(</span>
+    <span class="n">dataset_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">split</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span>
+    <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">core_field_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">sig_figs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate normalization-stats YAML from an existing dataset directory.&quot;&quot;&quot;</span>
+    <span class="n">split_data_path</span> <span class="o">=</span> <span class="n">dataset_dir</span> <span class="o">/</span> <span class="n">split</span> <span class="o">/</span> <span class="s2">&quot;data.pt&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">split_data_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Could not find split file &#39;</span><span class="si">{</span><span class="n">split_data_path</span><span class="si">}</span><span class="s2">&#39;.&quot;</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="n">split_payload</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">split_data_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">split_payload</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Expected dict payload in &#39;</span><span class="si">{</span><span class="n">split_data_path</span><span class="si">}</span><span class="s2">&#39;.&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">payload_data</span> <span class="o">=</span> <span class="n">split_payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload_data</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">or</span> <span class="n">payload_data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">5</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;Expected split payload &#39;data&#39; as a 5D torch.Tensor with shape &quot;</span>
+            <span class="s2">&quot;[batch,time,x,y,channels].&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">resolved_field_names</span> <span class="o">=</span> <span class="n">core_field_names</span>
+    <span class="k">if</span> <span class="n">resolved_field_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">resolved_field_names</span> <span class="o">=</span> <span class="n">_infer_core_field_names_from_resolved_config</span><span class="p">(</span>
+            <span class="n">dataset_dir</span><span class="o">=</span><span class="n">dataset_dir</span><span class="p">,</span>
+            <span class="n">n_channels</span><span class="o">=</span><span class="n">payload_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+        <span class="p">)</span>
+    <span class="n">stats_payload</span> <span class="o">=</span> <span class="n">compute_normalization_stats</span><span class="p">(</span>
+        <span class="n">split_payload</span><span class="o">=</span><span class="n">split_payload</span><span class="p">,</span>
+        <span class="n">core_field_names</span><span class="o">=</span><span class="n">resolved_field_names</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">resolved_output_path</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">output_path</span> <span class="k">if</span> <span class="n">output_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dataset_dir</span> <span class="o">/</span> <span class="s2">&quot;stats.yml&quot;</span>
+    <span class="p">)</span>
+    <span class="n">save_normalization_stats</span><span class="p">(</span>
+        <span class="n">stats_payload</span><span class="o">=</span><span class="n">stats_payload</span><span class="p">,</span>
+        <span class="n">output_path</span><span class="o">=</span><span class="n">resolved_output_path</span><span class="p">,</span>
+        <span class="n">sig_figs</span><span class="o">=</span><span class="n">sig_figs</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">resolved_output_path</span></div>
+
+
+
+<div class="viewcode-block" id="get_per_strata_counts">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.get_per_strata_counts">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_per_strata_counts</span><span class="p">(</span>
+    <span class="n">n_train</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">n_valid</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">n_test</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">n_strata</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get per-strata split sizes, requiring exact divisibility.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">n_strata</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Number of strata must be positive.&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">split_name</span><span class="p">,</span> <span class="n">total</span> <span class="ow">in</span> <span class="p">(</span>
+        <span class="p">(</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">n_train</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;valid&quot;</span><span class="p">,</span> <span class="n">n_valid</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="n">n_test</span><span class="p">),</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="n">total</span> <span class="o">%</span> <span class="n">n_strata</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;dataset.n_</span><span class="si">{</span><span class="n">split_name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">total</span><span class="si">}</span><span class="s2"> must be divisible by &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;number of strata (</span><span class="si">{</span><span class="n">n_strata</span><span class="si">}</span><span class="s2">).&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">n_train</span> <span class="o">//</span> <span class="n">n_strata</span><span class="p">,</span> <span class="n">n_valid</span> <span class="o">//</span> <span class="n">n_strata</span><span class="p">,</span> <span class="n">n_test</span> <span class="o">//</span> <span class="n">n_strata</span></div>
+
+
+
+<div class="viewcode-block" id="combine_stratified_splits">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.combine_stratified_splits">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">combine_stratified_splits</span><span class="p">(</span>
+    <span class="n">ordered_strata_splits</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Combine per-strata splits preserving strata order in batch dimension.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ordered_strata_splits</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;No strata outputs to combine.&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="n">combined</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">split_names</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="s2">&quot;valid&quot;</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">split</span> <span class="ow">in</span> <span class="n">split_names</span><span class="p">:</span>
+        <span class="n">first_payload</span> <span class="o">=</span> <span class="n">ordered_strata_splits</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">split</span><span class="p">]</span>
+        <span class="n">merged_payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">first_payload</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="n">group</span><span class="p">[</span><span class="n">split</span><span class="p">][</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">ordered_strata_splits</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">):</span>
+                <span class="n">merged_payload</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">all</span><span class="p">(</span><span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">):</span>
+                <span class="n">merged_payload</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Cannot combine non-tensor field &#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39; across strata. &quot;</span>
+                    <span class="s2">&quot;Expected all tensors or all None.&quot;</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">combined</span><span class="p">[</span><span class="n">split</span><span class="p">]</span> <span class="o">=</span> <span class="n">merged_payload</span>
+
+    <span class="k">return</span> <span class="n">combined</span></div>
+
+
+
+<span class="nd">@hydra</span><span class="o">.</span><span class="n">main</span><span class="p">(</span><span class="n">version_base</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">config_path</span><span class="o">=</span><span class="s2">&quot;configs&quot;</span><span class="p">,</span> <span class="n">config_name</span><span class="o">=</span><span class="s2">&quot;generate_data&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_generate_main</span><span class="p">(</span><span class="n">cfg</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate simulation datasets from a Hydra-configured simulator.&quot;&quot;&quot;</span>
+    <span class="n">channel_names_for_visualization</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">stratify_cfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;stratify&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">stratify_cfg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="n">stratify_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;enabled&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">stratify_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;key&quot;</span><span class="p">)</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">stratify_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;values&quot;</span><span class="p">,</span> <span class="p">[]))</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;stratify.key must be set when stratify.enabled=true.&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">values</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;stratify.values must be a non-empty list when stratify.enabled=true.&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">n_train_each</span><span class="p">,</span> <span class="n">n_valid_each</span><span class="p">,</span> <span class="n">n_test_each</span> <span class="o">=</span> <span class="n">get_per_strata_counts</span><span class="p">(</span>
+            <span class="n">n_train</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">n_train</span><span class="p">,</span>
+            <span class="n">n_valid</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">n_valid</span><span class="p">,</span>
+            <span class="n">n_test</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">n_test</span><span class="p">,</span>
+            <span class="n">n_strata</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">key_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key_path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;simulator.&quot;</span><span class="p">):</span>
+            <span class="n">key_path</span> <span class="o">=</span> <span class="n">key_path</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s2">&quot;simulator.&quot;</span><span class="p">)</span> <span class="p">:]</span>
+
+        <span class="n">per_strata_outputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+            <span class="n">sim_cfg</span> <span class="o">=</span> <span class="n">OmegaConf</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                <span class="n">OmegaConf</span><span class="o">.</span><span class="n">to_container</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">simulator</span><span class="p">,</span> <span class="n">resolve</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">OmegaConf</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">sim_cfg</span><span class="p">,</span> <span class="n">key_path</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">merge</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">sim</span> <span class="o">=</span> <span class="n">build_simulator</span><span class="p">(</span><span class="n">sim_cfg</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">channel_names_for_visualization</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">channel_names_for_visualization</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">output_names</span><span class="p">)</span>
+            <span class="n">splits</span> <span class="o">=</span> <span class="n">generate_dataset_splits</span><span class="p">(</span>
+                <span class="n">sim</span><span class="o">=</span><span class="n">sim</span><span class="p">,</span>
+                <span class="n">n_train</span><span class="o">=</span><span class="n">n_train_each</span><span class="p">,</span>
+                <span class="n">n_valid</span><span class="o">=</span><span class="n">n_valid_each</span><span class="p">,</span>
+                <span class="n">n_test</span><span class="o">=</span><span class="n">n_test_each</span><span class="p">,</span>
+                <span class="n">base_seed</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span>
+                <span class="n">ensure_exact_n</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ensure_exact_n&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
+            <span class="p">)</span>
+            <span class="n">per_strata_outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">splits</span><span class="p">)</span>
+
+        <span class="n">splits</span> <span class="o">=</span> <span class="n">combine_stratified_splits</span><span class="p">(</span><span class="n">per_strata_outputs</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sim</span> <span class="o">=</span> <span class="n">build_simulator</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">simulator</span><span class="p">)</span>
+        <span class="n">channel_names_for_visualization</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">sim</span><span class="o">.</span><span class="n">output_names</span><span class="p">)</span>
+
+        <span class="n">splits</span> <span class="o">=</span> <span class="n">generate_dataset_splits</span><span class="p">(</span>
+            <span class="n">sim</span><span class="o">=</span><span class="n">sim</span><span class="p">,</span>
+            <span class="n">n_train</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">n_train</span><span class="p">,</span>
+            <span class="n">n_valid</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">n_valid</span><span class="p">,</span>
+            <span class="n">n_test</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">n_test</span><span class="p">,</span>
+            <span class="n">base_seed</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span>
+            <span class="n">ensure_exact_n</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ensure_exact_n&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
+        <span class="p">)</span>
+
+    <span class="n">output_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">output_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">output_dir</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+        <span class="n">output_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">get_original_cwd</span><span class="p">())</span> <span class="o">/</span> <span class="n">output_dir</span>
+
+    <span class="n">save_resolved_config</span><span class="p">(</span><span class="n">cfg</span><span class="o">=</span><span class="n">cfg</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="n">output_dir</span><span class="p">)</span>
+
+    <span class="n">save_dataset_splits</span><span class="p">(</span><span class="n">splits</span><span class="o">=</span><span class="n">splits</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">overwrite</span><span class="p">)</span>
+    <span class="n">shared_core_field_groups</span> <span class="o">=</span> <span class="n">_parse_shared_core_field_groups</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;normalization&quot;</span><span class="p">))</span>
+    <span class="n">normalization_stats_payload</span> <span class="o">=</span> <span class="n">compute_normalization_stats</span><span class="p">(</span>
+        <span class="n">split_payload</span><span class="o">=</span><span class="n">splits</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">],</span>
+        <span class="n">core_field_names</span><span class="o">=</span><span class="n">channel_names_for_visualization</span><span class="p">,</span>
+        <span class="n">shared_core_field_groups</span><span class="o">=</span><span class="n">shared_core_field_groups</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">save_normalization_stats</span><span class="p">(</span>
+        <span class="n">stats_payload</span><span class="o">=</span><span class="n">normalization_stats_payload</span><span class="p">,</span>
+        <span class="n">output_path</span><span class="o">=</span><span class="n">output_dir</span> <span class="o">/</span> <span class="s2">&quot;stats.yml&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">save_example_videos</span><span class="p">(</span>
+        <span class="n">splits</span><span class="o">=</span><span class="n">splits</span><span class="p">,</span>
+        <span class="n">output_dir</span><span class="o">=</span><span class="n">output_dir</span><span class="p">,</span>
+        <span class="n">visualize_cfg</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;visualize&quot;</span><span class="p">),</span>
+        <span class="n">channel_names</span><span class="o">=</span><span class="n">channel_names_for_visualization</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="list_simulators">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.list_simulators">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">list_simulators</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return available simulator config names from the package config group.&quot;&quot;&quot;</span>
+    <span class="n">simulator_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;configs&quot;</span> <span class="o">/</span> <span class="s2">&quot;simulator&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">simulator_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">simulator_dir</span><span class="p">)</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">simulator_dir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">&quot;*.yaml&quot;</span><span class="p">)</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../reference/core/cli.html#autosim.cli.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Dispatch tiny autosim subcommands.</span>
+
+<span class="sd">    - `autosim list` prints simulator config names.</span>
+<span class="sd">    - `autosim stats` writes normalization stats YAML for an existing dataset.</span>
+<span class="sd">    - `autosim` (or any Hydra overrides) runs data generation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">argv</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+    <span class="k">if</span> <span class="n">argv</span> <span class="ow">and</span> <span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;-h&quot;</span><span class="p">,</span> <span class="s2">&quot;--help&quot;</span><span class="p">}:</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+            <span class="n">prog</span><span class="o">=</span><span class="s2">&quot;autosim&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Generate simulation datasets using Hydra overrides, or list &quot;</span>
+                <span class="s2">&quot;available simulator configs, or compute normalization stats.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">&quot;command&quot;</span><span class="p">,</span>
+            <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;?&quot;</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Subcommand: &#39;list&#39; or &#39;stats&#39;. Omit to run data generation with Hydra.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">print_help</span><span class="p">()</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="n">argv</span> <span class="ow">and</span> <span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;list&quot;</span><span class="p">:</span>
+        <span class="n">list_parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+            <span class="n">prog</span><span class="o">=</span><span class="s2">&quot;autosim list&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;List available simulator config names.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">list_parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">list_simulators</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="n">argv</span> <span class="ow">and</span> <span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;stats&quot;</span><span class="p">:</span>
+        <span class="n">stats_parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+            <span class="n">prog</span><span class="o">=</span><span class="s2">&quot;autosim stats&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Generate normalization_stats YAML for an existing dataset directory.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">stats_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">&quot;dataset_dir&quot;</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Dataset root containing split folders such as train/data.pt.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">stats_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">&quot;--split&quot;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Split to use for stats (default: train).&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">stats_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">&quot;--output&quot;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;Optional output YAML path (default: &lt;dataset_dir&gt;/stats.yml).&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">stats_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">&quot;--field-names&quot;</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Optional comma-separated core field names, e.g. &#39;U,V&#39;. &quot;</span>
+                <span class="s2">&quot;If omitted, names are inferred from resolved_config.yaml &quot;</span>
+                <span class="s2">&quot;when possible.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">stats_parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+            <span class="s2">&quot;--sig-figs&quot;</span><span class="p">,</span>
+            <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+            <span class="n">default</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+            <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Significant figures for float stats in YAML (default: 4).&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">stats_parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+
+        <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">written_path</span> <span class="o">=</span> <span class="n">generate_normalization_stats_yaml</span><span class="p">(</span>
+            <span class="n">dataset_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">dataset_dir</span><span class="p">),</span>
+            <span class="n">split</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">split</span><span class="p">),</span>
+            <span class="n">output_path</span><span class="o">=</span><span class="n">output_path</span><span class="p">,</span>
+            <span class="n">core_field_names</span><span class="o">=</span><span class="n">_parse_field_names_csv</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">field_names</span><span class="p">),</span>
+            <span class="n">sig_figs</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">sig_figs</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">written_path</span><span class="o">.</span><span class="n">as_posix</span><span class="p">())</span>
+        <span class="k">return</span>
+
+    <span class="c1"># Preserve all original arguments for Hydra&#39;s own parser.</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">argv</span> <span class="o">=</span> <span class="p">[</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">*</span><span class="n">argv</span><span class="p">]</span>
+    <span class="n">_generate_main</span><span class="p">()</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The Alan Turing Institute
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Copyright &copy; 2026
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

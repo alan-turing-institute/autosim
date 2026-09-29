@@ -1,0 +1,820 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>autosim.simulations.spatiotemporal.advection_diffusion_multichannel &#8212; AutoSim: simulation data generation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=7f8ff830"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../../../../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../../../../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/autosim/simulations/spatiotemporal/advection_diffusion_multichannel';</script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/AS.png" class="logo__image only-light" alt="AutoSim: simulation data generation - Home"/>
+    <img src="../../../../_static/AS.png" class="logo__image only-dark pst-js-only" alt="AutoSim: simulation data generation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../../../index.html">
+                    Welcome to AutoSim
+                </a>
+            </li>
+        </ul>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../tutorials/visualize.html">Visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../tutorials/stratified.html">Stratified sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../reference/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../reference/core/index.html">Core Modules</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/cli.html">autosim.cli</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/device.html">autosim.device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/logging.html">autosim.logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/types.html">autosim.types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/utils.html">autosim.utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/validation.html">autosim.validation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../reference/simulations/index.html">Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/base.html">autosim.simulations.base</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/index.html">Spatiotemporal Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/advection_diffusion.html">autosim.simulations.spatiotemporal.advection_diffusion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/advection_diffusion_multichannel.html">autosim.simulations.spatiotemporal.advection_diffusion_multichannel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/gray_scott.html">autosim.simulations.spatiotemporal.gray_scott</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/gross_pitaevskii.html">autosim.simulations.spatiotemporal.gross_pitaevskii</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/navier_stokes_conditioned.html">autosim.simulations.spatiotemporal.navier_stokes_conditioned</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/reaction_diffusion.html">autosim.simulations.spatiotemporal.reaction_diffusion</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/double_pendulum.html">autosim.simulations.double_pendulum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/epidemic.html">autosim.simulations.epidemic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/flow_problem.html">autosim.simulations.flow_problem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/projectile.html">autosim.simulations.projectile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/seir.html">autosim.simulations.seir</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../reference/experimental/index.html">Experimental Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/compressible_fluid.html">autosim.experimental.simulations.compressible_fluid</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/hydrodynamics_2d.html">autosim.experimental.simulations.hydrodynamics_2d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/lattice_boltzmann.html">autosim.experimental.simulations.lattice_boltzmann</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/shallow_water.html">autosim.experimental.simulations.shallow_water</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim/issues/new?title=Issue%20on%20page%20%2F_modules/autosim/simulations/spatiotemporal/advection_diffusion_multichannel.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for autosim.simulations.spatiotemporal.advection_diffusion_multichannel</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Advection-diffusion simulator with multi-channel outputs.</span>
+
+<span class="sd">Returns channels: [vorticity, u, v, streamfunction].</span>
+
+<span class="sd">Implementation uses spectral Poisson solve (FFT) for streamfunction and central finite</span>
+<span class="sd">differences (via numpy.roll) for spatial derivatives.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.integrate</span><span class="w"> </span><span class="kn">import</span> <span class="n">solve_ivp</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.simulations.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">SpatioTemporalSimulator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">NumpyLike</span><span class="p">,</span> <span class="n">TensorLike</span>
+
+<span class="c1"># Integrator settings</span>
+<span class="n">integrator_keywords</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;rtol&quot;</span><span class="p">:</span> <span class="mf">1e-6</span><span class="p">,</span> <span class="s2">&quot;atol&quot;</span><span class="p">:</span> <span class="mf">1e-8</span><span class="p">,</span> <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;RK45&quot;</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="AdvectionDiffusionMultichannel">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/advection_diffusion_multichannel.html#autosim.simulations.spatiotemporal.advection_diffusion_multichannel.AdvectionDiffusionMultichannel">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AdvectionDiffusionMultichannel</span><span class="p">(</span><span class="n">SpatioTemporalSimulator</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Differentiable advection-diffusion simulator exposing multi-channel outputs.</span>
+
+<span class="sd">    The simulator evolves a vorticity field according to:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \begin{aligned}</span>
+<span class="sd">        \partial_t \omega</span>
+<span class="sd">            &amp;= \nu \nabla^2 \omega</span>
+<span class="sd">            - \mu (u \partial_x \omega + v \partial_y \omega)</span>
+<span class="sd">        \end{aligned}</span>
+
+<span class="sd">    It returns selected channels from</span>
+<span class="sd">    :math:`[\omega, u, v, \psi]`, where :math:`\psi` is the streamfunction.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        parameters_range: Bounds on the sampled viscosity (`nu`) and advection strength</span>
+<span class="sd">            (`mu`).</span>
+<span class="sd">        output_names: Human-readable names for the returned channels.</span>
+<span class="sd">        output_indices: Channel indices to keep from ``[vorticity, u, v,</span>
+<span class="sd">            streamfunction]``. Defaults to all channels in canonical order.</span>
+<span class="sd">        return_timeseries: Whether `forward` returns the entire trajectory instead of a</span>
+<span class="sd">            single snapshot.</span>
+<span class="sd">        log_level: Logging verbosity passed to the base `Simulator`.</span>
+<span class="sd">        n: Number of spatial points per dimension.</span>
+<span class="sd">        L: Domain length in each spatial direction.</span>
+<span class="sd">        T: Total integration time.</span>
+<span class="sd">        dt: Temporal resolution used for the ODE solver outputs.</span>
+<span class="sd">        integrator_kwargs: Extra keyword arguments forwarded to</span>
+<span class="sd">            `scipy.integrate.solve_ivp`.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        Each grid point emits four channels `[vorticity, u, v, streamfunction]`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_ALL_CHANNEL_NAMES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;vorticity&quot;</span><span class="p">,</span> <span class="s2">&quot;u&quot;</span><span class="p">,</span> <span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;streamfunction&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">parameters_range</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_indices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">return_timeseries</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">log_level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;progress_bar&quot;</span><span class="p">,</span>
+        <span class="n">n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32</span><span class="p">,</span>
+        <span class="n">L</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">80.0</span><span class="p">,</span>
+        <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
+        <span class="n">integrator_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the multi-channel advection-diffusion simulator.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">parameters_range</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">parameters_range</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;nu&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.0001</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">),</span> <span class="s2">&quot;mu&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)}</span>
+
+        <span class="k">if</span> <span class="n">output_indices</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">output_indices</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_indices</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;output_indices must contain at least one channel index.&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">output_indices</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_indices</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;output_indices must not contain duplicate channel indices.&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">invalid_indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">idx</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">output_indices</span> <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">idx</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">invalid_indices</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;output_indices entries must be in the range [0, 3] for channels &quot;</span>
+                <span class="s2">&quot;[vorticity, u, v, streamfunction]. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Received invalid indices: </span><span class="si">{</span><span class="n">invalid_indices</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">selected_output_names</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_ALL_CHANNEL_NAMES</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">output_indices</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">output_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">output_names</span> <span class="o">=</span> <span class="n">selected_output_names</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_names</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_indices</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;output_names length must match selected output_indices length. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Received </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">output_names</span><span class="p">)</span><span class="si">}</span><span class="s2"> names for </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">output_indices</span><span class="p">)</span><span class="si">}</span><span class="s2"> indices.&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parameters_range</span><span class="p">,</span> <span class="n">output_names</span><span class="p">,</span> <span class="n">log_level</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_indices</span> <span class="o">=</span> <span class="n">output_indices</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">return_timeseries</span> <span class="o">=</span> <span class="n">return_timeseries</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">L</span> <span class="o">=</span> <span class="n">L</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">T</span> <span class="o">=</span> <span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">=</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">integrator_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">integrator_keywords</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">integrator_kwargs</span> <span class="ow">or</span> <span class="p">{})}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">TensorLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorLike</span><span class="p">:</span>
+        <span class="c1"># Expect single input sample in batch</span>
+        <span class="k">assert</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Simulator._forward expects a single input, got </span><span class="si">{</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># x contains the physical parameters [nu, mu]</span>
+        <span class="n">sample</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">sol</span> <span class="o">=</span> <span class="n">simulate_advection_diffusion</span><span class="p">(</span>
+            <span class="n">sample</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">return_timeseries</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">integrator_kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># sol shape: (nt, n, n, channels) if return_timeseries else (n, n, channels)</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">sol</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="c1"># Flatten to (1, -1) for compatibility with the superclass</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AdvectionDiffusionMultichannel.forward_samples_spatiotemporal">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/advection_diffusion_multichannel.html#autosim.simulations.spatiotemporal.advection_diffusion_multichannel.AdvectionDiffusionMultichannel.forward_samples_spatiotemporal">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward_samples_spatiotemporal</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">random_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ensure_exact_n</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Produce simulator rollouts along with the sampled parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            n: Number of trajectories to sample.</span>
+<span class="sd">            random_seed: Seed for reproducible parameter draws.</span>
+<span class="sd">            ensure_exact_n: Whether to resample failed trajectories until exactly ``n``</span>
+<span class="sd">                succeed.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Spatiotemporal payload with ``data``, ``constant_scalars``, and</span>
+<span class="sd">            ``constant_fields`` keys. Channels follow the configured</span>
+<span class="sd">            ``output_indices`` order.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_batch_with_optional_retries</span><span class="p">(</span>
+            <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span>
+            <span class="n">random_seed</span><span class="o">=</span><span class="n">random_seed</span><span class="p">,</span>
+            <span class="n">ensure_exact_n</span><span class="o">=</span><span class="n">ensure_exact_n</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">channels</span> <span class="o">=</span> <span class="mi">4</span>
+        <span class="n">features_per_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">*</span> <span class="n">channels</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">return_timeseries</span><span class="p">:</span>
+            <span class="n">total_features</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">total_features</span> <span class="o">%</span> <span class="n">features_per_step</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="s2">&quot;Returned tensor does not align with n*n*channels; &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;received </span><span class="si">{</span><span class="n">total_features</span><span class="si">}</span><span class="s2"> features, expected multiples of &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">features_per_step</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">n_time</span> <span class="o">=</span> <span class="n">total_features</span> <span class="o">//</span> <span class="n">features_per_step</span>
+            <span class="n">y_reshaped</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">n_time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">features_per_step</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="s2">&quot;Unexpected flattened size for single snapshot; &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;received </span><span class="si">{</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">, expected </span><span class="si">{</span><span class="n">features_per_step</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">y_reshaped</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span>
+
+        <span class="c1"># Select configured subset of channels in user-specified order.</span>
+        <span class="n">y_reshaped</span> <span class="o">=</span> <span class="n">y_reshaped</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_indices</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">y_reshaped</span><span class="p">,</span>
+            <span class="s2">&quot;constant_scalars&quot;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+            <span class="s2">&quot;constant_fields&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">}</span></div>
+</div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_spectral_poisson_solver</span><span class="p">(</span><span class="n">w2d</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">K3</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Solve ``laplacian(psi) = -omega`` in Fourier space.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        w2d: Two-dimensional vorticity field with shape ``(n, n)``.</span>
+<span class="sd">        K3: Pre-computed spectral multiplier ``1 / (k_x^2 + k_y^2)`` with the zero mode</span>
+<span class="sd">            handled to keep the mean streamfunction at zero.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Real-valued streamfunction with shape ``(n, n)``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">psi_hat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft2</span><span class="p">(</span><span class="n">w2d</span><span class="p">)</span> <span class="o">*</span> <span class="n">K3</span>
+    <span class="n">psi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft2</span><span class="p">(</span><span class="n">psi_hat</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">psi</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_laplacian_periodic</span><span class="p">(</span><span class="n">w2d</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">dx</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply the periodic Laplacian using second-order central differences.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        w2d: Input field of shape ``(n, n)``.</span>
+<span class="sd">        dx: Grid spacing.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Field after applying the Laplacian, matching the input shape.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">w2d</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">w2d</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">w2d</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="n">dx</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">w2d</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">w2d</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">w2d</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="p">)</span> <span class="o">/</span> <span class="n">dx</span><span class="o">**</span><span class="mi">2</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_gradient_periodic</span><span class="p">(</span><span class="n">f2d</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">dx</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute periodic central-difference gradients.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        f2d: Scalar field of shape ``(n, n)``.</span>
+<span class="sd">        dx: Grid spacing.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ``(df/dx, df/dy)`` each with shape ``(n, n)``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dfdx</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">f2d</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">f2d</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dx</span><span class="p">)</span>
+    <span class="n">dfdy</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">f2d</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">f2d</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dx</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dfdx</span><span class="p">,</span> <span class="n">dfdy</span>
+
+
+<div class="viewcode-block" id="advection_diffusion_rhs">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/advection_diffusion_multichannel.html#autosim.simulations.spatiotemporal.advection_diffusion_multichannel.advection_diffusion_rhs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">advection_diffusion_rhs</span><span class="p">(</span>
+    <span class="n">_t</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">w_flat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">dx</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">nu</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">mu</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">K3</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Evaluate the vorticity time derivative.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        _t: Time (ignored, but required by `solve_ivp`).</span>
+<span class="sd">        w_flat: Flattened vorticity field of length ``n * n``.</span>
+<span class="sd">        n: Grid resolution per spatial axis.</span>
+<span class="sd">        dx: Grid spacing.</span>
+<span class="sd">        nu: Diffusion coefficient.</span>
+<span class="sd">        mu: Advection strength.</span>
+<span class="sd">        K3: Spectral multiplier used for the Poisson solve.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Flattened ``dw/dt`` matching the shape of ``w_flat``.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        Implements ``dw/dt = nu * laplacian(w) - mu * (u * d/dx + v * d/dy)`` where</span>
+<span class="sd">        ``(u, v)`` is recovered from the streamfunction via ``u = dpsi/dy`` and</span>
+<span class="sd">        ``v = -dpsi/dx``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">w2d</span> <span class="o">=</span> <span class="n">w_flat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+    <span class="c1"># Streamfunction via spectral Poisson solver</span>
+    <span class="n">psi</span> <span class="o">=</span> <span class="n">_spectral_poisson_solver</span><span class="p">(</span><span class="n">w2d</span><span class="p">,</span> <span class="n">K3</span><span class="p">)</span>
+
+    <span class="c1"># Velocity field from psi</span>
+    <span class="c1"># u = dpsi/dy, v = -dpsi/dx</span>
+    <span class="n">dpsidx</span><span class="p">,</span> <span class="n">dpsidy</span> <span class="o">=</span> <span class="n">_gradient_periodic</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">dx</span><span class="p">)</span>  <span class="c1"># dpsi/dx, dpsi/dy</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">dpsidy</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="o">-</span><span class="n">dpsidx</span>
+
+    <span class="c1"># Gradients of vorticity</span>
+    <span class="n">dw_dx</span><span class="p">,</span> <span class="n">dw_dy</span> <span class="o">=</span> <span class="n">_gradient_periodic</span><span class="p">(</span><span class="n">w2d</span><span class="p">,</span> <span class="n">dx</span><span class="p">)</span>
+
+    <span class="n">advec</span> <span class="o">=</span> <span class="n">u</span> <span class="o">*</span> <span class="n">dw_dx</span> <span class="o">+</span> <span class="n">v</span> <span class="o">*</span> <span class="n">dw_dy</span>
+
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">_laplacian_periodic</span><span class="p">(</span><span class="n">w2d</span><span class="p">,</span> <span class="n">dx</span><span class="p">)</span>
+
+    <span class="n">dwdt</span> <span class="o">=</span> <span class="n">nu</span> <span class="o">*</span> <span class="n">diff</span> <span class="o">-</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">advec</span>
+
+    <span class="k">return</span> <span class="n">dwdt</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="simulate_advection_diffusion">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/advection_diffusion_multichannel.html#autosim.simulations.spatiotemporal.advection_diffusion_multichannel.simulate_advection_diffusion">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">simulate_advection_diffusion</span><span class="p">(</span>
+    <span class="n">x</span><span class="p">:</span> <span class="n">NumpyLike</span><span class="p">,</span>
+    <span class="n">return_timeseries</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="n">L</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+    <span class="n">T</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">80.0</span><span class="p">,</span>
+    <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="n">integrator_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NumpyLike</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Integrate the advection-diffusion system and emit physical channels.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x: Two-element vector ``[nu, mu]`` with viscosity and advection parameters.</span>
+<span class="sd">        return_timeseries: If ``True``, return the entire trajectory; otherwise only the</span>
+<span class="sd">            terminal state.</span>
+<span class="sd">        n: Grid resolution per spatial dimension.</span>
+<span class="sd">        L: Domain size along each axis.</span>
+<span class="sd">        T: End time for integration.</span>
+<span class="sd">        dt: Step between recorded solver outputs.</span>
+<span class="sd">        integrator_kwargs: Extra keyword arguments forwarded to `solve_ivp`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        If `return_timeseries` is ``True``, an array of shape ``(n_time, n, n, 4)``;</span>
+<span class="sd">        otherwise shape ``(n, n, 4)``. Channels are ordered</span>
+<span class="sd">        ``[vorticity, u, v, streamfunction]``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nu</span><span class="p">,</span> <span class="n">mu</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">tspan</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">T</span> <span class="o">+</span> <span class="mf">1e-12</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+    <span class="n">n_time</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tspan</span><span class="p">)</span>
+
+    <span class="n">x_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">L</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">L</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">x_grid</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_grid</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="c1"># Initial condition: Gaussian vortex (centered)</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x_grid</span><span class="p">,</span> <span class="n">x_grid</span><span class="p">)</span>
+    <span class="n">w_initial</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">X</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">Y</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mf">20.0</span><span class="p">))</span>
+
+    <span class="c1"># Precompute spectral operator for Poisson solve: 1/(k^2)</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">L</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span> <span class="o">//</span> <span class="mi">2</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="n">n</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span>
+    <span class="p">)</span>
+    <span class="n">KX</span><span class="p">,</span> <span class="n">KY</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+    <span class="n">denom</span> <span class="o">=</span> <span class="n">KX</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">KY</span><span class="o">**</span><span class="mi">2</span>
+    <span class="c1"># Avoid division by zero at zero frequency: set to a large number then zero psi mean</span>
+    <span class="n">denom</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="n">K3</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">denom</span>
+    <span class="n">K3</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="n">w0_flat</span> <span class="o">=</span> <span class="n">w_initial</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+    <span class="c1"># Integrate</span>
+    <span class="n">ode_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">integrator_keywords</span><span class="p">,</span> <span class="o">**</span><span class="p">(</span><span class="n">integrator_kwargs</span> <span class="ow">or</span> <span class="p">{})}</span>
+
+    <span class="n">sol</span> <span class="o">=</span> <span class="n">solve_ivp</span><span class="p">(</span>
+        <span class="n">fun</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">,</span> <span class="n">w</span><span class="p">:</span> <span class="n">advection_diffusion_rhs</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">K3</span><span class="p">),</span>
+        <span class="n">t_span</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">T</span><span class="p">),</span>
+        <span class="n">y0</span><span class="o">=</span><span class="n">w0_flat</span><span class="p">,</span>
+        <span class="n">t_eval</span><span class="o">=</span><span class="n">tspan</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">ode_kwargs</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">sol</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;ODE solver failed: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">sol</span><span class="o">.</span><span class="n">message</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">return_timeseries</span><span class="p">:</span>
+        <span class="c1"># sol.y shape: (N, n_time)</span>
+        <span class="n">w_ts</span> <span class="o">=</span> <span class="n">sol</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n_time</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="n">channels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_time</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ti</span><span class="p">,</span> <span class="n">w2d</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">w_ts</span><span class="p">):</span>
+            <span class="n">psi</span> <span class="o">=</span> <span class="n">_spectral_poisson_solver</span><span class="p">(</span><span class="n">w2d</span><span class="p">,</span> <span class="n">K3</span><span class="p">)</span>
+            <span class="n">dpsidx</span><span class="p">,</span> <span class="n">dpsidy</span> <span class="o">=</span> <span class="n">_gradient_periodic</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">dx</span><span class="p">)</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">dpsidy</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="o">-</span><span class="n">dpsidx</span>
+
+            <span class="n">channels</span><span class="p">[</span><span class="n">ti</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">w2d</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">psi</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">channels</span>
+
+    <span class="n">w_final</span> <span class="o">=</span> <span class="n">sol</span><span class="o">.</span><span class="n">y</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    <span class="n">psi</span> <span class="o">=</span> <span class="n">_spectral_poisson_solver</span><span class="p">(</span><span class="n">w_final</span><span class="p">,</span> <span class="n">K3</span><span class="p">)</span>
+    <span class="n">dpsidx</span><span class="p">,</span> <span class="n">dpsidy</span> <span class="o">=</span> <span class="n">_gradient_periodic</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">dx</span><span class="p">)</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">dpsidy</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="o">-</span><span class="n">dpsidx</span>
+
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">w_final</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">psi</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The Alan Turing Institute
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Copyright &copy; 2026
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,1150 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>autosim.experimental.simulations.shallow_water &#8212; AutoSim: simulation data generation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=7f8ff830"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/experimental/shallow_water';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="prev" title="autosim.experimental.simulations.lattice_boltzmann" href="lattice_boltzmann.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/AS.png" class="logo__image only-light" alt="AutoSim: simulation data generation - Home"/>
+    <img src="../../_static/AS.png" class="logo__image only-dark pst-js-only" alt="AutoSim: simulation data generation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    Welcome to AutoSim
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/visualize.html">Visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/stratified.html">Stratified sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../index.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../core/index.html">Core Modules</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../core/cli.html">autosim.cli</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core/device.html">autosim.device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core/logging.html">autosim.logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core/types.html">autosim.types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core/utils.html">autosim.utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core/validation.html">autosim.validation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../simulations/index.html">Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/base.html">autosim.simulations.base</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../simulations/spatiotemporal/index.html">Spatiotemporal Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/advection_diffusion.html">autosim.simulations.spatiotemporal.advection_diffusion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/advection_diffusion_multichannel.html">autosim.simulations.spatiotemporal.advection_diffusion_multichannel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/gray_scott.html">autosim.simulations.spatiotemporal.gray_scott</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/gross_pitaevskii.html">autosim.simulations.spatiotemporal.gross_pitaevskii</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/navier_stokes_conditioned.html">autosim.simulations.spatiotemporal.navier_stokes_conditioned</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/reaction_diffusion.html">autosim.simulations.spatiotemporal.reaction_diffusion</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/double_pendulum.html">autosim.simulations.double_pendulum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/epidemic.html">autosim.simulations.epidemic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/flow_problem.html">autosim.simulations.flow_problem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/projectile.html">autosim.simulations.projectile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/seir.html">autosim.simulations.seir</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="index.html">Experimental Simulations</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="compressible_fluid.html">autosim.experimental.simulations.compressible_fluid</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hydrodynamics_2d.html">autosim.experimental.simulations.hydrodynamics_2d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="lattice_boltzmann.html">autosim.experimental.simulations.lattice_boltzmann</a></li>
+<li class="toctree-l3 current active"><a class="current reference internal" href="#">autosim.experimental.simulations.shallow_water</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim/issues/new?title=Issue%20on%20page%20%2Freference/experimental/shallow_water.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/reference/experimental/shallow_water.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>autosim.experimental.simulations.shallow_water</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rotation-choices">Rotation choices</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#initial-conditions-and-restarts">Initial conditions and restarts</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#differentiable-forcing-free-forecasts">Differentiable forcing-free forecasts</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.shallow_water_stepper.advance_swe_2d"><code class="docutils literal notranslate"><span class="pre">advance_swe_2d()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#zero-gravity-limit">Zero-gravity limit</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#forcing-choices">Forcing choices</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#energy-diagnostics">Energy diagnostics</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#crps-spatial-coherence-dataset-presets">CRPS spatial-coherence dataset presets</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.shallow_water.ShallowWater2D"><code class="docutils literal notranslate"><span class="pre">ShallowWater2D</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.shallow_water.ShallowWater2D.forward_samples_spatiotemporal"><code class="docutils literal notranslate"><span class="pre">ShallowWater2D.forward_samples_spatiotemporal()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.shallow_water.simulate_swe_2d"><code class="docutils literal notranslate"><span class="pre">simulate_swe_2d()</span></code></a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="autosim-experimental-simulations-shallow-water">
+<h1>autosim.experimental.simulations.shallow_water<a class="headerlink" href="#autosim-experimental-simulations-shallow-water" title="Link to this heading">#</a></h1>
+<section id="rotation-choices">
+<h2>Rotation choices<a class="headerlink" href="#rotation-choices" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">f0=None</span></code> retains the default reference Coriolis parameter
+<code class="docutils literal notranslate"><span class="pre">sqrt(g</span> <span class="pre">*</span> <span class="pre">h_mean)</span> <span class="pre">/</span> <span class="pre">8</span></code>. Set <code class="docutils literal notranslate"><span class="pre">f0=0</span></code> with <code class="docutils literal notranslate"><span class="pre">coriolis_mode=&quot;f_plane&quot;</span></code>
+to disable rotation. If <code class="docutils literal notranslate"><span class="pre">beta</span></code> is also left unset, <code class="docutils literal notranslate"><span class="pre">f0=0</span></code> makes the
+<code class="docutils literal notranslate"><span class="pre">periodic_beta</span></code> profile zero as well. An explicitly nonzero <code class="docutils literal notranslate"><span class="pre">beta</span></code> still
+produces spatially varying Coriolis acceleration in <code class="docutils literal notranslate"><span class="pre">periodic_beta</span></code> mode.</p>
+<p>At <code class="docutils literal notranslate"><span class="pre">f0=0</span></code>, <code class="docutils literal notranslate"><span class="pre">balanced</span></code> and <code class="docutils literal notranslate"><span class="pre">pv_balanced</span></code> forcing have no height
+component and reduce to <code class="docutils literal notranslate"><span class="pre">vortical</span></code> forcing.</p>
+</section>
+<section id="initial-conditions-and-restarts">
+<h2>Initial conditions and restarts<a class="headerlink" href="#initial-conditions-and-restarts" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">initial_condition=&quot;random&quot;</span></code> retains the original randomized jet-like
+state. <code class="docutils literal notranslate"><span class="pre">&quot;balanced_random_pv&quot;</span></code> samples an isotropic Gaussian ring of
+potential-vorticity modes, applies deformation-radius-aware inversion, and
+normalizes the RMS speed to <code class="docutils literal notranslate"><span class="pre">amp</span></code>. <code class="docutils literal notranslate"><span class="pre">initial_wavenumber</span></code> and
+<code class="docutils literal notranslate"><span class="pre">initial_bandwidth</span></code> control its central scale and spectral width; their
+defaults prefer modes 4 and 1.5 on the longest domain side. On a small grid
+that cannot retain mode 4 isotropically, the default centre is clamped to the
+largest isotropically retained mode.
+Either value may instead be included in <code class="docutils literal notranslate"><span class="pre">parameters_range</span></code>. It is then
+sampled independently for every trajectory and returned in
+<code class="docutils literal notranslate"><span class="pre">constant_scalars</span></code>, allowing emulator datasets to span multiple resolved
+eddy scales.</p>
+<p><code class="docutils literal notranslate"><span class="pre">&quot;balanced_double_jet&quot;</span></code> creates a smooth, periodic zonal double jet with
+zero net transport and a small configurable wave perturbation. Both new
+generated states construct height in constant-<code class="docutils literal notranslate"><span class="pre">f</span></code> geostrophic balance,
+which is approximate when evolved with <code class="docutils literal notranslate"><span class="pre">periodic_beta</span></code>. The double-jet
+initializer preserves positive balanced heights within the output range and
+rejects configurations that would need height clipping; reduce <code class="docutils literal notranslate"><span class="pre">amp</span></code> or
+increase <code class="docutils literal notranslate"><span class="pre">jet_mode</span></code> if that occurs. <code class="docutils literal notranslate"><span class="pre">&quot;restart&quot;</span></code> accepts a finite
+<code class="docutils literal notranslate"><span class="pre">[nx,</span> <span class="pre">ny,</span> <span class="pre">3]</span></code> tensor in <code class="docutils literal notranslate"><span class="pre">[h,</span> <span class="pre">u,</span> <span class="pre">v]</span></code> order, which is useful for branching deterministic and stochastic runs from exactly the same
+spun-up physical state. A restart does not preserve the latent OU forcing
+tendency, so correlated forcing is initialized anew rather than continuing an
+interrupted stochastic path exactly. Because the supplied state already fixes
+its amplitude, restart datasets omit <code class="docutils literal notranslate"><span class="pre">amp</span></code> from <code class="docutils literal notranslate"><span class="pre">parameters_range</span></code>.</p>
+</section>
+<section id="differentiable-forcing-free-forecasts">
+<h2>Differentiable forcing-free forecasts<a class="headerlink" href="#differentiable-forcing-free-forecasts" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">autosim.experimental.simulations.advance_swe_2d</span></code> advances physical
+<code class="docutils literal notranslate"><span class="pre">[h,</span> <span class="pre">u,</span> <span class="pre">v]</span></code> fields shaped <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">nx,</span> <span class="pre">ny,</span> <span class="pre">3)</span></code> without stochastic forcing.
+It shares the generator’s deterministic RHS, RK4 stages, spectral projection
+and hyperviscosity, but preserves the input’s float32/float64 precision,
+device and autograd graph. Leading batch and ensemble axes evolve independently.
+With <code class="docutils literal notranslate"><span class="pre">dealias=True</span></code>, both interfaces project each RK-stage state onto the
+retained Fourier band before evaluating nonlinear products. This prevents
+unresolved modes in restarts or learned corrections from aliasing into resolved
+modes. The differentiable interface validates both the raw and projected
+states; a projection that creates nonphysical values raises an error. A zero
+forecast interval remains an exact identity, without projection.</p>
+<p>Supply the dataset’s physical parameters explicitly and choose a fixed
+<code class="docutils literal notranslate"><span class="pre">n_substeps</span></code> by convergence testing. For example, for a valid 32 by 32 state
+on a periodic domain with side length <code class="docutils literal notranslate"><span class="pre">2*pi</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.experimental.simulations</span><span class="w"> </span><span class="kn">import</span> <span class="n">advance_swe_2d</span>
+
+<span class="n">forecast</span> <span class="o">=</span> <span class="n">advance_swe_2d</span><span class="p">(</span>
+    <span class="n">state</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="n">n_substeps</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
+    <span class="n">Lx</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">Ly</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+    <span class="n">g</span><span class="o">=</span><span class="mf">9.81</span><span class="p">,</span> <span class="n">h_mean</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">drag</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+    <span class="n">f0</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">coriolis_mode</span><span class="o">=</span><span class="s2">&quot;periodic_beta&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Do not pass normalized model channels directly: convert to physical units
+before the solve and convert back afterwards. Physics parameters and the
+fixed time schedule are Python scalars, not learnable tensors. Gradients
+propagate through the incoming state, including when it contains a learned
+correction from an earlier forecast. An additive residual model can therefore
+use <code class="docutils literal notranslate"><span class="pre">advance_swe_2d(state,</span> <span class="pre">...)</span> <span class="pre">+</span> <span class="pre">learned_correction</span></code> and backpropagate a
+later rollout loss through the intervening physics solves. This correction
+represents the net finite-interval residual, not an instantaneous forcing.</p>
+<p>The interface rejects non-finite states, states needing the generator’s
+clipping, and steps exceeding the wave/advection CFL or the combined linear
+viscosity/drag/Coriolis bound. The generator caps its adaptive steps with the
+same linear bound, including the maximum absolute periodic Coriolis value.
+The differentiable interface does not silently detach, sanitize or adapt a
+learned state. These checks
+are safeguards, not a general stability guarantee; their control flow is not
+differentiated and currently synchronizes on CUDA. Fixed-step and adaptive
+forecasts need not be bitwise identical over a full forecast interval.
+Long differentiable rollouts retain intermediate FFT graphs, so measure memory
+and runtime before training. <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> and <code class="docutils literal notranslate"><span class="pre">vmap</span></code> are not currently
+supported contracts. No noise or data-generation settings change automatically.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="autosim.experimental.simulations.shallow_water_stepper.advance_swe_2d">
+<span class="sig-name descname"><span class="pre">advance_swe_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_substeps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">9.81</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0005</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.002</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coriolis_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'periodic_beta'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dealias</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cfl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.12</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/autosim/experimental/simulations/shallow_water_stepper.html#advance_swe_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#autosim.experimental.simulations.shallow_water_stepper.advance_swe_2d" title="Link to this definition">#</a></dt>
+<dd><p>Advance a physical state without forcing, retaining its autograd graph.</p>
+<p>Uses the data generator’s RHS, RK4, rectangular spectral projection and
+order-eight hyperviscosity. Unlike <code class="docutils literal notranslate"><span class="pre">simulate_swe_2d</span></code>, this interface uses
+an explicit fixed schedule, preserves precision/device, supports leading
+batch/member axes and never detaches or sanitizes an incoming state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>) – Float32/float64 physical fields shaped <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">nx,</span> <span class="pre">ny,</span> <span class="pre">3)</span></code> in
+<code class="docutils literal notranslate"><span class="pre">[h,</span> <span class="pre">u,</span> <span class="pre">v]</span></code> order. Gradients are supported with respect to this
+tensor, including through repeated calls. Do not pass normalized
+model channels directly.</p></li>
+<li><p><strong>dt</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Non-negative forecast interval in simulator time units.</p></li>
+<li><p><strong>n_substeps</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Positive fixed count of RK4/filter steps over <code class="docutils literal notranslate"><span class="pre">dt</span></code>.
+This is not adaptive; insufficient resolution raises an error.</p></li>
+<li><p><strong>Lx</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Positive periodic domain length in x.</p></li>
+<li><p><strong>Ly</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Positive periodic domain length in y.</p></li>
+<li><p><strong>g</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Non-negative gravity coefficient.</p></li>
+<li><p><strong>h_mean</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Positive reference depth, used to resolve the default f0.</p></li>
+<li><p><strong>nu</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Non-negative Laplacian viscosity.</p></li>
+<li><p><strong>drag</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Non-negative linear drag.</p></li>
+<li><p><strong>f0</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Reference Coriolis parameter; default <code class="docutils literal notranslate"><span class="pre">sqrt(g*h_mean)/8</span></code>.</p></li>
+<li><p><strong>beta</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Periodic Coriolis variation; default <code class="docutils literal notranslate"><span class="pre">0.5*f0/Ly</span></code>.</p></li>
+<li><p><strong>coriolis_mode</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;f_plane&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;periodic_beta&quot;</span></code>.</p></li>
+<li><p><strong>dealias</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Project each RK-stage state to the rectangular two-thirds
+band before evaluating nonlinear products, as in the generator.</p></li>
+<li><p><strong>cfl</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Positive wave/advection CFL bound, checked at every RK stage.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Forecast with the same shape, dtype and device as <code class="docutils literal notranslate"><span class="pre">state</span></code>. Physical
+parameters are fixed Python values, not trainable tensors. No random
+numbers are consumed and the input is not modified.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – Physics or time parameters are supplied as tensors rather
+    than fixed Python scalars.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – Invalid configuration, invalid raw state at any RK stage
+    or after filtering, or a timestep violating the CFL or combined
+    viscosity/drag/Coriolis bound.
+    These validation branches are not differentiated. The retained
+    state evolution is differentiable within the accepted domain.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a></p>
+</dd>
+</dl>
+<p>Fixed and adaptive schedules need not be bitwise equal over a full lead;
+choose <code class="docutils literal notranslate"><span class="pre">n_substeps</span></code> using a convergence check. Boundary clipping is
+deliberately rejected rather than providing misleading clipped gradients.
+This first interface does not promise <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code>/<code class="docutils literal notranslate"><span class="pre">vmap</span></code> support.</p>
+</dd></dl>
+
+</section>
+<section id="zero-gravity-limit">
+<h2>Zero-gravity limit<a class="headerlink" href="#zero-gravity-limit" title="Link to this heading">#</a></h2>
+<p>Setting <code class="docutils literal notranslate"><span class="pre">g=0</span></code> removes height-gradient feedback from the momentum equations
+and initializes <code class="docutils literal notranslate"><span class="pre">h</span></code> uniformly. With <code class="docutils literal notranslate"><span class="pre">f0=beta=0</span></code>, velocity follows forced,
+damped two-dimensional vector-Burgers dynamics:</p>
+<div class="math notranslate nohighlight">
+\[\partial_t \mathbf{u} + \mathbf{u}\cdot\nabla\mathbf{u}
+= \nu\nabla^2\mathbf{u} - r\mathbf{u} + \mathbf{F}.\]</div>
+<p>The continuity equation is still integrated, so <code class="docutils literal notranslate"><span class="pre">h</span></code> is a passive field rather
+than a constant. This limit is not incompressible Navier–Stokes: even when
+<code class="docutils literal notranslate"><span class="pre">vortical</span></code> forcing is divergence-free, nonlinear evolution can generate
+velocity divergence. Smaller initial amplitudes and stronger viscosity and drag
+than the gravity-supported defaults help prevent compressive steepening.</p>
+</section>
+<section id="forcing-choices">
+<h2>Forcing choices<a class="headerlink" href="#forcing-choices" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">ShallowWater2D</span></code> supports four stochastic forcing geometries in addition
+to the deterministic <code class="docutils literal notranslate"><span class="pre">none</span></code> mode:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">vortical</span></code> adds divergence-free velocity increments and is useful for
+unresolved rotational eddy stirring or wind-stress curl. It is the closest
+option to spectral stochastic kinetic-energy backscatter schemes.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">balanced</span></code> adds vortical velocity together with its constant-Coriolis
+geostrophic height perturbation. This experimental joint perturbation can
+reduce immediate imbalance, although its balance is approximate on the
+periodic beta-plane.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pv_balanced</span></code> samples a potential-vorticity anomaly, inverts the
+deformation-radius Helmholtz operator, and constructs geostrophically
+balanced velocity and height increments. The inversion is physically
+motivated, but its repeated use as additive forcing is an experimental
+construction rather than a standard atmospheric backscatter scheme.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">momentum</span></code> adds unconstrained horizontal-velocity increments containing
+rotational and divergent components. It is the most direct idealization of
+stochastic wind stress for ocean-atmosphere coupling.</p></li>
+</ul>
+<p>All modes use a configurable Gaussian ring in spatial Fourier space. For
+<code class="docutils literal notranslate"><span class="pre">vortical</span></code> and <code class="docutils literal notranslate"><span class="pre">balanced</span></code> forcing, the ring filters a sampled vorticity
+field before streamfunction inversion; for <code class="docutils literal notranslate"><span class="pre">pv_balanced</span></code> it filters a
+sampled potential-vorticity field before Helmholtz inversion; and for
+<code class="docutils literal notranslate"><span class="pre">momentum</span></code> it filters two sampled velocity components directly.
+<code class="docutils literal notranslate"><span class="pre">forcing_energy_rate</span></code> is a diffusion scale in the linearized SWE energy
+norm. For white noise it sets the expected increment energy per unit time; for
+OU forcing it sets the long-time diffusion rate. It does not prescribe the
+realized energy transferred to the nonlinear flow. Individual Gaussian
+draws fluctuate around the target rather than being rescaled to identical
+energy. Neither the total flow energy nor the energy of each forcing
+realization is held constant.</p>
+<p><code class="docutils literal notranslate"><span class="pre">forcing_wavenumber</span></code> is an angular wavenumber. On a square domain of side
+<code class="docutils literal notranslate"><span class="pre">L</span></code>, Fourier mode <code class="docutils literal notranslate"><span class="pre">m</span></code> has <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">=</span> <span class="pre">2</span> <span class="pre">*</span> <span class="pre">pi</span> <span class="pre">*</span> <span class="pre">m</span> <span class="pre">/</span> <span class="pre">L</span></code> and wavelength <code class="docutils literal notranslate"><span class="pre">L</span> <span class="pre">/</span> <span class="pre">m</span></code>.
+For example, on the 64 by 64 example with <code class="docutils literal notranslate"><span class="pre">L=64</span></code>, mode 4 has
+<code class="docutils literal notranslate"><span class="pre">k=0.392699...</span></code> and a 16-grid-point wavelength. Lower modes are useful for
+coherent weather or wind-stress patterns; higher modes represent smaller-scale
+eddy stirring. <code class="docutils literal notranslate"><span class="pre">forcing_bandwidth</span></code> controls how many neighbouring scales are
+excited. Spectral forcing is a standard choice on this periodic FFT grid and
+also makes the vortical constraint exact up to numerical precision.
+The ring centre must fit inside the largest circular band retained in every
+Fourier direction. Internally selected defaults are clamped to that band on
+small grids. Fixed values and sampled ranges that place the peak only in the
+rectangular mask’s diagonal corners are rejected before generation.</p>
+<p>The Fourier ring is an idealized homogeneous, direction-neutral covariance:
+it controls the injected scale, not the location of storms, coastlines, or
+other spatially varying sources. Spectral stochastic streamfunction patterns
+have direct weather-model precedent; see <a class="reference external" href="https://doi.org/10.1175/2008JAS2677.1">Berner et al. (2009)</a> for their use in the ECMWF ensemble
+prediction system.</p>
+<p><code class="docutils literal notranslate"><span class="pre">forcing_correlation_time=0</span></code> selects independent white-in-time increments.
+A positive value selects an Ornstein-Uhlenbeck forcing tendency with that
+e-folding time in simulator time units. Increasing it produces longer-lived
+temporal correlations without changing the target long-time energy diffusion
+rate. Conditional on the incoming tendency and the effective diffusion rate
+held over a step, the OU time integral is sampled exactly. It converges to the
+white-noise increment as the correlation time tends to zero.
+Set <code class="docutils literal notranslate"><span class="pre">return_additional_input_fields=True</span></code> to store the realized
+<code class="docutils literal notranslate"><span class="pre">[dh,</span> <span class="pre">du,</span> <span class="pre">dv]</span></code> impulse accumulated over every saved transition as an opt-in
+diagnostic. It is not included in the default forced dataset or its
+normalization statistics.</p>
+<p>Set <code class="docutils literal notranslate"><span class="pre">forcing_backscatter_fraction</span></code> above zero to add that fraction of the
+diagnosed Laplacian-viscosity and exact numerical hyperviscosity loss to the
+forcing diffusion rate. Depth-weighted loss diagnostics are divided by
+<code class="docutils literal notranslate"><span class="pre">h_mean</span></code> to match the forcing’s specific-energy convention. The default zero
+keeps forcing fixed. Linear-drag loss is excluded because drag normally
+represents a physical large-scale sink; set
+<code class="docutils literal notranslate"><span class="pre">backscatter_include_drag=True</span></code> to include it for controlled experiments.
+This is an idealized energy calibration, not a closure derived from the
+resolved flow.</p>
+<p>OU forcing is a finite-persistence, Gaussian red-noise model rather than a
+claim that real weather follows a single correlation time. First-order
+autoregressive spectral coefficients, the discrete-time analogue of this OU
+correlation, are used in atmospheric stochastic-backscatter schemes; see
+<a class="reference external" href="https://doi.org/10.1175/2008JAS2677.1">Berner et al. (2009)</a> and the WRF
+application by <a class="reference external" href="https://doi.org/10.1175/MWR-D-15-0092.1">Duda et al. (2016)</a>.</p>
+<p>Stochastic increments that take height or velocity outside the generator’s
+output bounds cause an error, even when only one grid cell is affected. Reduce
+the forcing strength or adjust the initial state rather than relying on
+clipping to repair such a trajectory: clipping invalidates the saved state’s
+energy budget and, for height, alters mass.</p>
+</section>
+<section id="energy-diagnostics">
+<h2>Energy diagnostics<a class="headerlink" href="#energy-diagnostics" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">return_energy_budget=True</span></code> records total shallow-water energy and the exact
+energy changes across the deterministic RK4 step, spectral hyperviscosity,
+and stochastic increment for each saved transition. Their sum closes the
+recorded total-energy change up to the float32 precision of the stored
+budget, even when integration uses float64. Positive
+viscosity and drag loss estimates accumulated over the saved transition and
+the interval-mean effective forcing diffusion rate are also returned. These
+estimates explain the source used by dissipation-linked forcing but are not
+extra terms in the exact closure.</p>
+<p>The first six budget columns use depth-weighted energy units. The final
+<code class="docutils literal notranslate"><span class="pre">effective_forcing_energy_rate</span></code> column uses specific energy per unit model
+time, consistent with <code class="docutils literal notranslate"><span class="pre">forcing_energy_rate</span></code>. Multiplying this rate by
+<code class="docutils literal notranslate"><span class="pre">h_mean</span></code> converts it to depth-weighted energy per unit time; multiplying
+again by the saved interval gives its integrated diffusion scale. This scale
+need not equal the realized <code class="docutils literal notranslate"><span class="pre">forcing_energy_change</span></code> of the nonlinear flow.</p>
+</section>
+<section id="crps-spatial-coherence-dataset-presets">
+<h2>CRPS spatial-coherence dataset presets<a class="headerlink" href="#crps-spatial-coherence-dataset-presets" title="Link to this heading">#</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">shallow_water2d_crps_32</span></code> and <code class="docutils literal notranslate"><span class="pre">shallow_water2d_crps_64</span></code> simulator
+presets generate independent trajectories with <code class="docutils literal notranslate"><span class="pre">balanced_random_pv</span></code> initial
+conditions and a coherent vortical forcing ring centred on Fourier mode 3.
+All physical parameters are fixed within each dataset, including <code class="docutils literal notranslate"><span class="pre">amp=0.1</span></code>.</p>
+<p>The forcing is white in time (<code class="docutils literal notranslate"><span class="pre">forcing_correlation_time=0</span></code>), so the returned
+<code class="docutils literal notranslate"><span class="pre">[h,</span> <span class="pre">u,</span> <span class="pre">v]</span></code> fields form the complete state for a one-step conditional model.
+After spin-up, each trajectory contains 128 states from time 40.0 through 71.75
+at intervals of 0.25. Downstream data loaders can extract adjacent one-step
+pairs while retaining the complete trajectory for rollout evaluation.</p>
+<p>Run a small 32 by 32 pilot before generating either full dataset:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">uv run autosim --config-name=generate_data_swe_crps_32 \</span>
+<span class="go">  dataset.n_train=8 dataset.n_valid=2 dataset.n_test=2</span>
+</pre></div>
+</div>
+<p>The production commands are:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">uv run autosim --config-name=generate_data_swe_crps_32</span>
+<span class="go">uv run autosim --config-name=generate_data_swe_crps_64</span>
+</pre></div>
+</div>
+<p>Both resolutions use 64/8/8 trajectories for the train/validation/test splits.
+Generation is serial, so the 64 by 64 dataset should only be started after
+inspecting the 32 by 32 output. <code class="docutils literal notranslate"><span class="pre">forcing_energy_rate</span></code> controls the forcing
+diffusion scale; it should not be interpreted as a direct target for the ratio
+of stochastic to deterministic forecast spread. Nor should these forced,
+dissipative presets be expected to exhibit a <code class="docutils literal notranslate"><span class="pre">k^-3</span></code> inertial range.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">shallow_water2d_crps_deterministic_32</span></code> preset provides a matched
+deterministic control. It keeps the 32 by 32 physical parameters, initial-state
+distribution, sampling interval, trajectory length, split sizes, and seed, but
+sets <code class="docutils literal notranslate"><span class="pre">forcing_type=none</span></code>. An unforced trajectory decays under the retained
+drag and viscosity, so the control uses a shorter spin-up and returns 128 states
+from time 5.0 through 36.75; the original time-40 sampling window would be
+almost static. The retained window still decays, so cross-dataset error
+comparisons must account for different amplitudes and time-varying statistics.</p>
+<p>The control matches the initial-state distribution, not individual
+trajectories. Using the same seed does not preserve trajectory pairing once
+the forced runs consume extra random draws. For paired comparisons, restart
+both forecasts from the same physical state with <code class="docutils literal notranslate"><span class="pre">initial_condition=&quot;restart&quot;</span></code>.
+Generate the distribution-matched control with:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">uv run autosim --config-name=generate_data_swe_crps_deterministic_32</span>
+</pre></div>
+</div>
+<p id="module-autosim.experimental.simulations.shallow_water">Shallow-water equation simulator.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="autosim.experimental.simulations.shallow_water.ShallowWater2D">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ShallowWater2D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parameters_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_timeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'progress_bar'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ny</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ly</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">90.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt_save</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cfl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.12</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">9.81</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0005</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.002</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">torch.float64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_additional_input_fields</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coriolis_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'periodic_beta'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dealias</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'none'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_energy_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_wavenumber</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_bandwidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_correlation_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_condition</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'random'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_wavenumber</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_bandwidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jet_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jet_perturbation_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jet_perturbation_fraction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_energy_budget</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_backscatter_fraction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backscatter_include_drag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/autosim/experimental/simulations/shallow_water.html#ShallowWater2D"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#autosim.experimental.simulations.shallow_water.ShallowWater2D" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="../simulations/base.html#autosim.simulations.base.SpatioTemporalSimulator" title="autosim.simulations.base.SpatioTemporalSimulator"><code class="xref py py-class docutils literal notranslate"><span class="pre">SpatioTemporalSimulator</span></code></a></p>
+<p>Full 2D shallow-water simulator with prognostic <span class="math notranslate nohighlight">\([h, u, v]\)</span>.</p>
+<p>The solver evolves fluid height <span class="math notranslate nohighlight">\(h\)</span> and horizontal velocity
+<span class="math notranslate nohighlight">\((u, v)\)</span> using:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{aligned}
+\partial_t h + \nabla\cdot(h\mathbf{u}) &amp;= 0, \\
+\partial_t u + u\partial_x u + v\partial_y u
+    &amp;= f v - g\partial_x h + \nu\nabla^2 u - r u, \\
+\partial_t v + u\partial_x v + v\partial_y v
+    &amp;= -f u - g\partial_y h + \nu\nabla^2 v - r v.
+\end{aligned}\end{split}\]</div>
+<p>Setting <code class="docutils literal notranslate"><span class="pre">g=0</span></code> removes height-gradient feedback from momentum. With
+<code class="docutils literal notranslate"><span class="pre">f0=beta=0</span></code>, velocity then follows forced, damped 2D vector-Burgers
+dynamics while <span class="math notranslate nohighlight">\(h\)</span> remains a passive continuity field.</p>
+<p>The stochastic forcing options represent different unresolved processes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;vortical&quot;</span></code> injects divergence-free velocity and can represent
+unresolved rotational eddy stirring or wind-stress curl. It is the
+closest option to spectral stochastic kinetic-energy backscatter.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;balanced&quot;</span></code> adds the same rotational velocity together with its
+constant-<span class="math notranslate nohighlight">\(f\)</span> geostrophic height perturbation. This experimental
+joint perturbation can reduce immediate imbalance, although balance is
+approximate with spatially varying Coriolis parameter.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;pv_balanced&quot;</span></code> samples a potential-vorticity anomaly and applies
+deformation-radius-aware Helmholtz inversion before constructing the
+geostrophic velocity and height perturbation. Its use as repeated
+additive forcing is experimental rather than a standard backscatter
+scheme.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;momentum&quot;</span></code> injects unconstrained horizontal velocity and therefore
+includes rotational and divergent components. It is the most direct
+idealization of stochastic wind stress in ocean-atmosphere coupling.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code> leaves the SWE evolution deterministic after the random
+initial state is fixed.</p></li>
+</ul>
+<p>Every stochastic mode uses a Gaussian ring in spatial Fourier space. It
+filters sampled vorticity for <code class="docutils literal notranslate"><span class="pre">&quot;vortical&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;balanced&quot;</span></code>, sampled
+potential vorticity for <code class="docutils literal notranslate"><span class="pre">&quot;pv_balanced&quot;</span></code>, and two sampled velocity
+components for <code class="docutils literal notranslate"><span class="pre">&quot;momentum&quot;</span></code>.
+<code class="docutils literal notranslate"><span class="pre">forcing_correlation_time=0</span></code> gives independent white-in-time impulses.
+A positive value evolves a persistent Ornstein-Uhlenbeck (OU) forcing
+tendency with e-folding time <span class="math notranslate nohighlight">\(\tau\)</span> and integrates that tendency
+exactly over each adaptive step, conditional on the incoming tendency and
+that step’s effective diffusion rate. Larger <span class="math notranslate nohighlight">\(\tau\)</span> produces more
+persistent, longer-correlated forcing.</p>
+<p>Initial states can use the original random balanced flow, an isotropic
+spectrally balanced random-PV field, a smooth periodic balanced double
+jet, or a supplied restart tensor. The double jet has zero net zonal
+transport so its geostrophic height field remains periodic.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>parameters_range</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)"><em>tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>]</em><em>] </em><em>| </em><em>None</em>) – <p>Input parameter (min, max) ranges. Supported keys:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">amp</span></code>: initial-condition amplitude scale. Required for generated
+initial conditions and invalid for <code class="docutils literal notranslate"><span class="pre">&quot;restart&quot;</span></code> because a
+supplied state already fixes the amplitude.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">h_mean</span></code>: mean layer depth (scalar) around which spatial
+variations are generated (default 1.0 if omitted).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">drag</span></code>: linear drag coefficient (default 2e-3).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nu</span></code>: Laplacian viscosity (default 5e-4).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">beta</span></code>: central planetary-vorticity gradient.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">f0</span></code>: reference Coriolis parameter; zero disables constant
+rotation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">initial_wavenumber</span></code>: central angular wavenumber for a sampled
+<code class="docutils literal notranslate"><span class="pre">&quot;balanced_random_pv&quot;</span></code> initial spectrum.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">initial_bandwidth</span></code>: Gaussian-ring width for a sampled
+<code class="docutils literal notranslate"><span class="pre">&quot;balanced_random_pv&quot;</span></code> initial spectrum.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">forcing_energy_rate</span></code>: diffusion scale in the linearized SWE
+specific-energy norm.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">forcing_correlation_time</span></code>: OU e-folding time; zero selects
+white noise.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">forcing_wavenumber</span></code>: central angular wavenumber for the
+stochastic forcing spectrum.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">forcing_bandwidth</span></code>: Gaussian-ring width for the stochastic
+forcing spectrum.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">forcing_backscatter_fraction</span></code>: fraction of diagnosed
+viscosity and hyperviscosity losses returned through forcing.</p></li>
+</ul>
+<p>If None, generated initial conditions use
+<code class="docutils literal notranslate"><span class="pre">{&quot;amp&quot;:</span> <span class="pre">(0.05,</span> <span class="pre">0.14)}</span></code>; restart mode uses no sampled scalar
+parameters.</p>
+</p></li>
+<li><p><strong>output_names</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>] </em><em>| </em><em>None</em>) – Passed to base. Default outputs: [“h”, “u”, “v”].</p></li>
+<li><p><strong>return_timeseries</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Passed to base. Default outputs: [“h”, “u”, “v”].</p></li>
+<li><p><strong>log_level</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Passed to base. Default outputs: [“h”, “u”, “v”].</p></li>
+<li><p><strong>return_additional_input_fields</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Return the accumulated forcing impulse for each saved state
+transition under the separate <code class="docutils literal notranslate"><span class="pre">additional_input_fields</span></code> dataset
+key. Requires <code class="docutils literal notranslate"><span class="pre">return_timeseries=True</span></code>.</p></li>
+<li><p><strong>return_energy_budget</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Return total energy and transition-aligned numerical energy-budget
+terms under the separate <code class="docutils literal notranslate"><span class="pre">energy_budget</span></code> dataset key. Requires
+<code class="docutils literal notranslate"><span class="pre">return_timeseries=True</span></code>.</p></li>
+<li><p><strong>nx</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Grid, domain, time and CFL settings.</p></li>
+<li><p><strong>ny</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Grid, domain, time and CFL settings.</p></li>
+<li><p><strong>Lx</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Grid, domain, time and CFL settings.</p></li>
+<li><p><strong>Ly</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Grid, domain, time and CFL settings.</p></li>
+<li><p><strong>T</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Grid, domain, time and CFL settings.</p></li>
+<li><p><strong>dt_save</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Grid, domain, time and CFL settings.</p></li>
+<li><p><strong>skip_nt</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Grid, domain, time and CFL settings.</p></li>
+<li><p><strong>cfl</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Grid, domain, time and CFL settings.</p></li>
+<li><p><strong>g</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Physics constants (used when not in parameters_range).
+<code class="docutils literal notranslate"><span class="pre">g=0</span></code> removes height feedback and initializes a flat height field.
+<code class="docutils literal notranslate"><span class="pre">f0=None</span></code> derives <code class="docutils literal notranslate"><span class="pre">sqrt(g</span> <span class="pre">*</span> <span class="pre">h_mean)</span> <span class="pre">/</span> <span class="pre">8</span></code>; <code class="docutils literal notranslate"><span class="pre">f0=0</span></code> disables
+rotation when <code class="docutils literal notranslate"><span class="pre">beta</span></code> is also omitted.</p></li>
+<li><p><strong>h_mean</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Physics constants (used when not in parameters_range).
+<code class="docutils literal notranslate"><span class="pre">g=0</span></code> removes height feedback and initializes a flat height field.
+<code class="docutils literal notranslate"><span class="pre">f0=None</span></code> derives <code class="docutils literal notranslate"><span class="pre">sqrt(g</span> <span class="pre">*</span> <span class="pre">h_mean)</span> <span class="pre">/</span> <span class="pre">8</span></code>; <code class="docutils literal notranslate"><span class="pre">f0=0</span></code> disables
+rotation when <code class="docutils literal notranslate"><span class="pre">beta</span></code> is also omitted.</p></li>
+<li><p><strong>nu</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Physics constants (used when not in parameters_range).
+<code class="docutils literal notranslate"><span class="pre">g=0</span></code> removes height feedback and initializes a flat height field.
+<code class="docutils literal notranslate"><span class="pre">f0=None</span></code> derives <code class="docutils literal notranslate"><span class="pre">sqrt(g</span> <span class="pre">*</span> <span class="pre">h_mean)</span> <span class="pre">/</span> <span class="pre">8</span></code>; <code class="docutils literal notranslate"><span class="pre">f0=0</span></code> disables
+rotation when <code class="docutils literal notranslate"><span class="pre">beta</span></code> is also omitted.</p></li>
+<li><p><strong>drag</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Physics constants (used when not in parameters_range).
+<code class="docutils literal notranslate"><span class="pre">g=0</span></code> removes height feedback and initializes a flat height field.
+<code class="docutils literal notranslate"><span class="pre">f0=None</span></code> derives <code class="docutils literal notranslate"><span class="pre">sqrt(g</span> <span class="pre">*</span> <span class="pre">h_mean)</span> <span class="pre">/</span> <span class="pre">8</span></code>; <code class="docutils literal notranslate"><span class="pre">f0=0</span></code> disables
+rotation when <code class="docutils literal notranslate"><span class="pre">beta</span></code> is also omitted.</p></li>
+<li><p><strong>beta</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Physics constants (used when not in parameters_range).
+<code class="docutils literal notranslate"><span class="pre">g=0</span></code> removes height feedback and initializes a flat height field.
+<code class="docutils literal notranslate"><span class="pre">f0=None</span></code> derives <code class="docutils literal notranslate"><span class="pre">sqrt(g</span> <span class="pre">*</span> <span class="pre">h_mean)</span> <span class="pre">/</span> <span class="pre">8</span></code>; <code class="docutils literal notranslate"><span class="pre">f0=0</span></code> disables
+rotation when <code class="docutils literal notranslate"><span class="pre">beta</span></code> is also omitted.</p></li>
+<li><p><strong>f0</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Physics constants (used when not in parameters_range).
+<code class="docutils literal notranslate"><span class="pre">g=0</span></code> removes height feedback and initializes a flat height field.
+<code class="docutils literal notranslate"><span class="pre">f0=None</span></code> derives <code class="docutils literal notranslate"><span class="pre">sqrt(g</span> <span class="pre">*</span> <span class="pre">h_mean)</span> <span class="pre">/</span> <span class="pre">8</span></code>; <code class="docutils literal notranslate"><span class="pre">f0=0</span></code> disables
+rotation when <code class="docutils literal notranslate"><span class="pre">beta</span></code> is also omitted.</p></li>
+<li><p><strong>coriolis_mode</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;f_plane&quot;</span></code> or a smooth <code class="docutils literal notranslate"><span class="pre">&quot;periodic_beta&quot;</span></code> analogue compatible
+with the doubly periodic Fourier grid.</p></li>
+<li><p><strong>dealias</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Whether to apply two-thirds spectral dealiasing.</p></li>
+<li><p><strong>forcing_type</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Stochastic forcing geometry: <code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code>, divergence-free
+<code class="docutils literal notranslate"><span class="pre">&quot;vortical&quot;</span></code>, geostrophically <code class="docutils literal notranslate"><span class="pre">&quot;balanced&quot;</span></code>, deformation-aware
+<code class="docutils literal notranslate"><span class="pre">&quot;pv_balanced&quot;</span></code>, or unconstrained <code class="docutils literal notranslate"><span class="pre">&quot;momentum&quot;</span></code> forcing.</p></li>
+<li><p><strong>forcing_energy_rate</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Diffusion scale in the linearized SWE specific-energy norm. For
+white noise it sets the expected increment energy per unit time;
+for OU forcing it sets the long-time diffusion rate.</p></li>
+<li><p><strong>forcing_wavenumber</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Central angular wavenumber and width of the Gaussian spectral
+ring. A central wavenumber <code class="docutils literal notranslate"><span class="pre">k</span></code> corresponds to wavelength
+<code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">pi</span> <span class="pre">/</span> <span class="pre">k</span></code>. An internally selected centre is clamped on small
+grids to remain isotropically resolved.</p></li>
+<li><p><strong>forcing_bandwidth</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Central angular wavenumber and width of the Gaussian spectral
+ring. A central wavenumber <code class="docutils literal notranslate"><span class="pre">k</span></code> corresponds to wavelength
+<code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">pi</span> <span class="pre">/</span> <span class="pre">k</span></code>. An internally selected centre is clamped on small
+grids to remain isotropically resolved.</p></li>
+<li><p><strong>forcing_correlation_time</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – OU e-folding time in simulation-time units. Zero retains
+independent white-in-time increments.</p></li>
+<li><p><strong>forcing_backscatter_fraction</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Non-negative fraction of diagnosed Laplacian-viscosity and exact
+hyperviscosity energy loss used as an additional forcing diffusion
+rate. Zero preserves fixed-amplitude forcing.</p></li>
+<li><p><strong>backscatter_include_drag</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Whether to include diagnosed linear-drag loss in the backscatter
+source. Disabled by default because drag is normally a physical
+large-scale sink rather than unresolved cascade loss.</p></li>
+<li><p><strong>initial_condition</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – <code class="docutils literal notranslate"><span class="pre">&quot;random&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;balanced_random_pv&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;balanced_double_jet&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;restart&quot;</span></code>.</p></li>
+<li><p><strong>initial_state</strong> (<em>TensorLike</em><em> | </em><em>None</em>) – Restart tensor with shape <code class="docutils literal notranslate"><span class="pre">[nx,</span> <span class="pre">ny,</span> <span class="pre">3]</span></code> in <code class="docutils literal notranslate"><span class="pre">[h,</span> <span class="pre">u,</span> <span class="pre">v]</span></code> order.
+Required only for <code class="docutils literal notranslate"><span class="pre">initial_condition=&quot;restart&quot;</span></code>. This restores
+the physical state, but not a latent correlated-forcing tendency;
+OU forcing is initialized anew for the restarted forecast.</p></li>
+<li><p><strong>initial_wavenumber</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Central angular wavenumber and Gaussian-ring width for
+<code class="docutils literal notranslate"><span class="pre">&quot;balanced_random_pv&quot;</span></code>. Defaults prefer mode 4 and a 1.5-mode
+bandwidth on the longest domain side; the centre is clamped on
+small grids to remain isotropically resolved.</p></li>
+<li><p><strong>initial_bandwidth</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>) – Central angular wavenumber and Gaussian-ring width for
+<code class="docutils literal notranslate"><span class="pre">&quot;balanced_random_pv&quot;</span></code>. Defaults prefer mode 4 and a 1.5-mode
+bandwidth on the longest domain side; the centre is clamped on
+small grids to remain isotropically resolved.</p></li>
+<li><p><strong>jet_mode</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Meridional double-jet mode, zonal perturbation mode, and relative
+perturbation velocity scale for <code class="docutils literal notranslate"><span class="pre">&quot;balanced_double_jet&quot;</span></code>.</p></li>
+<li><p><strong>jet_perturbation_mode</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Meridional double-jet mode, zonal perturbation mode, and relative
+perturbation velocity scale for <code class="docutils literal notranslate"><span class="pre">&quot;balanced_double_jet&quot;</span></code>.</p></li>
+<li><p><strong>jet_perturbation_fraction</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Meridional double-jet mode, zonal perturbation mode, and relative
+perturbation velocity scale for <code class="docutils literal notranslate"><span class="pre">&quot;balanced_double_jet&quot;</span></code>.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensor_attributes.html#torch.dtype" title="(in PyTorch v2.14)"><em>torch.dtype</em></a>) – torch.float32 or torch.float64.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="autosim.experimental.simulations.shallow_water.ShallowWater2D.forward_samples_spatiotemporal">
+<span class="sig-name descname"><span class="pre">forward_samples_spatiotemporal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ensure_exact_n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/autosim/experimental/simulations/shallow_water.html#ShallowWater2D.forward_samples_spatiotemporal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#autosim.experimental.simulations.shallow_water.ShallowWater2D.forward_samples_spatiotemporal" title="Link to this definition">#</a></dt>
+<dd><p>Run sampled trajectories and return <cite>[batch,time,x,y,channels]</cite> data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>random_seed</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>ensure_exact_n</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="autosim.experimental.simulations.shallow_water.simulate_swe_2d">
+<span class="sig-name descname"><span class="pre">simulate_swe_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">amp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_timeseries</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ny</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Lx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt_save</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cfl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_mean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">torch.float64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coriolis_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'periodic_beta'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dealias</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'none'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_energy_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_wavenumber</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_bandwidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_additional_input_fields</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_correlation_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_condition</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'random'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_wavenumber</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_bandwidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jet_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jet_perturbation_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jet_perturbation_fraction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_energy_budget</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forcing_backscatter_fraction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backscatter_include_drag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/autosim/experimental/simulations/shallow_water.html#simulate_swe_2d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#autosim.experimental.simulations.shallow_water.simulate_swe_2d" title="Link to this definition">#</a></dt>
+<dd><p>Integrate full shallow-water equations with PDEArena-style random2 ICs.</p>
+<p>Named stochastic forcing modes share a Gaussian spatial spectral ring.
+<code class="docutils literal notranslate"><span class="pre">forcing_correlation_time=0</span></code> uses independent white-in-time increments.
+Positive correlation time evolves an OU forcing tendency with exact
+exponential memory and samples its exact time integral at each adaptive
+step, conditional on the incoming tendency and the effective diffusion
+rate held over that step. Its stationary linearized expected specific
+energy is
+<code class="docutils literal notranslate"><span class="pre">forcing_energy_rate</span> <span class="pre">/</span> <span class="pre">(2</span> <span class="pre">*</span> <span class="pre">correlation_time)</span></code>, so its long-time
+integrated diffusion rate is <code class="docutils literal notranslate"><span class="pre">forcing_energy_rate</span></code>. The exact integral
+also converges to the white-noise increment as the correlation time tends
+to zero.</p>
+<p>A stochastic increment that would require height or velocity output
+clipping raises <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code>, even if only one cell is affected.
+Clipping would invalidate energy diagnostics of the saved state and,
+for height, change mass.</p>
+<p>A positive <code class="docutils literal notranslate"><span class="pre">forcing_backscatter_fraction</span></code> adds the requested fraction
+of diagnosed Laplacian-viscosity and exact hyperviscosity loss to the
+configured base diffusion rate, after converting the depth-weighted loss
+to specific energy by dividing by <code class="docutils literal notranslate"><span class="pre">h_mean</span></code>. Linear-drag loss is included when
+<code class="docutils literal notranslate"><span class="pre">backscatter_include_drag=True</span></code>.</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">return_additional_input_fields=True</span></code>, three forcing-impulse channels
+are appended after <code class="docutils literal notranslate"><span class="pre">[h,</span> <span class="pre">u,</span> <span class="pre">v]</span></code>. At saved index <code class="docutils literal notranslate"><span class="pre">i</span></code> they contain the sum
+of <code class="docutils literal notranslate"><span class="pre">[dh,</span> <span class="pre">du,</span> <span class="pre">dv]</span></code> increments used to advance state <code class="docutils literal notranslate"><span class="pre">i</span></code> to state <code class="docutils literal notranslate"><span class="pre">i+1</span></code>;
+the final entry is zero because it has no following transition.</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">return_energy_budget=True</span></code>, the second returned tensor contains
+total energy at every saved state followed by transition-aligned energy
+changes from deterministic RK4 evolution, hyperviscosity, and stochastic
+forcing. Their sum exactly closes the numerical total-energy change. The
+reported Laplacian-viscosity and drag entries are positive loss estimates
+accumulated over each saved transition. They are used to interpret
+dissipation, not as extra terms in that closure. The effective forcing
+energy rate is an interval mean in specific-energy units per model time;
+multiply it by <code class="docutils literal notranslate"><span class="pre">h_mean</span></code> to match the depth-weighted convention of the
+other columns. Its integrated diffusion scale need not equal realized
+forcing work. The returned budget is stored as float32, even for float64
+integration, so closure checks must allow for that storage precision.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>amp</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>return_timeseries</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+<li><p><strong>nx</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>ny</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>Lx</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>Ly</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>T</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>dt_save</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>cfl</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>g</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>h_mean</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>nu</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>drag</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensor_attributes.html#torch.dtype" title="(in PyTorch v2.14)"><em>dtype</em></a>)</p></li>
+<li><p><strong>skip_nt</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>beta</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>coriolis_mode</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>dealias</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+<li><p><strong>forcing_type</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>forcing_energy_rate</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>forcing_wavenumber</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>forcing_bandwidth</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>return_additional_input_fields</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+<li><p><strong>forcing_correlation_time</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>f0</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>initial_condition</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>initial_state</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>initial_wavenumber</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>initial_bandwidth</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>jet_mode</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>jet_perturbation_mode</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>jet_perturbation_fraction</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>return_energy_budget</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+<li><p><strong>forcing_backscatter_fraction</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>backscatter_include_drag</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a> | <a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a>[<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>, <a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.14)"><em>Tensor</em></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./reference/experimental"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="lattice_boltzmann.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">autosim.experimental.simulations.lattice_boltzmann</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rotation-choices">Rotation choices</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#initial-conditions-and-restarts">Initial conditions and restarts</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#differentiable-forcing-free-forecasts">Differentiable forcing-free forecasts</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.shallow_water_stepper.advance_swe_2d"><code class="docutils literal notranslate"><span class="pre">advance_swe_2d()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#zero-gravity-limit">Zero-gravity limit</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#forcing-choices">Forcing choices</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#energy-diagnostics">Energy diagnostics</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#crps-spatial-coherence-dataset-presets">CRPS spatial-coherence dataset presets</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.shallow_water.ShallowWater2D"><code class="docutils literal notranslate"><span class="pre">ShallowWater2D</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.shallow_water.ShallowWater2D.forward_samples_spatiotemporal"><code class="docutils literal notranslate"><span class="pre">ShallowWater2D.forward_samples_spatiotemporal()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.shallow_water.simulate_swe_2d"><code class="docutils literal notranslate"><span class="pre">simulate_swe_2d()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The Alan Turing Institute
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Copyright &copy; 2026
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

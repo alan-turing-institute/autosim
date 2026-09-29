@@ -1,0 +1,1338 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>autosim.simulations.spatiotemporal.gross_pitaevskii &#8212; AutoSim: simulation data generation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=7f8ff830"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../../../../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../../../../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/autosim/simulations/spatiotemporal/gross_pitaevskii';</script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/AS.png" class="logo__image only-light" alt="AutoSim: simulation data generation - Home"/>
+    <img src="../../../../_static/AS.png" class="logo__image only-dark pst-js-only" alt="AutoSim: simulation data generation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../../../index.html">
+                    Welcome to AutoSim
+                </a>
+            </li>
+        </ul>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../tutorials/visualize.html">Visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../tutorials/stratified.html">Stratified sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../reference/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../reference/core/index.html">Core Modules</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/cli.html">autosim.cli</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/device.html">autosim.device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/logging.html">autosim.logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/types.html">autosim.types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/utils.html">autosim.utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/validation.html">autosim.validation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../reference/simulations/index.html">Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/base.html">autosim.simulations.base</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/index.html">Spatiotemporal Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/advection_diffusion.html">autosim.simulations.spatiotemporal.advection_diffusion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/advection_diffusion_multichannel.html">autosim.simulations.spatiotemporal.advection_diffusion_multichannel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/gray_scott.html">autosim.simulations.spatiotemporal.gray_scott</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/gross_pitaevskii.html">autosim.simulations.spatiotemporal.gross_pitaevskii</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/navier_stokes_conditioned.html">autosim.simulations.spatiotemporal.navier_stokes_conditioned</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/reaction_diffusion.html">autosim.simulations.spatiotemporal.reaction_diffusion</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/double_pendulum.html">autosim.simulations.double_pendulum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/epidemic.html">autosim.simulations.epidemic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/flow_problem.html">autosim.simulations.flow_problem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/projectile.html">autosim.simulations.projectile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/seir.html">autosim.simulations.seir</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../reference/experimental/index.html">Experimental Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/compressible_fluid.html">autosim.experimental.simulations.compressible_fluid</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/hydrodynamics_2d.html">autosim.experimental.simulations.hydrodynamics_2d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/lattice_boltzmann.html">autosim.experimental.simulations.lattice_boltzmann</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/shallow_water.html">autosim.experimental.simulations.shallow_water</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim/issues/new?title=Issue%20on%20page%20%2F_modules/autosim/simulations/spatiotemporal/gross_pitaevskii.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for autosim.simulations.spatiotemporal.gross_pitaevskii</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Gross-Pitaevskii equation simulator.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Literal</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.simulations.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">SpatioTemporalSimulator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">TensorLike</span>
+
+
+<div class="viewcode-block" id="generate_complex_potential">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.generate_complex_potential">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_complex_potential</span><span class="p">(</span>  <span class="c1"># noqa: PLR0915</span>
+    <span class="n">X</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">Y</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">t</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">static_disorder</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">rng</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate a highly controllable 2D potential landscape.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        X: X-coordinate grid for evaluating the potential.</span>
+<span class="sd">        Y: Y-coordinate grid for evaluating the potential.</span>
+<span class="sd">        config: Potential configuration values controlling traps, lattices, and</span>
+<span class="sd">            disorder.</span>
+<span class="sd">        t: Current simulation time used for rotating or time-varying terms.</span>
+<span class="sd">        static_disorder: Precomputed disorder field to add to the potential.</span>
+<span class="sd">        rng: Random number generator used when sampling disorder terms.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">trap_Omega</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;trap_Omega&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+    <span class="n">X_trap</span><span class="p">,</span> <span class="n">Y_trap</span> <span class="o">=</span> <span class="n">X</span><span class="p">,</span> <span class="n">Y</span>
+    <span class="k">if</span> <span class="n">trap_Omega</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">trap_Omega</span> <span class="o">*</span> <span class="n">t</span>
+        <span class="n">cos_t</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="n">sin_t</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="n">X_trap</span> <span class="o">=</span> <span class="n">X</span> <span class="o">*</span> <span class="n">cos_t</span> <span class="o">+</span> <span class="n">Y</span> <span class="o">*</span> <span class="n">sin_t</span>
+        <span class="n">Y_trap</span> <span class="o">=</span> <span class="o">-</span><span class="n">X</span> <span class="o">*</span> <span class="n">sin_t</span> <span class="o">+</span> <span class="n">Y</span> <span class="o">*</span> <span class="n">cos_t</span>
+
+    <span class="c1"># 1. Base Geometry (Anisotropic Trap)</span>
+    <span class="c1"># wx, wy control the &quot;squish&quot;, box_param adds steep walls.</span>
+    <span class="n">wx</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;wx&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">wy</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;wy&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="n">V_base</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">wx</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">X_trap</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">wy</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">Y_trap</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">box_param</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;box_param&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">box_param</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">box_power</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;box_power&quot;</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">))</span>
+        <span class="n">box_anisotropy</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;box_anisotropy&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+        <span class="n">box_type</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;box_type&quot;</span><span class="p">,</span> <span class="s2">&quot;woods_saxon&quot;</span><span class="p">))</span>
+
+        <span class="n">R_wall</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">box_param</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.25</span>
+
+        <span class="k">if</span> <span class="n">box_type</span> <span class="o">==</span> <span class="s2">&quot;power&quot;</span><span class="p">:</span>
+            <span class="n">term_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">X_trap</span> <span class="o">/</span> <span class="n">R_wall</span><span class="p">)</span> <span class="o">**</span> <span class="n">box_power</span>
+            <span class="n">term_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">Y_trap</span> <span class="o">/</span> <span class="p">(</span><span class="n">R_wall</span> <span class="o">*</span> <span class="n">box_anisotropy</span><span class="p">))</span> <span class="o">**</span> <span class="n">box_power</span>
+            <span class="n">V_base</span> <span class="o">+=</span> <span class="n">term_x</span> <span class="o">+</span> <span class="n">term_y</span>
+        <span class="k">elif</span> <span class="n">box_type</span> <span class="o">==</span> <span class="s2">&quot;woods_saxon&quot;</span><span class="p">:</span>
+            <span class="n">ws_a</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ws_a&quot;</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))</span>
+            <span class="n">ws_V0</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ws_V0&quot;</span><span class="p">,</span> <span class="mf">100.0</span><span class="p">))</span>
+            <span class="n">r_eff</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">X_trap</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">Y_trap</span> <span class="o">/</span> <span class="n">box_anisotropy</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">V_base</span> <span class="o">+=</span> <span class="n">ws_V0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">r_eff</span> <span class="o">-</span> <span class="n">R_wall</span><span class="p">)</span> <span class="o">/</span> <span class="n">ws_a</span><span class="p">))</span>
+
+    <span class="c1"># 1.5 Add Moiré Optical Lattice</span>
+    <span class="n">moire_strength</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;moire_strength&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">moire_strength</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">moire_k</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;moire_k&quot;</span><span class="p">,</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span>
+        <span class="n">moire_angle</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;moire_angle&quot;</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))</span>  <span class="c1"># Twist angle</span>
+
+        <span class="c1"># Lattice 1 (Aligned)</span>
+        <span class="n">V_lat1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">moire_k</span> <span class="o">*</span> <span class="n">X_trap</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">moire_k</span> <span class="o">*</span> <span class="n">Y_trap</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+        <span class="c1"># Lattice 2 (Twisted)</span>
+        <span class="n">cos_m</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">moire_angle</span><span class="p">)</span>
+        <span class="n">sin_m</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">moire_angle</span><span class="p">)</span>
+        <span class="n">X_twist</span> <span class="o">=</span> <span class="n">X_trap</span> <span class="o">*</span> <span class="n">cos_m</span> <span class="o">+</span> <span class="n">Y_trap</span> <span class="o">*</span> <span class="n">sin_m</span>
+        <span class="n">Y_twist</span> <span class="o">=</span> <span class="o">-</span><span class="n">X_trap</span> <span class="o">*</span> <span class="n">sin_m</span> <span class="o">+</span> <span class="n">Y_trap</span> <span class="o">*</span> <span class="n">cos_m</span>
+        <span class="n">V_lat2</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">moire_k</span> <span class="o">*</span> <span class="n">X_twist</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">moire_k</span> <span class="o">*</span> <span class="n">Y_twist</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+        <span class="n">V_base</span> <span class="o">+=</span> <span class="n">moire_strength</span> <span class="o">*</span> <span class="p">(</span><span class="n">V_lat1</span> <span class="o">+</span> <span class="n">V_lat2</span><span class="p">)</span>
+
+    <span class="c1"># 2. Add Spatial Disorder (Optical Speckle)</span>
+    <span class="n">V_disorder</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">disorder_strength</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;disorder_strength&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+    <span class="n">disorder_time_dependent</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;disorder_time_dependent&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">disorder_strength</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">static_disorder</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">disorder_time_dependent</span><span class="p">:</span>
+            <span class="n">V_disorder</span> <span class="o">=</span> <span class="n">static_disorder</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">V_disorder</span> <span class="o">=</span> <span class="n">_generate_speckle_field</span><span class="p">(</span>
+                <span class="n">X</span><span class="p">,</span>
+                <span class="n">Y</span><span class="p">,</span>
+                <span class="n">wx</span><span class="p">,</span>
+                <span class="n">wy</span><span class="p">,</span>
+                <span class="n">disorder_strength</span><span class="p">,</span>
+                <span class="n">disorder_radius</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;disorder_radius&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
+                <span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">,</span>
+            <span class="p">)</span>
+
+    <span class="c1"># 3. Add a Dynamic &quot;Spoon&quot; (if calculating at a specific time t)</span>
+    <span class="n">V_spoon</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">spoon_strength</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;spoon_strength&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">spoon_strength</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># Spoon moves in a circle: x = R*cos(wt), y = R*sin(wt)</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;spoon_radius&quot;</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>
+        <span class="n">speed</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;spoon_speed&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">spoon_width</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;spoon_width&quot;</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+
+        <span class="n">spoon_type</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;spoon_type&quot;</span><span class="p">,</span> <span class="s2">&quot;orbit&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">spoon_type</span> <span class="o">==</span> <span class="s2">&quot;linear&quot;</span><span class="p">:</span>
+            <span class="n">xs</span> <span class="o">=</span> <span class="n">R</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">speed</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span>
+            <span class="n">ys</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">xs</span> <span class="o">=</span> <span class="n">R</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">speed</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span>
+            <span class="n">ys</span> <span class="o">=</span> <span class="n">R</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">speed</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span>
+
+        <span class="c1"># Gaussian obstacle</span>
+        <span class="n">r2</span> <span class="o">=</span> <span class="p">(</span><span class="n">X</span> <span class="o">-</span> <span class="n">xs</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">Y</span> <span class="o">-</span> <span class="n">ys</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">V_spoon</span> <span class="o">=</span> <span class="n">spoon_strength</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">r2</span> <span class="o">/</span> <span class="p">(</span><span class="n">spoon_width</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+
+    <span class="c1"># Combine everything</span>
+    <span class="n">V_total</span> <span class="o">=</span> <span class="n">V_base</span> <span class="o">+</span> <span class="n">V_disorder</span> <span class="o">+</span> <span class="n">V_spoon</span>
+
+    <span class="k">return</span> <span class="n">V_total</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_generate_speckle_field</span><span class="p">(</span>
+    <span class="n">X</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">Y</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">wx</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">wy</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">disorder_strength</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">disorder_radius</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">rng</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate a spatially windowed speckle disorder field.</span>
+
+<span class="sd">    Sums random-phase sine waves at multiple spatial frequencies then windows</span>
+<span class="sd">    the result with a Gaussian envelope centred on the trap.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">freqs</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">3.1</span><span class="p">,</span> <span class="mf">5.8</span><span class="p">]</span>
+    <span class="n">V</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">freqs</span><span class="p">:</span>
+        <span class="n">phase_x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="n">rng</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">phase_y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="n">rng</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">Y</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">V</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">f</span> <span class="o">*</span> <span class="n">X</span> <span class="o">+</span> <span class="n">phase_x</span><span class="p">)</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">f</span> <span class="o">*</span> <span class="n">Y</span> <span class="o">+</span> <span class="n">phase_y</span><span class="p">)</span>
+    <span class="n">V</span> <span class="o">=</span> <span class="n">disorder_strength</span> <span class="o">*</span> <span class="p">(</span><span class="n">V</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">disorder_radius</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="n">disorder_radius</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">wx</span> <span class="o">*</span> <span class="n">wy</span><span class="p">)</span>
+    <span class="n">r2</span> <span class="o">=</span> <span class="n">X</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">Y</span><span class="o">**</span><span class="mi">2</span>
+    <span class="k">return</span> <span class="n">V</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">r2</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">disorder_radius</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="generate_static_disorder">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.generate_static_disorder">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_static_disorder</span><span class="p">(</span>
+    <span class="n">X</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">Y</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">rng</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a stationary speckle-like potential for one trajectory.&quot;&quot;&quot;</span>
+    <span class="n">disorder_strength</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;disorder_strength&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">disorder_strength</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">wx</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;wx&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+    <span class="n">wy</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;wy&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">_generate_speckle_field</span><span class="p">(</span>
+        <span class="n">X</span><span class="p">,</span>
+        <span class="n">Y</span><span class="p">,</span>
+        <span class="n">wx</span><span class="p">,</span>
+        <span class="n">wy</span><span class="p">,</span>
+        <span class="n">disorder_strength</span><span class="p">,</span>
+        <span class="n">disorder_radius</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;disorder_radius&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span>
+        <span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="GPESimulator2D">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.GPESimulator2D">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GPESimulator2D</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Internal Simulator class for the Gross-Pitaevskii Equation.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.005</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the 2D Quantum Simulator.</span>
+
+<span class="sd">        N: Grid resolution (N x N)</span>
+<span class="sd">        L: Physical size of the simulation box</span>
+<span class="sd">        dt: Time step size</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">device</span>
+            <span class="k">if</span> <span class="n">device</span>
+            <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">=</span> <span class="n">N</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">L</span> <span class="o">=</span> <span class="n">L</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">=</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">L</span> <span class="o">/</span> <span class="n">N</span>
+
+        <span class="c1"># 1. Setup Spatial Grid</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-</span> <span class="n">N</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-</span> <span class="n">N</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">&quot;ij&quot;</span><span class="p">)</span>
+
+        <span class="c1"># 2. Setup Momentum (k) Grid for the Kinetic Energy step</span>
+        <span class="n">kx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftfreq</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">ky</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftfreq</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">KX</span><span class="p">,</span> <span class="n">KY</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">kx</span><span class="p">,</span> <span class="n">ky</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">&quot;ij&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Kinetic Energy Operator in momentum space</span>
+        <span class="n">kinetic_energy</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">KX</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">KY</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exp_K</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="n">kinetic_energy</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">complex64</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="c1"># exp_K_it: imaginary-time kinetic propagator exp(-k²/2 * dt)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exp_K_it</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">kinetic_energy</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">complex64</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Anti-aliasing mask (Orszag 2/3 rule) to eliminate high-freq grid artifacts</span>
+        <span class="c1"># We zero out the highest third of the momentum spectrum.</span>
+        <span class="n">k_max</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span>
+        <span class="n">K_mag</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">KX</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">KY</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># Smooth or sharp cutoff: typical pseudo-spectral uses a sharp spherical cutoff.</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">K_mag</span> <span class="o">&lt;</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">k_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dealias_mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">complex64</span><span class="p">)</span>
+
+        <span class="c1"># Store momentum grids for spectral Lz computation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">KX</span> <span class="o">=</span> <span class="n">KX</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">complex64</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">KY</span> <span class="o">=</span> <span class="n">KY</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">complex64</span><span class="p">)</span>
+
+        <span class="c1"># Cache for the rotation sampling grid (recomputed only when angle changes)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cached_rot_angle</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cached_rot_grid</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_apply_rotation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">psi</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">angle</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Rotate the wavefunction by `angle` radians via bicubic interpolation.</span>
+
+<span class="sd">        Implements exp(i * angle * Lz) as a coordinate rotation</span>
+<span class="sd">        psi&#39;(r) = psi(R_{-angle} r).</span>
+<span class="sd">        Unlike a forward-Euler Lz step this is exactly norm-preserving.  The sampling</span>
+<span class="sd">        grid depends only on `angle` and the fixed spatial grid, so it is cached and</span>
+<span class="sd">        recomputed only when the angle changes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cached_rot_angle</span> <span class="o">!=</span> <span class="n">angle</span><span class="p">:</span>
+            <span class="n">cos_a</span><span class="p">,</span> <span class="n">sin_a</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angle</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">angle</span><span class="p">)</span>
+
+            <span class="c1"># Pullback: source coordinates under R_{-angle}</span>
+            <span class="n">xs_src</span> <span class="o">=</span> <span class="n">cos_a</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">+</span> <span class="n">sin_a</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y</span>
+            <span class="n">ys_src</span> <span class="o">=</span> <span class="o">-</span><span class="n">sin_a</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">+</span> <span class="n">cos_a</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y</span>
+
+            <span class="c1"># Normalize to grid_sample coordinates.</span>
+            <span class="c1"># With align_corners=False pixel i -&gt; (2i+1)/N - 1,</span>
+            <span class="c1"># so physical x -&gt; 2x/L + 1/N.</span>
+            <span class="c1"># This avoids the 1-pixel translation bias on even-sized grids.</span>
+            <span class="n">inv_L</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span>
+            <span class="n">xs_norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">xs_src</span> <span class="o">*</span> <span class="n">inv_L</span> <span class="o">+</span> <span class="n">offset</span><span class="p">)</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+            <span class="n">ys_norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">ys_src</span> <span class="o">*</span> <span class="n">inv_L</span> <span class="o">+</span> <span class="n">offset</span><span class="p">)</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+            <span class="c1"># grid_sample: grid[..., 0] = W (col = Y), grid[..., 1] = H (row = X)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cached_rot_grid</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">ys_norm</span><span class="p">,</span> <span class="n">xs_norm</span><span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cached_rot_angle</span> <span class="o">=</span> <span class="n">angle</span>
+
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cached_rot_grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cached_rot_grid</span>
+        <span class="n">psi_r</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">grid_sample</span><span class="p">(</span>
+            <span class="n">psi</span><span class="o">.</span><span class="n">real</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">(),</span>
+            <span class="n">grid</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;bicubic&quot;</span><span class="p">,</span>
+            <span class="n">padding_mode</span><span class="o">=</span><span class="s2">&quot;zeros&quot;</span><span class="p">,</span>
+            <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+        <span class="n">psi_i</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">grid_sample</span><span class="p">(</span>
+            <span class="n">psi</span><span class="o">.</span><span class="n">imag</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">(),</span>
+            <span class="n">grid</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;bicubic&quot;</span><span class="p">,</span>
+            <span class="n">padding_mode</span><span class="o">=</span><span class="s2">&quot;zeros&quot;</span><span class="p">,</span>
+            <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">complex</span><span class="p">(</span><span class="n">psi_r</span><span class="p">,</span> <span class="n">psi_i</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">complex64</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_apply_V_half</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">psi</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">V</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">g</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">half_dt</span><span class="p">:</span> <span class="nb">complex</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Apply the potential and nonlinear half-step.</span>
+
+<span class="sd">        This applies</span>
+<span class="sd">        :math:`\psi \leftarrow \psi \exp[-i(V + g|\psi|^2)\Delta t_h]`,</span>
+<span class="sd">        where ``half_dt`` provides :math:`\Delta t_h`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">density</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="k">return</span> <span class="n">psi</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">V</span> <span class="o">+</span> <span class="n">g</span> <span class="o">*</span> <span class="n">density</span><span class="p">)</span> <span class="o">*</span> <span class="n">half_dt</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_apply_Lz_exp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">psi</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Apply :math:`\exp(\alpha L_z)` for imaginary-time rotation steps.</span>
+
+<span class="sd">        For imaginary time the correct sub-step is</span>
+<span class="sd">        :math:`\exp(\Omega\,\Delta\tau\,L_z)`, which is a *non-unitary*</span>
+<span class="sd">        operator that amplifies positive-angular-momentum modes and thereby</span>
+<span class="sd">        drives vortex nucleation. A unitary coordinate rotation (used for real</span>
+<span class="sd">        time) leaves the density unchanged and cannot form a vortex lattice.</span>
+
+<span class="sd">        The angular momentum operator is evaluated spectrally:</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \begin{aligned}</span>
+<span class="sd">            L_z &amp;= -i(x\partial_y - y\partial_x), \\</span>
+<span class="sd">            \partial_x \psi &amp;= \operatorname{IFFT}(i k_x \hat{\psi}), \\</span>
+<span class="sd">            \partial_y \psi &amp;= \operatorname{IFFT}(i k_y \hat{\psi}).</span>
+<span class="sd">            \end{aligned}</span>
+
+<span class="sd">        :math:`\exp(\alpha L_z)` is approximated to first order as</span>
+<span class="sd">        :math:`I + \alpha L_z`; with the small sub-step</span>
+<span class="sd">        :math:`\alpha = \Omega\,\Delta t / 2 \approx 5 \times 10^{-4}`, the</span>
+<span class="sd">        truncation error is negligible and the caller&#39;s renormalisation keeps</span>
+<span class="sd">        the norm bounded.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">psi_hat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
+        <span class="n">dpsi_dx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">KX</span> <span class="o">*</span> <span class="n">psi_hat</span><span class="p">)</span>
+        <span class="n">dpsi_dy</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">KY</span> <span class="o">*</span> <span class="n">psi_hat</span><span class="p">)</span>
+        <span class="n">Lz_psi</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">*</span> <span class="n">dpsi_dy</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y</span> <span class="o">*</span> <span class="n">dpsi_dx</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">psi</span> <span class="o">+</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">Lz_psi</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">complex64</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GPESimulator2D.initialize_state">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.GPESimulator2D.initialize_state">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initialize_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">y0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">kx0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">ky0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a meaningful initial condition: a moving Gaussian wavepacket.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">width</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;width must be positive&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">r2</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Y</span> <span class="o">-</span> <span class="n">y0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">amplitude</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">r2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">width</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+
+        <span class="c1"># Add a phase gradient for initial momentum</span>
+        <span class="n">phase</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">kx0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">+</span> <span class="n">ky0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y</span><span class="p">))</span>
+
+        <span class="n">psi</span> <span class="o">=</span> <span class="n">amplitude</span> <span class="o">*</span> <span class="n">phase</span>
+
+        <span class="c1"># Normalize the wave function so total probability = 1</span>
+        <span class="n">norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">psi</span> <span class="o">/</span> <span class="n">norm</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">complex64</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GPESimulator2D.step">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.GPESimulator2D.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">Omega</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">imaginary_time</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evolve the system forward by one time step using Strang splitting.</span>
+
+<span class="sd">        Sequence: [V-half] [rot-half] [K-full] [rot-half] [V-half] [renorm]</span>
+
+<span class="sd">        Real-time uses half_dt = dt/2 (phase evolution).</span>
+<span class="sd">        Imaginary-time uses half_dt = -i*dt/2 (amplitude decay toward ground state).</span>
+<span class="sd">        In both cases the rotation is the same real coordinate rotation exp(i*angle*Lz).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Effective half time-step</span>
+        <span class="n">half_dt</span><span class="p">:</span> <span class="nb">complex</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="n">j</span> <span class="k">if</span> <span class="n">imaginary_time</span> <span class="k">else</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">/</span> <span class="mf">2.0</span>
+        <span class="n">exp_K</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp_K_it</span> <span class="k">if</span> <span class="n">imaginary_time</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp_K</span>
+
+        <span class="c1"># 1. Potential + nonlinear half-step</span>
+        <span class="n">psi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_V_half</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">half_dt</span><span class="p">)</span>
+
+        <span class="c1"># 2. Rotation half-step</span>
+        <span class="c1"># Real time:      exp(i Ω dt/2 Lz) — unitary coordinate rotation</span>
+        <span class="c1"># Imaginary time: exp(Ω dτ/2 Lz)  — non-unitary amplifier, required for</span>
+        <span class="c1">#                 vortex nucleation (a coordinate rotation only shifts phases</span>
+        <span class="c1">#                 and cannot change the density toward a vortex lattice).</span>
+        <span class="k">if</span> <span class="n">Omega</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="n">rot_angle</span> <span class="o">=</span> <span class="n">Omega</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">/</span> <span class="mf">2.0</span>
+            <span class="k">if</span> <span class="n">imaginary_time</span><span class="p">:</span>
+                <span class="n">psi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_Lz_exp</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">rot_angle</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">psi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_rotation</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">rot_angle</span><span class="p">)</span>
+
+        <span class="c1"># 3. Kinetic full-step in momentum space with anti-aliasing (2/3 rule)</span>
+        <span class="c1"># Mask stops energy pooling at the highest grid frequencies (checkerboarding)</span>
+        <span class="n">psi_hat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">*</span> <span class="n">exp_K</span> <span class="o">*</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;dealias_mask&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">psi</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">psi_hat</span><span class="p">)</span>
+
+        <span class="c1"># 4. Rotation half-step (symmetric)</span>
+        <span class="k">if</span> <span class="n">Omega</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">imaginary_time</span><span class="p">:</span>
+                <span class="n">psi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_Lz_exp</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">rot_angle</span><span class="p">)</span>  <span class="c1"># pyright: ignore[reportPossiblyUnboundVariable] since set above in block with same condition</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">psi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_rotation</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">rot_angle</span><span class="p">)</span>  <span class="c1"># pyright: ignore[reportPossiblyUnboundVariable] since set above in block with same condition</span>
+
+        <span class="c1"># 5. Potential + nonlinear half-step</span>
+        <span class="n">psi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_V_half</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">half_dt</span><span class="p">)</span>
+
+        <span class="c1"># 6. Renormalise: preserves the physical norm invariant and suppresses</span>
+        <span class="c1"># floating-point drift; for imaginary-time this is required for convergence.</span>
+        <span class="n">norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">psi</span> <span class="o">/</span> <span class="n">norm</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="simulate_gpe_2d">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.simulate_gpe_2d">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">simulate_gpe_2d</span><span class="p">(</span>  <span class="c1"># noqa: PLR0912, PLR0915</span>
+    <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">return_timeseries</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">128</span><span class="p">,</span>
+    <span class="n">L</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+    <span class="n">T</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
+    <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.005</span><span class="p">,</span>
+    <span class="n">snapshot_dt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">random_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simulate the Gross-Pitaevskii Equation in 2D.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;n must be positive&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">L</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;L must be positive&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">T</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;T must be positive&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dt</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;dt must be positive&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">snapshot_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">snapshot_dt</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;snapshot_dt must be positive when provided&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">snapshot_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">snapshot_dt</span> <span class="o">=</span> <span class="n">dt</span>
+
+    <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">random_seed</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">seed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="mi">31</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,))</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">seed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">random_seed</span><span class="p">)</span>
+    <span class="n">rng</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">rng</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+    <span class="n">simulator</span> <span class="o">=</span> <span class="n">GPESimulator2D</span><span class="p">(</span><span class="n">N</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="n">dt</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="n">psi</span> <span class="o">=</span> <span class="n">simulator</span><span class="o">.</span><span class="n">initialize_state</span><span class="p">(</span>
+        <span class="n">x0</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;x0&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+        <span class="n">y0</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;y0&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+        <span class="n">width</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;width&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+        <span class="n">kx0</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kx0&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+        <span class="n">ky0</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ky0&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">imaginary_time</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;imaginary_time&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">imaginary_time</span> <span class="ow">or</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;imaginary_time_steps&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># Seed initial state with tiny noise to break symmetry, which is required</span>
+        <span class="c1"># for vortex lattices to nucleate during imaginary time evolution.</span>
+        <span class="n">noise_amp</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;initial_noise&quot;</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">noise_amp</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">noise_real</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">psi</span><span class="o">.</span><span class="n">real</span><span class="p">)</span><span class="o">.</span><span class="n">normal_</span><span class="p">(</span><span class="n">generator</span><span class="o">=</span><span class="n">rng</span><span class="p">)</span>
+            <span class="n">noise_imag</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">psi</span><span class="o">.</span><span class="n">imag</span><span class="p">)</span><span class="o">.</span><span class="n">normal_</span><span class="p">(</span><span class="n">generator</span><span class="o">=</span><span class="n">rng</span><span class="p">)</span>
+            <span class="n">psi</span> <span class="o">=</span> <span class="n">psi</span> <span class="o">+</span> <span class="n">noise_amp</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">complex</span><span class="p">(</span><span class="n">noise_real</span><span class="p">,</span> <span class="n">noise_imag</span><span class="p">)</span>
+            <span class="n">psi</span> <span class="o">=</span> <span class="n">psi</span> <span class="o">/</span> <span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">simulator</span><span class="o">.</span><span class="n">dx</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">g</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;g&quot;</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">)</span>
+
+    <span class="c1"># Pre-calculate spatial disorder once (stationary speckle) unless explicitly</span>
+    <span class="c1"># requesting time-dependent disorder.</span>
+    <span class="n">static_disorder</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;disorder_strength&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;disorder_time_dependent&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="n">static_disorder</span> <span class="o">=</span> <span class="n">generate_static_disorder</span><span class="p">(</span>
+            <span class="n">simulator</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">simulator</span><span class="o">.</span><span class="n">Y</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">rng</span>
+        <span class="p">)</span>
+
+    <span class="n">history_density</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">history_real</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">history_imag</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_snapshot</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="n">density</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">real</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">real</span>
+        <span class="n">imag</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">imag</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">density</span><span class="p">,</span> <span class="n">real</span><span class="p">,</span> <span class="n">imag</span><span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">next_snapshot_t</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">snapshot_dt</span><span class="p">)</span>
+        <span class="n">last_snapshot_t</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="k">if</span> <span class="n">return_timeseries</span><span class="p">:</span>
+            <span class="n">history_density</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">history_real</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">psi</span><span class="o">.</span><span class="n">real</span><span class="p">)</span>
+            <span class="n">history_imag</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">psi</span><span class="o">.</span><span class="n">imag</span><span class="p">)</span>
+
+        <span class="n">t</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="n">Omega</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Omega&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+        <span class="n">exact_trap_rotation</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;exact_trap_rotation&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+
+        <span class="n">real_time_Omega</span> <span class="o">=</span> <span class="n">Omega</span>
+        <span class="k">if</span> <span class="n">exact_trap_rotation</span><span class="p">:</span>
+            <span class="n">config</span><span class="p">[</span><span class="s2">&quot;trap_Omega&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Omega</span>
+            <span class="n">real_time_Omega</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="n">imaginary_time</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;imaginary_time&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+        <span class="n">imaginary_time_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;imaginary_time_steps&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">imaginary_time_steps</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">imaginary_time_dt</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;imaginary_time_dt&quot;</span><span class="p">,</span> <span class="n">dt</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">imaginary_time_dt</span> <span class="o">!=</span> <span class="n">dt</span><span class="p">:</span>
+                <span class="n">simulator</span><span class="o">.</span><span class="n">dt</span> <span class="o">=</span> <span class="n">imaginary_time_dt</span>
+                <span class="c1"># Recompute imaginary-time kinetic propagator with new dt</span>
+                <span class="n">kin_E</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">simulator</span><span class="o">.</span><span class="n">KX</span><span class="o">.</span><span class="n">real</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">simulator</span><span class="o">.</span><span class="n">KY</span><span class="o">.</span><span class="n">real</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+                <span class="n">simulator</span><span class="o">.</span><span class="n">exp_K_it</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">kin_E</span> <span class="o">*</span> <span class="n">simulator</span><span class="o">.</span><span class="n">dt</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+                    <span class="n">torch</span><span class="o">.</span><span class="n">complex64</span>
+                <span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">imaginary_time_steps</span><span class="p">):</span>
+                <span class="n">V_init</span> <span class="o">=</span> <span class="n">generate_complex_potential</span><span class="p">(</span>
+                    <span class="n">simulator</span><span class="o">.</span><span class="n">X</span><span class="p">,</span>
+                    <span class="n">simulator</span><span class="o">.</span><span class="n">Y</span><span class="p">,</span>
+                    <span class="n">config</span><span class="p">,</span>
+                    <span class="mf">0.0</span><span class="p">,</span>
+                    <span class="n">static_disorder</span><span class="o">=</span><span class="n">static_disorder</span><span class="p">,</span>
+                    <span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">psi</span> <span class="o">=</span> <span class="n">simulator</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">V_init</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">Omega</span><span class="o">=</span><span class="n">Omega</span><span class="p">,</span> <span class="n">imaginary_time</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">imaginary_time_dt</span> <span class="o">!=</span> <span class="n">dt</span><span class="p">:</span>
+                <span class="c1"># Restore original real-time dt (real-time exp_K was untouched)</span>
+                <span class="n">simulator</span><span class="o">.</span><span class="n">dt</span> <span class="o">=</span> <span class="n">dt</span>
+
+        <span class="k">while</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="n">T</span> <span class="o">-</span> <span class="mf">1e-12</span><span class="p">:</span>
+            <span class="n">t_mid</span> <span class="o">=</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">dt</span>
+            <span class="n">V</span> <span class="o">=</span> <span class="n">generate_complex_potential</span><span class="p">(</span>
+                <span class="n">simulator</span><span class="o">.</span><span class="n">X</span><span class="p">,</span>
+                <span class="n">simulator</span><span class="o">.</span><span class="n">Y</span><span class="p">,</span>
+                <span class="n">config</span><span class="p">,</span>
+                <span class="n">t_mid</span><span class="p">,</span>
+                <span class="n">static_disorder</span><span class="o">=</span><span class="n">static_disorder</span><span class="p">,</span>
+                <span class="n">rng</span><span class="o">=</span><span class="n">rng</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">psi</span> <span class="o">=</span> <span class="n">simulator</span><span class="o">.</span><span class="n">step</span><span class="p">(</span>
+                <span class="n">psi</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">Omega</span><span class="o">=</span><span class="n">real_time_Omega</span><span class="p">,</span> <span class="n">imaginary_time</span><span class="o">=</span><span class="n">imaginary_time</span>
+            <span class="p">)</span>
+            <span class="n">t</span> <span class="o">+=</span> <span class="n">dt</span>
+
+            <span class="k">if</span> <span class="n">return_timeseries</span><span class="p">:</span>
+                <span class="k">while</span> <span class="n">next_snapshot_t</span> <span class="o">&lt;=</span> <span class="n">t</span> <span class="o">+</span> <span class="mf">1e-12</span><span class="p">:</span>
+                    <span class="n">history_density</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+                    <span class="n">history_real</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">psi</span><span class="o">.</span><span class="n">real</span><span class="p">)</span>
+                    <span class="n">history_imag</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">psi</span><span class="o">.</span><span class="n">imag</span><span class="p">)</span>
+                    <span class="n">last_snapshot_t</span> <span class="o">=</span> <span class="n">next_snapshot_t</span>
+                    <span class="n">next_snapshot_t</span> <span class="o">+=</span> <span class="n">snapshot_dt</span>
+
+        <span class="k">if</span> <span class="n">return_timeseries</span> <span class="ow">and</span> <span class="n">T</span> <span class="o">-</span> <span class="n">last_snapshot_t</span> <span class="o">&gt;</span> <span class="mf">1e-9</span><span class="p">:</span>
+            <span class="n">history_density</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">history_real</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">psi</span><span class="o">.</span><span class="n">real</span><span class="p">)</span>
+            <span class="n">history_imag</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">psi</span><span class="o">.</span><span class="n">imag</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_timeseries</span><span class="p">:</span>
+        <span class="n">densities</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">history_density</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">real_parts</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">history_real</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">imag_parts</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">history_imag</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># return shape: (T, X, Y, Channels)</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">densities</span><span class="p">,</span> <span class="n">real_parts</span><span class="p">,</span> <span class="n">imag_parts</span><span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_snapshot</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="GrossPitaevskiiEquation2D">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.GrossPitaevskiiEquation2D">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GrossPitaevskiiEquation2D</span><span class="p">(</span><span class="n">SpatioTemporalSimulator</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Gross-Pitaevskii equation simulator for quantum fluids.</span>
+
+<span class="sd">    The simulator evolves a complex wavefunction :math:`\psi` under:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        i\partial_t \psi =</span>
+<span class="sd">        \left[-\frac{1}{2}\nabla^2 + V(x, y, t) + g|\psi|^2</span>
+<span class="sd">        - \Omega L_z\right]\psi.</span>
+
+<span class="sd">    The returned channels are density, real part, and imaginary part:</span>
+<span class="sd">    :math:`[|\psi|^2, \operatorname{Re}(\psi), \operatorname{Im}(\psi)]`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_DEFAULT_SIM_PARAMS</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;wx&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="s2">&quot;wy&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="s2">&quot;box_param&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">&quot;box_anisotropy&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="s2">&quot;ws_a&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="s2">&quot;ws_V0&quot;</span><span class="p">:</span> <span class="mf">100.0</span><span class="p">,</span>
+        <span class="s2">&quot;disorder_strength&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">&quot;disorder_time_dependent&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s2">&quot;disorder_radius&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>  <span class="c1"># 0.0 -&gt; auto (2/sqrt(wx*wy))</span>
+        <span class="s2">&quot;spoon_strength&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">&quot;spoon_radius&quot;</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span>
+        <span class="s2">&quot;spoon_speed&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="s2">&quot;spoon_width&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="s2">&quot;g&quot;</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">,</span>
+        <span class="s2">&quot;x0&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">&quot;y0&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="s2">&quot;kx0&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">&quot;ky0&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">&quot;Omega&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">&quot;exact_trap_rotation&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s2">&quot;imaginary_time&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s2">&quot;imaginary_time_steps&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="s2">&quot;imaginary_time_dt&quot;</span><span class="p">:</span> <span class="mf">0.005</span><span class="p">,</span>
+        <span class="s2">&quot;initial_noise&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+        <span class="s2">&quot;moire_strength&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">&quot;moire_k&quot;</span><span class="p">:</span> <span class="mf">6.2831853</span><span class="p">,</span>
+        <span class="s2">&quot;moire_angle&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">_ALLOWED_PARAMETER_NAMES</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+        <span class="n">_DEFAULT_SIM_PARAMS</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Per-parameter post-processors applied after float sampling.</span>
+    <span class="c1"># Parameters not listed here are kept as plain floats.</span>
+    <span class="n">_PARAM_CONVERTERS</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;exact_trap_rotation&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span>
+        <span class="s2">&quot;imaginary_time&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span>
+        <span class="s2">&quot;imaginary_time_steps&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">v</span><span class="p">),</span>
+    <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_artifact_config</span><span class="p">(</span>
+        <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">warmup_frames</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">tail_frames</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">threshold</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;artifact_validation_threshold must be positive&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">warmup_frames</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;artifact_validation_warmup_frames must be non-negative&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tail_frames</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;artifact_validation_tail_frames must be at least 1&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">parameters_range</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">return_timeseries</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">log_level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;progress_bar&quot;</span><span class="p">,</span>
+        <span class="n">n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">128</span><span class="p">,</span>
+        <span class="n">L</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
+        <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.005</span><span class="p">,</span>
+        <span class="n">snapshot_dt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">skip_nt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">random_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">box_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;woods_saxon&quot;</span><span class="p">,</span>
+        <span class="n">spoon_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;orbit&quot;</span><span class="p">,</span> <span class="s2">&quot;linear&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;orbit&quot;</span><span class="p">,</span>
+        <span class="n">artifact_validation_enabled</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">artifact_validation_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0005</span><span class="p">,</span>
+        <span class="n">artifact_validation_warmup_frames</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="n">artifact_validation_tail_frames</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">12</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the Gross-Pitaevskii simulator.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">parameters_range</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Provide some sensible defaults for complexity knobs</span>
+            <span class="n">parameters_range</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;g&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">50.0</span><span class="p">),</span>
+                <span class="s2">&quot;disorder_strength&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
+                <span class="s2">&quot;spoon_strength&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">),</span>
+                <span class="s2">&quot;wx&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
+                <span class="s2">&quot;wy&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
+            <span class="p">}</span>
+        <span class="k">if</span> <span class="n">output_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">output_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;density&quot;</span><span class="p">,</span> <span class="s2">&quot;real&quot;</span><span class="p">,</span> <span class="s2">&quot;imag&quot;</span><span class="p">]</span>
+
+        <span class="n">unknown_parameters</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">parameters_range</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ALLOWED_PARAMETER_NAMES</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">unknown_parameters</span><span class="p">:</span>
+            <span class="n">unknown</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">unknown_parameters</span><span class="p">))</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unsupported parameters in parameters_range: </span><span class="si">{</span><span class="n">unknown</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Allowed names are: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ALLOWED_PARAMETER_NAMES</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">parameters_range</span><span class="p">,</span> <span class="n">output_names</span><span class="p">,</span> <span class="n">log_level</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;n must be positive&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">L</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;L must be positive&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">T</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;T must be positive&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dt</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;dt must be positive&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">skip_nt</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;skip_nt must be non-negative&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">snapshot_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">snapshot_dt</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;snapshot_dt must be positive when provided&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_artifact_config</span><span class="p">(</span>
+            <span class="n">threshold</span><span class="o">=</span><span class="n">artifact_validation_threshold</span><span class="p">,</span>
+            <span class="n">warmup_frames</span><span class="o">=</span><span class="n">artifact_validation_warmup_frames</span><span class="p">,</span>
+            <span class="n">tail_frames</span><span class="o">=</span><span class="n">artifact_validation_tail_frames</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">return_timeseries</span> <span class="o">=</span> <span class="n">return_timeseries</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">L</span> <span class="o">=</span> <span class="n">L</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">T</span> <span class="o">=</span> <span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">=</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_dt</span> <span class="o">=</span> <span class="n">snapshot_dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">skip_nt</span> <span class="o">=</span> <span class="n">skip_nt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_seed</span> <span class="o">=</span> <span class="n">random_seed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">box_type</span> <span class="o">=</span> <span class="n">box_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spoon_type</span> <span class="o">=</span> <span class="n">spoon_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">artifact_validation_enabled</span> <span class="o">=</span> <span class="n">artifact_validation_enabled</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">artifact_validation_threshold</span> <span class="o">=</span> <span class="n">artifact_validation_threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">artifact_validation_warmup_frames</span> <span class="o">=</span> <span class="n">artifact_validation_warmup_frames</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">artifact_validation_tail_frames</span> <span class="o">=</span> <span class="n">artifact_validation_tail_frames</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">Generator</span><span class="p">()</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">random_seed</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">random_seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fringe_score_density</span><span class="p">(</span><span class="n">density</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Estimate fringe artifact strength via spectral analysis.</span>
+
+<span class="sd">        Detects numerical aliasing (horizontal/vertical stripes) by measuring</span>
+<span class="sd">        the spectral energy in the highest spatial frequencies (near Nyquist limit).</span>
+<span class="sd">        Grid aliasing inevitably pools massive energy into these modes compared to</span>
+<span class="sd">        typical physical flows like vortices or sound waves.</span>
+
+<span class="sd">        Score = High-frequency spectral energy / Total spectral energy.</span>
+<span class="sd">        Clean frames score extremely low; frames with fringing spike immensely.</span>
+
+<span class="sd">        Returns 0.0 on completely degenerate input.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">density</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;density must be a 2D tensor&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">density</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Measure 2D power spectrum</span>
+        <span class="c1"># Remove mean to ignore the huge DC component, making variance the baseline</span>
+        <span class="n">frame_centered</span> <span class="o">=</span> <span class="n">frame</span> <span class="o">-</span> <span class="n">frame</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="n">fft_density</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">frame_centered</span><span class="p">)</span>
+        <span class="n">power_spectrum</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">fft_density</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+        <span class="c1"># Shift zero-frequency to the center</span>
+        <span class="n">power_spectrum</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftshift</span><span class="p">(</span><span class="n">power_spectrum</span><span class="p">)</span>
+
+        <span class="c1"># Create normalized radial frequency grid [-1, 1] for x and y</span>
+        <span class="n">N</span><span class="p">,</span> <span class="n">M</span> <span class="o">=</span> <span class="n">power_spectrum</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">frame</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">frame</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">Y</span><span class="p">,</span> <span class="n">X</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s2">&quot;ij&quot;</span><span class="p">)</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">X</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">Y</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">total_energy</span> <span class="o">=</span> <span class="n">power_spectrum</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">total_energy</span> <span class="o">&lt;=</span> <span class="mf">1e-12</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+
+        <span class="c1"># Calculate energy fraction in the highest frequencies (|k| &gt; 0.8 * k_nyquist).</span>
+        <span class="c1"># Aliasing (fringes) heavily populates R &gt; 0.8</span>
+        <span class="n">high_freq_mask</span> <span class="o">=</span> <span class="n">R</span> <span class="o">&gt;</span> <span class="mf">0.8</span>
+        <span class="n">high_freq_energy</span> <span class="o">=</span> <span class="n">power_spectrum</span><span class="p">[</span><span class="n">high_freq_mask</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="nb">float</span><span class="p">((</span><span class="n">high_freq_energy</span> <span class="o">/</span> <span class="n">total_energy</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_max_fringe_score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sol</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return max fringe artifact score over selected trajectory frames.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">sol</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="c1"># (T, X, Y, C)</span>
+            <span class="n">densities</span> <span class="o">=</span> <span class="n">sol</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">n_time</span> <span class="o">=</span> <span class="n">densities</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">artifact_validation_warmup_frames</span><span class="p">,</span> <span class="n">n_time</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">tail</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">artifact_validation_tail_frames</span><span class="p">,</span> <span class="n">n_time</span> <span class="o">-</span> <span class="n">start</span><span class="p">))</span>
+            <span class="n">frame_indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">n_time</span> <span class="o">-</span> <span class="n">tail</span><span class="p">),</span> <span class="n">n_time</span><span class="p">))</span>
+            <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_fringe_score_density</span><span class="p">(</span><span class="n">densities</span><span class="p">[</span><span class="n">t</span><span class="p">])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">frame_indices</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">sol</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># (X, Y, C)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fringe_score_density</span><span class="p">(</span><span class="n">sol</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Unexpected simulation output shape for artifact validation&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_extract_run_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="n">param_values</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_names</span><span class="p">):</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+            <span class="n">converter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_PARAM_CONVERTERS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">param_values</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">converter</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span> <span class="k">if</span> <span class="n">converter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">raw</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_DEFAULT_SIM_PARAMS</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">param_values</span><span class="p">)</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;box_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">box_type</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;spoon_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spoon_type</span>
+        <span class="k">return</span> <span class="n">config</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">TensorLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TensorLike</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;GrossPitaevskiiEquation2D expects a single input sample&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_run_parameters</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="n">seed</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">seed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">**</span><span class="mi">31</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,),</span> <span class="n">generator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+        <span class="n">sol</span> <span class="o">=</span> <span class="n">simulate_gpe_2d</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+            <span class="n">return_timeseries</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">return_timeseries</span><span class="p">,</span>
+            <span class="n">n</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span>
+            <span class="n">L</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span>
+            <span class="n">T</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+            <span class="n">dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span>
+            <span class="n">snapshot_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">snapshot_dt</span><span class="p">,</span>
+            <span class="n">random_seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+            <span class="n">device</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>  <span class="c1"># use same device as input tensor</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">artifact_validation_enabled</span><span class="p">:</span>
+            <span class="n">fringe_score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_fringe_score</span><span class="p">(</span><span class="n">sol</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fringe_score</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">artifact_validation_threshold</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Rejected GPE trajectory: fringe artifact score &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">fringe_score</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> &gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">artifact_validation_threshold</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">sol</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GrossPitaevskiiEquation2D.forward_samples_spatiotemporal">
+<a class="viewcode-back" href="../../../../reference/simulations/spatiotemporal/gross_pitaevskii.html#autosim.simulations.spatiotemporal.gross_pitaevskii.GrossPitaevskiiEquation2D.forward_samples_spatiotemporal">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward_samples_spatiotemporal</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">random_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ensure_exact_n</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run sampled trajectories and return `[batch,time,x,y,channels]` data.&quot;&quot;&quot;</span>
+        <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_batch_with_optional_retries</span><span class="p">(</span>
+            <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span>
+            <span class="n">random_seed</span><span class="o">=</span><span class="n">random_seed</span><span class="p">,</span>
+            <span class="n">ensure_exact_n</span><span class="o">=</span><span class="n">ensure_exact_n</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">channels</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># density, real, imag</span>
+        <span class="n">features_per_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">*</span> <span class="n">channels</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">return_timeseries</span><span class="p">:</span>
+            <span class="n">total_features</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">total_features</span> <span class="o">%</span> <span class="n">features_per_step</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="s2">&quot;Returned tensor does not align with n*n*channels; &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;received </span><span class="si">{</span><span class="n">total_features</span><span class="si">}</span><span class="s2">, expected multiples of &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">features_per_step</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">n_time</span> <span class="o">=</span> <span class="n">total_features</span> <span class="o">//</span> <span class="n">features_per_step</span>
+            <span class="n">y_reshaped</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">n_time</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span>
+
+            <span class="n">start_idx</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">skip_nt</span>
+            <span class="k">if</span> <span class="n">start_idx</span> <span class="o">&gt;=</span> <span class="n">n_time</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;skip_nt is too large for the available trajectory length; &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;computed start index </span><span class="si">{</span><span class="n">start_idx</span><span class="si">}</span><span class="s2"> for n_time=</span><span class="si">{</span><span class="n">n_time</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">y_reshaped</span> <span class="o">=</span> <span class="n">y_reshaped</span><span class="p">[:,</span> <span class="n">start_idx</span><span class="p">:,</span> <span class="o">...</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">features_per_step</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="s2">&quot;Unexpected flattened size for single snapshot; &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;received </span><span class="si">{</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">, expected </span><span class="si">{</span><span class="n">features_per_step</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">y_reshaped</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">y_reshaped</span><span class="p">,</span>
+            <span class="s2">&quot;constant_scalars&quot;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+            <span class="s2">&quot;constant_fields&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">}</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The Alan Turing Institute
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Copyright &copy; 2026
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
