@@ -48,7 +48,12 @@ Differentiable forcing-free forecasts
 It shares the generator's deterministic RHS, RK4 stages, spectral projection
 and hyperviscosity, but preserves the input's float32/float64 precision,
 device and autograd graph. Leading batch and ensemble axes evolve independently.
-The existing data-generation and restart interfaces are unchanged.
+With ``dealias=True``, both interfaces project each RK-stage state onto the
+retained Fourier band before evaluating nonlinear products. This prevents
+unresolved modes in restarts or learned corrections from aliasing into resolved
+modes. The differentiable interface validates both the raw and projected
+states; a projection that creates nonphysical values raises an error. A zero
+forecast interval remains an exact identity, without projection.
 
 Supply the dataset's physical parameters explicitly and choose a fixed
 ``n_substeps`` by convergence testing. For example, for a valid 32 by 32 state
@@ -174,8 +179,10 @@ normalization statistics.
 
 Set ``forcing_backscatter_fraction`` above zero to add that fraction of the
 diagnosed Laplacian-viscosity and exact numerical hyperviscosity loss to the
-forcing diffusion rate. The default zero keeps forcing fixed. Linear-drag loss
-is excluded because drag normally represents a physical large-scale sink; set
+forcing diffusion rate. Depth-weighted loss diagnostics are divided by
+``h_mean`` to match the forcing's specific-energy convention. The default zero
+keeps forcing fixed. Linear-drag loss is excluded because drag normally
+represents a physical large-scale sink; set
 ``backscatter_include_drag=True`` to include it for controlled experiments.
 This is an idealized energy calibration, not a closure derived from the
 resolved flow.

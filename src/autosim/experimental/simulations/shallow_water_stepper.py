@@ -83,7 +83,8 @@ def advance_swe_2d(  # noqa: PLR0915
         f0: Reference Coriolis parameter; default ``sqrt(g*h_mean)/8``.
         beta: Periodic Coriolis variation; default ``0.5*f0/Ly``.
         coriolis_mode: ``"f_plane"`` or ``"periodic_beta"``.
-        dealias: Use the generator's rectangular two-thirds projection.
+        dealias: Project each RK-stage state to the rectangular two-thirds
+            band before evaluating nonlinear products, as in the generator.
         cfl: Positive wave/advection CFL bound, checked at every RK stage.
 
     Returns:
@@ -181,6 +182,11 @@ def advance_swe_2d(  # noqa: PLR0915
 
     def rhs(h: torch.Tensor, u: torch.Tensor, v: torch.Tensor) -> Fields:
         _check_fields(h, u, v)
+        if dealias:
+            # Learned corrections need not be band-limited. Project operands
+            # before multiplying, and reject any resulting nonphysical state.
+            h, u, v = (operators.project(field) for field in (h, u, v))
+            _check_fields(h, u, v)
         wave_speed = torch.sqrt(g * h)
         max_speed = torch.maximum(
             (u.abs() + wave_speed).max(), (v.abs() + wave_speed).max()

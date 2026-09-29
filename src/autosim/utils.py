@@ -39,13 +39,13 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
     cmap: str = "viridis",
     save_path: str | None = None,
     title: str = "Ground Truth vs Prediction",
-    true_label: str = "Ground Truth",
-    pred_label: str = "Prediction",
     pred_uq_label: str = "Prediction UQ",
     colorbar_mode: Literal["none", "row", "column", "all"] = "none",
     colorbar_mode_uq: Literal["none", "row"] = "none",
     channel_names: list[str] | None = None,
     preserve_aspect: bool = False,
+    true_label: str = "Ground Truth",
+    pred_label: str = "Prediction",
 ):
     """Create a video comparing ground truth and predicted spatiotemporal time series.
 
@@ -60,8 +60,6 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
         cmap: Colormap to use (default: "viridis").
         save_path: Optional path to save the video (e.g., "output.mp4").
         title: Title for the video (default: "Ground Truth vs Prediction").
-        true_label: Row label used for ``true``.
-        pred_label: Row label used for ``pred``.
         pred_uq_label: Row label used when plotting prediction uncertainty.
         colorbar_mode: Select how colorbars (and underlying color scales) are shared for
             the first two rows (true vs prediction):
@@ -76,6 +74,8 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
             ratio of the data so the image fills the panel without distortion. If False
             (default), panels are square and the image is stretched to fill via
             ``aspect='auto'``.
+        true_label: Row label used for ``true``.
+        pred_label: Row label used for ``pred``.
 
     Returns:
         Animation object that can be displayed in notebooks.

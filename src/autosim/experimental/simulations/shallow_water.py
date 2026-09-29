@@ -1012,7 +1012,8 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
 
     A positive ``forcing_backscatter_fraction`` adds the requested fraction
     of diagnosed Laplacian-viscosity and exact hyperviscosity loss to the
-    configured base diffusion rate. Linear-drag loss is included only when
+    configured base diffusion rate, after converting the depth-weighted loss
+    to specific energy by dividing by ``h_mean``. Linear-drag loss is included when
     ``backscatter_include_drag=True``.
 
     When ``return_additional_input_fields=True``, three forcing-impulse channels
@@ -1405,6 +1406,10 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     def rhs(
         h: torch.Tensor, u: torch.Tensor, v: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        if dealias:
+            # Truncate operands before nonlinear products: projecting only the
+            # tendencies cannot remove aliases from unresolved restart modes.
+            h, u, v = (dynamics.project(field) for field in (h, u, v))
         return dynamics.rhs(h, u, v)
 
     def output(h: torch.Tensor, u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
@@ -1543,10 +1548,13 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
             diagnosed_dissipation_rate = viscous_loss_rate + hyperviscous_loss_rate
             if backscatter_include_drag:
                 diagnosed_dissipation_rate += drag_loss_rate
+            # Loss diagnostics are depth-weighted; the forcing sampler uses
+            # the linearized specific-energy norm (energy / h_mean).
             effective_forcing_energy_rate = (
                 forcing_energy_rate
                 + forcing_backscatter_fraction
                 * float(diagnosed_dissipation_rate.item())
+                / h_mean
             )
             if forcing_correlation_time == 0:
                 forcing_increment = sample_forcing_field(

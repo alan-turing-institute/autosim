@@ -1266,3 +1266,72 @@ def test_backscatter_requires_stochastic_forcing() -> None:
             forcing_type="none",
             forcing_backscatter_fraction=50.0,
         )
+
+
+@pytest.mark.parametrize("depth", [0.5, 4.0])
+@pytest.mark.parametrize("correlation_time", [0.0, 0.1])
+@pytest.mark.parametrize("forcing_type", ["momentum", "vortical"])
+def test_backscatter_uses_specific_energy_at_nonunit_depth(
+    depth: float, correlation_time: float, forcing_type: str
+) -> None:
+    def run(mean_depth: float) -> dict:
+        initial = torch.zeros(12, 12, 3, dtype=torch.float64)
+        initial[..., 0] = mean_depth
+        initial[..., 1] = 0.1
+        simulator = _small_simulator(
+            nx=12,
+            ny=12,
+            T=0.001,
+            dt_save=0.001,
+            g=0.0,
+            h_mean=mean_depth,
+            f0=0.0,
+            nu=0.0,
+            drag=1.0,
+            initial_condition="restart",
+            initial_state=initial,
+            parameters_range={},
+            forcing_type=forcing_type,
+            forcing_energy_rate=1e-4,
+            forcing_correlation_time=correlation_time,
+            forcing_backscatter_fraction=0.5,
+            backscatter_include_drag=True,
+            return_energy_budget=True,
+        )
+        return simulator.forward_samples_spatiotemporal(n=1, random_seed=8)
+
+    reference = run(1.0)
+    result = run(depth)
+    # Uniform-depth drag loses specific energy at drag * speed**2. The
+    # diffusion target and seeded velocity increments must not depend on H.
+    assert float(result["energy_budget"][0, 0, 6]) == pytest.approx(0.0051)
+    torch.testing.assert_close(result["data"][..., 1:], reference["data"][..., 1:])
+    torch.testing.assert_close(
+        result["energy_budget"][..., :6] / depth,
+        reference["energy_budget"][..., :6],
+    )
+
+
+def test_restart_unresolved_modes_do_not_alias_into_retained_modes() -> None:
+    x = torch.arange(12, dtype=torch.float64) * 2 * math.pi / 12
+    initial = torch.zeros(12, 12, 3, dtype=torch.float64)
+    initial[..., 0] = 1.0
+    initial[..., 1] = 0.1 * torch.cos(5 * x)[:, None]
+    result = _run_small_swe(
+        nx=12,
+        ny=12,
+        Lx=2 * math.pi,
+        Ly=2 * math.pi,
+        T=0.001,
+        dt_save=0.001,
+        g=0.0,
+        f0=0.0,
+        nu=0.0,
+        drag=0.0,
+        initial_condition="restart",
+        initial_state=initial,
+    )
+    torch.testing.assert_close(result[0], initial.float(), atol=0, rtol=0)
+    expected = torch.zeros_like(initial)
+    expected[..., 0] = 1.0
+    torch.testing.assert_close(result[-1], expected.float(), atol=1e-12, rtol=0)
