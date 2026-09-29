@@ -11,10 +11,12 @@ def spectral_wavenumbers(
     Lx: float,
     Ly: float,
     dtype: torch.dtype,
+    *,
+    device: torch.device | str | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """Return Laplacian and real-derivative wavenumbers for ``rfft2`` fields."""
-    kx = 2.0 * math.pi * torch.fft.fftfreq(nx, d=Lx / nx, dtype=dtype)
-    ky = 2.0 * math.pi * torch.fft.rfftfreq(ny, d=Ly / ny, dtype=dtype)
+    kx = 2.0 * math.pi * torch.fft.fftfreq(nx, d=Lx / nx, dtype=dtype, device=device)
+    ky = 2.0 * math.pi * torch.fft.rfftfreq(ny, d=Ly / ny, dtype=dtype, device=device)
     Kx, Ky = torch.meshgrid(kx, ky, indexing="ij")
 
     # A first derivative of an even-grid Nyquist mode has no real-valued
@@ -29,10 +31,12 @@ def spectral_wavenumbers(
     return Kx, Ky, dKx, dKy
 
 
-def two_thirds_mask(nx: int, ny: int) -> torch.Tensor:
+def two_thirds_mask(
+    nx: int, ny: int, *, device: torch.device | str | None = None
+) -> torch.Tensor:
     """Return the standard rectangular two-thirds dealiasing mask."""
-    mode_x = torch.fft.fftfreq(nx, d=1.0 / nx)
-    mode_y = torch.fft.rfftfreq(ny, d=1.0 / ny)
+    mode_x = torch.fft.fftfreq(nx, d=1.0 / nx, device=device)
+    mode_y = torch.fft.rfftfreq(ny, d=1.0 / ny, device=device)
     mx, my = torch.meshgrid(mode_x, mode_y, indexing="ij")
     return (mx.abs() < nx / 3.0) & (my < ny / 3.0)
 

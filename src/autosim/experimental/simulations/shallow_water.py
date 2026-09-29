@@ -6,6 +6,10 @@ import math
 
 import torch
 
+from autosim.experimental.simulations._shallow_water_dynamics import (
+    ShallowWaterDynamics,
+    rk4_step,
+)
 from autosim.experimental.simulations._spectral import (
     expected_filtered_variance,
     gaussian_ring_spectrum,
@@ -1205,15 +1209,26 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     k_max = math.pi * max(nx / Lx, ny / Ly)
     nu_h = 1.0 / k_max ** (2 * N_HYPERVISC)
     hyp_op = -nu_h * K2**N_HYPERVISC
+    dynamics = ShallowWaterDynamics(
+        nx=nx,
+        ny=ny,
+        iKx=iKx,
+        iKy=iKy,
+        K2=K2,
+        dealias_mask=dealias_mask,
+        hyp_op=hyp_op,
+        f_grid=f_grid,
+        g=g,
+        nu=nu,
+        drag=drag,
+        height_floor=H_MIN_CLIP,
+    )
 
     def to_spec(field: torch.Tensor) -> torch.Tensor:
         return torch.fft.rfft2(field)
 
     def to_phys(field_hat: torch.Tensor) -> torch.Tensor:
         return torch.fft.irfft2(field_hat, s=(nx, ny))
-
-    def project(field: torch.Tensor) -> torch.Tensor:
-        return to_phys(to_spec(field) * dealias_mask)
 
     # ------------------------------------------------------------------ #
     # Initial conditions                                                  #
@@ -1390,56 +1405,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     def rhs(
         h: torch.Tensor, u: torch.Tensor, v: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        h_safe = h.clamp(min=H_MIN_CLIP)
-
-        # Reuse spectra per field to avoid repeated FFTs in each RHS evaluation.
-        u_h = to_spec(u)
-        v_h = to_spec(v)
-        h_h = to_spec(h)
-
-        du_dx = to_phys(iKx * u_h)
-        du_dy = to_phys(iKy * u_h)
-        dv_dx = to_phys(iKx * v_h)
-        dv_dy = to_phys(iKy * v_h)
-        dh_dx = to_phys(iKx * h_h)
-        dh_dy_local = to_phys(iKy * h_h)
-
-        lap_u = to_phys(-K2 * u_h)
-        lap_v = to_phys(-K2 * v_h)
-
-        hu = h_safe * u
-        hv = h_safe * v
-        hu_h = to_spec(hu)
-        hv_h = to_spec(hv)
-        div_hu = to_phys(iKx * hu_h) + to_phys(iKy * hv_h)
-
-        dudt = -(u * du_dx + v * du_dy) + f_grid * v - g * dh_dx + nu * lap_u - drag * u
-        dvdt = (
-            -(u * dv_dx + v * dv_dy)
-            - f_grid * u
-            - g * dh_dy_local
-            + nu * lap_v
-            - drag * v
-        )
-        dhdt = -div_hu
-        return project(dhdt), project(dudt), project(dvdt)
-
-    def rk4_step(
-        h: torch.Tensor, u: torch.Tensor, v: torch.Tensor, dt: float
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        k1_h, k1_u, k1_v = rhs(h, u, v)
-        k2_h, k2_u, k2_v = rhs(
-            h + 0.5 * dt * k1_h, u + 0.5 * dt * k1_u, v + 0.5 * dt * k1_v
-        )
-        k3_h, k3_u, k3_v = rhs(
-            h + 0.5 * dt * k2_h, u + 0.5 * dt * k2_u, v + 0.5 * dt * k2_v
-        )
-        k4_h, k4_u, k4_v = rhs(h + dt * k3_h, u + dt * k3_u, v + dt * k3_v)
-        return (
-            h + (dt / 6.0) * (k1_h + 2.0 * k2_h + 2.0 * k3_h + k4_h),
-            u + (dt / 6.0) * (k1_u + 2.0 * k2_u + 2.0 * k3_u + k4_u),
-            v + (dt / 6.0) * (k1_v + 2.0 * k2_v + 2.0 * k3_v + k4_v),
-        )
+        return dynamics.rhs(h, u, v)
 
     def output(h: torch.Tensor, u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
         h_out = torch.nan_to_num(
@@ -1556,18 +1522,13 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         if track_dissipation:
             energy_before_step = total_energy(h, u, v)
             viscous_loss_rate, drag_loss_rate = dissipation_rate_estimates(h, u, v)
-        h, u, v = rk4_step(h, u, v, step_dt)
+        h, u, v = rk4_step(rhs, h, u, v, step_dt)
         if track_dissipation:
             energy_after_deterministic = total_energy(h, u, v)
 
         # Apply hyperviscosity integrating factor to all fields (spectral filter).
-        hyp_factor = torch.exp(hyp_op * step_dt) * dealias_mask
-        u = to_phys(to_spec(u) * hyp_factor)
-        v = to_phys(to_spec(v) * hyp_factor)
-        h_field_mean = h.mean()
-        h_anom = h - h_field_mean
-        h_anom = to_phys(to_spec(h_anom) * hyp_factor)
-        h = (h_field_mean + h_anom).clamp(min=H_MIN_CLIP)
+        h, u, v = dynamics.filter(h, u, v, step_dt)
+        h = h.clamp(min=H_MIN_CLIP)
         if track_dissipation:
             energy_after_hyperviscosity = total_energy(h, u, v)
 

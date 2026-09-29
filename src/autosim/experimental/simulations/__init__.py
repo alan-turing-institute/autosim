@@ -13,6 +13,7 @@ from .lorenz96_correlated import Lorenz96Correlated
 from .multivariate_ou_lens import MultivariateOULens
 from .ornstein_uhlenbeck import OrnsteinUhlenbeck
 from .shallow_water import ShallowWater2D
+from .shallow_water_stepper import advance_swe_2d
 
 ALL_SIMULATORS = [
     CompressibleFluid2D,
@@ -44,6 +45,7 @@ __all__ = [
     "MultivariateOULens",
     "OrnsteinUhlenbeck",
     "ShallowWater2D",
+    "advance_swe_2d",
 ]
 
 SIMULATOR_REGISTRY = {simulator.__name__: simulator for simulator in ALL_SIMULATORS}

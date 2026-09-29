@@ -40,6 +40,53 @@ tendency, so correlated forcing is initialized anew rather than continuing an
 interrupted stochastic path exactly. Because the supplied state already fixes
 its amplitude, restart datasets omit ``amp`` from ``parameters_range``.
 
+Differentiable forcing-free forecasts
+-------------------------------------
+
+``autosim.experimental.simulations.advance_swe_2d`` advances physical
+``[h, u, v]`` fields shaped ``(..., nx, ny, 3)`` without stochastic forcing.
+It shares the generator's deterministic RHS, RK4 stages, spectral projection
+and hyperviscosity, but preserves the input's float32/float64 precision,
+device and autograd graph. Leading batch and ensemble axes evolve independently.
+The existing data-generation and restart interfaces are unchanged.
+
+Supply the dataset's physical parameters explicitly and choose a fixed
+``n_substeps`` by convergence testing. For example, for a valid 32 by 32 state
+on a periodic domain with side length ``2*pi``:
+
+.. code-block:: python
+
+   import math
+   from autosim.experimental.simulations import advance_swe_2d
+
+   forecast = advance_swe_2d(
+       state, 0.25, n_substeps=64,
+       Lx=2 * math.pi, Ly=2 * math.pi,
+       g=9.81, h_mean=1.0, nu=1e-4, drag=0.05,
+       f0=1.0, beta=0.5, coriolis_mode="periodic_beta",
+   )
+
+Do not pass normalized model channels directly: convert to physical units
+before the solve and convert back afterwards. Physics parameters and the
+fixed time schedule are Python scalars, not learnable tensors. Gradients
+propagate through the incoming state, including when it contains a learned
+correction from an earlier forecast. An additive residual model can therefore
+use ``advance_swe_2d(state, ...) + learned_correction`` and backpropagate a
+later rollout loss through the intervening physics solves. This correction
+represents the net finite-interval residual, not an instantaneous forcing.
+
+The interface rejects non-finite states, states needing the generator's
+clipping, and steps exceeding the wave/advection CFL or viscosity bound. It
+does not silently detach, sanitize or adapt a learned state. These checks
+are safeguards, not a general stability guarantee; their control flow is not
+differentiated and currently synchronizes on CUDA. Fixed-step and adaptive
+forecasts need not be bitwise identical over a full forecast interval.
+Long differentiable rollouts retain intermediate FFT graphs, so measure memory
+and runtime before training. ``torch.compile`` and ``vmap`` are not currently
+supported contracts. No noise or data-generation settings change automatically.
+
+.. autofunction:: autosim.experimental.simulations.shallow_water_stepper.advance_swe_2d
+
 Zero-gravity limit
 ------------------
 
