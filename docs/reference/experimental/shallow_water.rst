@@ -32,9 +32,11 @@ eddy scales.
 ``"balanced_double_jet"`` creates a smooth, periodic zonal double jet with
 zero net transport and a small configurable wave perturbation. Both new
 generated states construct height in constant-``f`` geostrophic balance,
-which is approximate when evolved with ``periodic_beta``. ``"restart"``
-accepts a finite ``[nx, ny, 3]`` tensor in ``[h, u, v]`` order, which is useful
-for branching deterministic and stochastic runs from exactly the same
+which is approximate when evolved with ``periodic_beta``. The double-jet
+initializer preserves positive balanced heights within the output range and
+rejects configurations that would need height clipping; reduce ``amp`` or
+increase ``jet_mode`` if that occurs. ``"restart"`` accepts a finite
+``[nx, ny, 3]`` tensor in ``[h, u, v]`` order, which is useful for branching deterministic and stochastic runs from exactly the same
 spun-up physical state. A restart does not preserve the latent OU forcing
 tendency, so correlated forcing is initialized anew rather than continuing an
 interrupted stochastic path exactly. Because the supplied state already fixes

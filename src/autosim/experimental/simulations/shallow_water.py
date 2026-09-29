@@ -1342,11 +1342,15 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         psi0 = to_phys(psi_h)
         u0 = to_phys(-iKy * psi_h)
         v0 = to_phys(iKx * psi_h)
-        h0 = (
-            (h_mean + (f0 / g) * psi0).clamp(min=0.5 * h_mean)
-            if g > 0
-            else torch.full_like(psi0, h_mean)
-        )
+        h0 = h_mean + (f0 / g) * psi0 if g > 0 else torch.full_like(psi0, h_mean)
+        # Clipping even positive heights would break geostrophic balance and
+        # alter the prescribed mean depth. Reject invalid configurations.
+        if torch.any((h0 < H_MIN_CLIP) | (h0 > H_MAX_CLIP)):
+            msg = (
+                "balanced_double_jet produced height outside the unclipped range; "
+                "reduce amp or increase jet_mode"
+            )
+            raise RuntimeError(msg)
     else:
         # Specify vorticity, invert ∇²ψ=ζ, then derive balanced u, v, and h.
         k_min = 2.0 * math.pi / max(Lx, Ly)

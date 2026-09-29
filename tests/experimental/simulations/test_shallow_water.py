@@ -253,8 +253,10 @@ def test_random_initial_condition_remains_default() -> None:
     torch.testing.assert_close(default, explicit)
 
 
-def test_balanced_double_jet_is_periodic_and_geostrophic() -> None:
-    amp = 0.1
+@pytest.mark.parametrize(("amp", "domain_size"), [(0.1, 24.0), (1.0, 64.0)])
+def test_balanced_double_jet_is_periodic_and_geostrophic(
+    amp: float, domain_size: float
+) -> None:
     g = 9.81
     h_mean = 1.0
     nx = ny = 24
@@ -262,8 +264,8 @@ def test_balanced_double_jet_is_periodic_and_geostrophic() -> None:
         amp=amp,
         nx=nx,
         ny=ny,
-        Lx=24.0,
-        Ly=24.0,
+        Lx=domain_size,
+        Ly=domain_size,
         T=0.0,
         g=g,
         h_mean=h_mean,
@@ -274,7 +276,7 @@ def test_balanced_double_jet_is_periodic_and_geostrophic() -> None:
     )[0]
     h, u, v = result.double().unbind(dim=-1)
     f0 = (g * h_mean) ** 0.5 / 8.0
-    ky = 2j * torch.pi * torch.fft.rfftfreq(ny, d=1.0)
+    ky = 2j * torch.pi * torch.fft.rfftfreq(ny, d=domain_size / ny)
     dh_dy = torch.fft.irfft2(ky[None, :] * torch.fft.rfft2(h), s=(nx, ny))
 
     assert float(u.mean()) == pytest.approx(0.0, abs=1e-7)
@@ -1427,3 +1429,29 @@ def test_height_forcing_rejects_isolated_clipping(
         torch.manual_seed(0)
         with pytest.raises(RuntimeError, match=r"height.*after stochastic forcing"):
             _run_small_swe(**options, forcing_energy_rate=scale**2)
+
+
+@pytest.mark.parametrize("minimum_height", [-0.05, H_MIN_CLIP / 2])
+def test_balanced_double_jet_rejects_heights_requiring_clipping(
+    minimum_height: float,
+) -> None:
+    domain_size = 64.0
+    g = 9.81
+    f0 = math.sqrt(g) / 8
+    # For a pure zonal sinusoid, geostrophic height has amplitude f0*U/(g*k).
+    wavenumber = 2 * math.pi / domain_size
+    amp = (1 - minimum_height) * g * wavenumber / (f0 * math.sqrt(2))
+    with pytest.raises(RuntimeError, match="balanced_double_jet produced height"):
+        _run_small_swe(
+            amp=amp,
+            nx=24,
+            ny=24,
+            Lx=domain_size,
+            Ly=domain_size,
+            T=0.0,
+            g=g,
+            f0=f0,
+            coriolis_mode="f_plane",
+            initial_condition="balanced_double_jet",
+            jet_perturbation_fraction=0.0,
+        )
