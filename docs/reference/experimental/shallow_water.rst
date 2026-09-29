@@ -200,10 +200,11 @@ correlation, are used in atmospheric stochastic-backscatter schemes; see
 application by `Duda et al. (2016)
 <https://doi.org/10.1175/MWR-D-15-0092.1>`_.
 
-Stochastic height increments that leave the generator's output bounds cause
-an error, even when only one grid cell is affected. Reduce the forcing strength
-or adjust the initial state rather than relying on clipping to repair such a
-trajectory: clipping would alter mass and the saved state's energy budget.
+Stochastic increments that take height or velocity outside the generator's
+output bounds cause an error, even when only one grid cell is affected. Reduce
+the forcing strength or adjust the initial state rather than relying on
+clipping to repair such a trajectory: clipping invalidates the saved state's
+energy budget and, for height, alters mass.
 
 Energy diagnostics
 ------------------

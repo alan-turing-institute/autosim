@@ -15,6 +15,7 @@ from autosim.experimental.simulations._spectral import (
 from autosim.experimental.simulations.shallow_water import (
     H_MAX_CLIP,
     H_MIN_CLIP,
+    UV_ABS_CLIP,
     _coriolis_grid,
     _ou_step_coefficients,
     _sample_swe_forcing_field,
@@ -1455,3 +1456,74 @@ def test_balanced_double_jet_rejects_heights_requiring_clipping(
             initial_condition="balanced_double_jet",
             jet_perturbation_fraction=0.0,
         )
+
+
+@pytest.mark.parametrize("forcing_type", ["vortical", "momentum"])
+@pytest.mark.parametrize("correlation_time", [0.0, 0.1])
+@pytest.mark.parametrize("velocity_channel", [1, 2])
+@pytest.mark.parametrize("sign", [-1, 1])
+def test_velocity_forcing_rejects_isolated_clipping(
+    forcing_type: str, correlation_time: float, velocity_channel: int, sign: int
+) -> None:
+    initial = torch.zeros(32, 32, 3, dtype=torch.float64)
+    initial[..., 0] = 1.0
+    initial[..., velocity_channel] = sign * (UV_ABS_CLIP - 1.0)
+    options = {
+        "amp": 0.0,
+        "return_timeseries": True,
+        "nx": 32,
+        "ny": 32,
+        "Lx": 2 * math.pi,
+        "Ly": 2 * math.pi,
+        "g": 9.81,
+        "h_mean": 1.0,
+        "nu": 0.0,
+        "drag": 0.0,
+        "f0": 0.0,
+        "beta": 0.0,
+        "coriolis_mode": "f_plane",
+        "initial_condition": "restart",
+        "initial_state": initial,
+        "T": 0.0001,
+        "dt_save": 0.0001,
+        "cfl": 0.12,
+        "forcing_type": forcing_type,
+        "forcing_wavenumber": 8.0,
+        "forcing_bandwidth": 1.0,
+        "forcing_correlation_time": correlation_time,
+        "return_additional_input_fields": True,
+        "return_energy_budget": True,
+    }
+    # Uniform flow is unchanged by the deterministic step. Scale a seeded
+    # forcing draw to put just a few cells across either velocity bound.
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        result = simulate_swe_2d(**options, forcing_energy_rate=1.0)
+    assert isinstance(result, tuple)
+    increment = result[0][0, ..., 3:].double()
+    component = increment[..., velocity_channel]
+    extreme = component.max() if sign > 0 else component.min()
+    scale = sign * 1.01 / float(extreme)
+    predicted_velocity = initial[..., 1:] + scale * increment[..., 1:]
+    invalid = predicted_velocity.abs() > UV_ABS_CLIP
+    assert 0 < int(invalid.sum()) < 0.01 * initial.shape[0] * initial.shape[1]
+
+    # A nearby valid draw must still be accepted and retain consistent energy.
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        valid = simulate_swe_2d(
+            **options, forcing_energy_rate=(sign * 0.99 / float(extreme)) ** 2
+        )
+    assert isinstance(valid, tuple)
+    frames, budget = valid
+    assert frames[-1, ..., 1:3].abs().max() < UV_ABS_CLIP
+    h, u, v = frames[-1, ..., :3].double().unbind(dim=-1)
+    saved_energy = (
+        0.5 * h * (u.square() + v.square()) + 0.5 * 9.81 * (h - 1).square()
+    ).mean()
+    torch.testing.assert_close(budget[-1, 0].double(), saved_energy, rtol=2e-7, atol=0)
+
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        with pytest.raises(RuntimeError, match=r"velocity.*after stochastic forcing"):
+            simulate_swe_2d(**options, forcing_energy_rate=scale**2)

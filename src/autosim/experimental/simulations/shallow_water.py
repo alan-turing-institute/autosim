@@ -1010,9 +1010,10 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     also converges to the white-noise increment as the correlation time tends
     to zero.
 
-    A stochastic height increment that would require output clipping raises
-    ``RuntimeError``, even if only one cell is affected. Silently clipping it
-    would change mass and invalidate energy diagnostics of the saved state.
+    A stochastic increment that would require height or velocity output
+    clipping raises ``RuntimeError``, even if only one cell is affected.
+    Clipping would invalidate energy diagnostics of the saved state and,
+    for height, change mass.
 
     A positive ``forcing_backscatter_fraction`` adds the requested fraction
     of diagnosed Laplacian-viscosity and exact hyperviscosity loss to the
@@ -1604,12 +1605,18 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
             h += dh
             u += du
             v += dv
-            # Even one clipped height changes mass and makes saved states
-            # inconsistent with the energy budget of the internal state.
+            # Even one clipped field makes saved states inconsistent with
+            # the internal energy budget; clipping height also changes mass.
             if torch.any((h < H_MIN_CLIP) | (h > H_MAX_CLIP)):
                 raise RuntimeError(
                     "ShallowWater2D simulation failed: "
                     "height outside clipping bounds after stochastic forcing "
+                    f"at t={t + step_dt:.6f} (amp={amp:.6f})."
+                )
+            if torch.any((u.abs() > UV_ABS_CLIP) | (v.abs() > UV_ABS_CLIP)):
+                raise RuntimeError(
+                    "ShallowWater2D simulation failed: "
+                    "velocity outside clipping bounds after stochastic forcing "
                     f"at t={t + step_dt:.6f} (amp={amp:.6f})."
                 )
             if return_additional_input_fields:
