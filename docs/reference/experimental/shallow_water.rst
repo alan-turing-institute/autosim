@@ -211,11 +211,19 @@ Energy diagnostics
 ``return_energy_budget=True`` records total shallow-water energy and the exact
 energy changes across the deterministic RK4 step, spectral hyperviscosity,
 and stochastic increment for each saved transition. Their sum closes the
-recorded total-energy change up to floating-point precision. Positive
+recorded total-energy change up to the float32 precision of the stored
+budget, even when integration uses float64. Positive
 viscosity and drag loss estimates accumulated over the saved transition and
 the interval-mean effective forcing diffusion rate are also returned. These
 estimates explain the source used by dissipation-linked forcing but are not
 extra terms in the exact closure.
+
+The first six budget columns use depth-weighted energy units. The final
+``effective_forcing_energy_rate`` column uses specific energy per unit model
+time, consistent with ``forcing_energy_rate``. Multiplying this rate by
+``h_mean`` converts it to depth-weighted energy per unit time; multiplying
+again by the saved interval gives its integrated diffusion scale. This scale
+need not equal the realized ``forcing_energy_change`` of the nonlinear flow.
 
 CRPS spatial-coherence dataset presets
 ---------------------------------------
@@ -258,7 +266,14 @@ distribution, sampling interval, trajectory length, split sizes, and seed, but
 sets ``forcing_type=none``. An unforced trajectory decays under the retained
 drag and viscosity, so the control uses a shorter spin-up and returns 128 states
 from time 5.0 through 36.75; the original time-40 sampling window would be
-almost static. Generate it with:
+almost static. The retained window still decays, so cross-dataset error
+comparisons must account for different amplitudes and time-varying statistics.
+
+The control matches the initial-state distribution, not individual
+trajectories. Using the same seed does not preserve trajectory pairing once
+the forced runs consume extra random draws. For paired comparisons, restart
+both forecasts from the same physical state with ``initial_condition="restart"``.
+Generate the distribution-matched control with:
 
 .. code-block:: console
 

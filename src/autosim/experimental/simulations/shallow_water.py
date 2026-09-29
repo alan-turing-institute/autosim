@@ -1032,7 +1032,11 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     reported Laplacian-viscosity and drag entries are positive loss estimates
     accumulated over each saved transition. They are used to interpret
     dissipation, not as extra terms in that closure. The effective forcing
-    energy rate is an interval mean.
+    energy rate is an interval mean in specific-energy units per model time;
+    multiply it by ``h_mean`` to match the depth-weighted convention of the
+    other columns. Its integrated diffusion scale need not equal realized
+    forcing work. The returned budget is stored as float32, even for float64
+    integration, so closure checks must allow for that storage precision.
     """
     if forcing_type not in FORCING_TYPES:
         msg = f"forcing_type must be one of {FORCING_TYPES}"
@@ -1208,8 +1212,8 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
             dim=-1,
         )
 
-    # Hyperviscosity integrating factor damps grid-scale modes in ~1 time unit
-    # while leaving large-scale vortices nearly untouched.
+    # Hyperviscosity has a unit damping rate at the larger axis Nyquist
+    # wavenumber. Dealiased retained modes lie below that calibration scale.
     k_max = math.pi * max(nx / Lx, ny / Ly)
     nu_h = 1.0 / k_max ** (2 * N_HYPERVISC)
     hyp_op = -nu_h * K2**N_HYPERVISC
