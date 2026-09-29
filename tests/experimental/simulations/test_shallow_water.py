@@ -13,6 +13,9 @@ from autosim.experimental.simulations._spectral import (
     two_thirds_mask,
 )
 from autosim.experimental.simulations.shallow_water import (
+    H_MAX_CLIP,
+    H_MIN_CLIP,
+    UV_ABS_CLIP,
     _coriolis_grid,
     _ou_step_coefficients,
     _sample_swe_forcing_field,
@@ -251,8 +254,10 @@ def test_random_initial_condition_remains_default() -> None:
     torch.testing.assert_close(default, explicit)
 
 
-def test_balanced_double_jet_is_periodic_and_geostrophic() -> None:
-    amp = 0.1
+@pytest.mark.parametrize(("amp", "domain_size"), [(0.1, 24.0), (1.0, 64.0)])
+def test_balanced_double_jet_is_periodic_and_geostrophic(
+    amp: float, domain_size: float
+) -> None:
     g = 9.81
     h_mean = 1.0
     nx = ny = 24
@@ -260,8 +265,8 @@ def test_balanced_double_jet_is_periodic_and_geostrophic() -> None:
         amp=amp,
         nx=nx,
         ny=ny,
-        Lx=24.0,
-        Ly=24.0,
+        Lx=domain_size,
+        Ly=domain_size,
         T=0.0,
         g=g,
         h_mean=h_mean,
@@ -272,7 +277,7 @@ def test_balanced_double_jet_is_periodic_and_geostrophic() -> None:
     )[0]
     h, u, v = result.double().unbind(dim=-1)
     f0 = (g * h_mean) ** 0.5 / 8.0
-    ky = 2j * torch.pi * torch.fft.rfftfreq(ny, d=1.0)
+    ky = 2j * torch.pi * torch.fft.rfftfreq(ny, d=domain_size / ny)
     dh_dy = torch.fft.irfft2(ky[None, :] * torch.fft.rfft2(h), s=(nx, ny))
 
     assert float(u.mean()) == pytest.approx(0.0, abs=1e-7)
@@ -1266,3 +1271,259 @@ def test_backscatter_requires_stochastic_forcing() -> None:
             forcing_type="none",
             forcing_backscatter_fraction=50.0,
         )
+
+
+@pytest.mark.parametrize("depth", [0.5, 4.0])
+@pytest.mark.parametrize("correlation_time", [0.0, 0.1])
+@pytest.mark.parametrize("forcing_type", ["momentum", "vortical"])
+def test_backscatter_uses_specific_energy_at_nonunit_depth(
+    depth: float, correlation_time: float, forcing_type: str
+) -> None:
+    def run(mean_depth: float) -> dict:
+        initial = torch.zeros(12, 12, 3, dtype=torch.float64)
+        initial[..., 0] = mean_depth
+        initial[..., 1] = 0.1
+        simulator = _small_simulator(
+            nx=12,
+            ny=12,
+            T=0.001,
+            dt_save=0.001,
+            g=0.0,
+            h_mean=mean_depth,
+            f0=0.0,
+            nu=0.0,
+            drag=1.0,
+            initial_condition="restart",
+            initial_state=initial,
+            parameters_range={},
+            forcing_type=forcing_type,
+            forcing_energy_rate=1e-4,
+            forcing_correlation_time=correlation_time,
+            forcing_backscatter_fraction=0.5,
+            backscatter_include_drag=True,
+            return_energy_budget=True,
+        )
+        return simulator.forward_samples_spatiotemporal(n=1, random_seed=8)
+
+    reference = run(1.0)
+    result = run(depth)
+    # Uniform-depth drag loses specific energy at drag * speed**2. The
+    # diffusion target and seeded velocity increments must not depend on H.
+    assert float(result["energy_budget"][0, 0, 6]) == pytest.approx(0.0051)
+    torch.testing.assert_close(result["data"][..., 1:], reference["data"][..., 1:])
+    torch.testing.assert_close(
+        result["energy_budget"][..., :6] / depth,
+        reference["energy_budget"][..., :6],
+    )
+
+
+def test_restart_unresolved_modes_do_not_alias_into_retained_modes() -> None:
+    x = torch.arange(12, dtype=torch.float64) * 2 * math.pi / 12
+    initial = torch.zeros(12, 12, 3, dtype=torch.float64)
+    initial[..., 0] = 1.0
+    initial[..., 1] = 0.1 * torch.cos(5 * x)[:, None]
+    result = _run_small_swe(
+        nx=12,
+        ny=12,
+        Lx=2 * math.pi,
+        Ly=2 * math.pi,
+        T=0.001,
+        dt_save=0.001,
+        g=0.0,
+        f0=0.0,
+        nu=0.0,
+        drag=0.0,
+        initial_condition="restart",
+        initial_state=initial,
+    )
+    torch.testing.assert_close(result[0], initial.float(), atol=0, rtol=0)
+    expected = torch.zeros_like(initial)
+    expected[..., 0] = 1.0
+    torch.testing.assert_close(result[-1], expected.float(), atol=1e-12, rtol=0)
+
+
+@pytest.mark.parametrize(("drag", "f0"), [(3.0, 0.0), (0.0, 3.0), (2.5, 2.5)])
+def test_generator_bounds_linear_damping_and_rotation(drag: float, f0: float) -> None:
+    initial = torch.zeros(12, 12, 3, dtype=torch.float64)
+    initial[..., 0], initial[..., 1] = 1, 0.001
+    options = {
+        "nx": 12,
+        "ny": 12,
+        "Lx": 2 * math.pi,
+        "Ly": 2 * math.pi,
+        "g": 0.0,
+        "nu": 0.0,
+        "drag": drag,
+        "f0": f0,
+        "beta": 0.0,
+        "coriolis_mode": "f_plane",
+        "initial_condition": "restart",
+        "initial_state": initial,
+        "T": 1.0,
+    }
+    coarse = _run_small_swe(**options, dt_save=1.0)
+    # Neither pure rotation nor positive drag can amplify a uniform velocity.
+    assert torch.linalg.vector_norm(coarse[-1, ..., 1:]) <= torch.linalg.vector_norm(
+        coarse[0, ..., 1:]
+    )
+    # The stability guard is not an accuracy guarantee: a resolved schedule
+    # should also recover the known inertial-oscillation solution.
+    fine = _run_small_swe(**options, dt_save=0.01)
+    expected = torch.tensor(
+        [
+            1,
+            0.001 * math.exp(-drag) * math.cos(f0),
+            -0.001 * math.exp(-drag) * math.sin(f0),
+        ],
+        dtype=fine.dtype,
+    )
+    torch.testing.assert_close(
+        fine[-1], expected.expand_as(fine[-1]), atol=2e-10, rtol=0
+    )
+
+
+@pytest.mark.parametrize("forcing_type", ["balanced", "pv_balanced"])
+@pytest.mark.parametrize("correlation_time", [0.0, 0.1])
+@pytest.mark.parametrize(
+    ("depth", "target_height"),
+    [(1.0, -0.01), (1.0, H_MIN_CLIP / 2), (99.0, H_MAX_CLIP + 0.01)],
+)
+def test_height_forcing_rejects_isolated_clipping(
+    forcing_type: str, correlation_time: float, depth: float, target_height: float
+) -> None:
+    initial = torch.zeros(32, 32, 3, dtype=torch.float64)
+    initial[..., 0] = depth
+    options = {
+        "nx": 32,
+        "ny": 32,
+        "Lx": 2 * math.pi,
+        "Ly": 2 * math.pi,
+        "g": 1.0,
+        "h_mean": depth,
+        "nu": 0.0,
+        "drag": 0.0,
+        "f0": 3.0,
+        "beta": 0.0,
+        "coriolis_mode": "f_plane",
+        "initial_condition": "restart",
+        "initial_state": initial,
+        "T": 0.001,
+        "dt_save": 0.001,
+        "forcing_type": forcing_type,
+        "forcing_wavenumber": 8.0,
+        "forcing_bandwidth": 1.0,
+        "forcing_correlation_time": correlation_time,
+        "return_additional_input_fields": True,
+    }
+    # Scale an actual seeded Gaussian draw to just cross a height bound.
+    # This avoids mocking the forcing or depending on a hard-coded noise rate.
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        unit = _run_small_swe(**options, forcing_energy_rate=1.0)
+    dh = unit[0, ..., 3].double()
+    extreme = dh.min() if target_height < depth else dh.max()
+    scale = (target_height - depth) / float(extreme)
+    predicted_height = depth + scale * dh
+    invalid = (predicted_height < H_MIN_CLIP) | (predicted_height > H_MAX_CLIP)
+    assert 0 < int(invalid.sum()) < 0.01 * invalid.numel()
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        with pytest.raises(RuntimeError, match=r"height.*after stochastic forcing"):
+            _run_small_swe(**options, forcing_energy_rate=scale**2)
+
+
+@pytest.mark.parametrize("minimum_height", [-0.05, H_MIN_CLIP / 2])
+def test_balanced_double_jet_rejects_heights_requiring_clipping(
+    minimum_height: float,
+) -> None:
+    domain_size = 64.0
+    g = 9.81
+    f0 = math.sqrt(g) / 8
+    # For a pure zonal sinusoid, geostrophic height has amplitude f0*U/(g*k).
+    wavenumber = 2 * math.pi / domain_size
+    amp = (1 - minimum_height) * g * wavenumber / (f0 * math.sqrt(2))
+    with pytest.raises(RuntimeError, match="balanced_double_jet produced height"):
+        _run_small_swe(
+            amp=amp,
+            nx=24,
+            ny=24,
+            Lx=domain_size,
+            Ly=domain_size,
+            T=0.0,
+            g=g,
+            f0=f0,
+            coriolis_mode="f_plane",
+            initial_condition="balanced_double_jet",
+            jet_perturbation_fraction=0.0,
+        )
+
+
+@pytest.mark.parametrize("forcing_type", ["vortical", "momentum"])
+@pytest.mark.parametrize("correlation_time", [0.0, 0.1])
+@pytest.mark.parametrize("velocity_channel", [1, 2])
+@pytest.mark.parametrize("sign", [-1, 1])
+def test_velocity_forcing_rejects_isolated_clipping(
+    forcing_type: str, correlation_time: float, velocity_channel: int, sign: int
+) -> None:
+    initial = torch.zeros(32, 32, 3, dtype=torch.float64)
+    initial[..., 0] = 1.0
+    initial[..., velocity_channel] = sign * (UV_ABS_CLIP - 1.0)
+    options = {
+        "amp": 0.0,
+        "return_timeseries": True,
+        "nx": 32,
+        "ny": 32,
+        "Lx": 2 * math.pi,
+        "Ly": 2 * math.pi,
+        "g": 9.81,
+        "h_mean": 1.0,
+        "nu": 0.0,
+        "drag": 0.0,
+        "f0": 0.0,
+        "beta": 0.0,
+        "coriolis_mode": "f_plane",
+        "initial_condition": "restart",
+        "initial_state": initial,
+        "T": 0.0001,
+        "dt_save": 0.0001,
+        "cfl": 0.12,
+        "forcing_type": forcing_type,
+        "forcing_wavenumber": 8.0,
+        "forcing_bandwidth": 1.0,
+        "forcing_correlation_time": correlation_time,
+        "return_additional_input_fields": True,
+        "return_energy_budget": True,
+    }
+    # Uniform flow is unchanged by the deterministic step. Scale a seeded
+    # forcing draw to put just a few cells across either velocity bound.
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        result = simulate_swe_2d(**options, forcing_energy_rate=1.0)
+    assert isinstance(result, tuple)
+    increment = result[0][0, ..., 3:].double()
+    component = increment[..., velocity_channel]
+    extreme = component.max() if sign > 0 else component.min()
+    scale = sign * 1.01 / float(extreme)
+    predicted_velocity = initial[..., 1:] + scale * increment[..., 1:]
+    invalid = predicted_velocity.abs() > UV_ABS_CLIP
+    assert 0 < int(invalid.sum()) < 0.01 * initial.shape[0] * initial.shape[1]
+
+    # A nearby valid draw must still be accepted and retain consistent energy.
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        valid = simulate_swe_2d(
+            **options, forcing_energy_rate=(sign * 0.99 / float(extreme)) ** 2
+        )
+    assert isinstance(valid, tuple)
+    frames, budget = valid
+    assert frames[-1, ..., 1:3].abs().max() < UV_ABS_CLIP
+    h, u, v = frames[-1, ..., :3].double().unbind(dim=-1)
+    saved_energy = (
+        0.5 * h * (u.square() + v.square()) + 0.5 * 9.81 * (h - 1).square()
+    ).mean()
+    torch.testing.assert_close(budget[-1, 0].double(), saved_energy, rtol=2e-7, atol=0)
+
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        with pytest.raises(RuntimeError, match=r"velocity.*after stochastic forcing"):
+            simulate_swe_2d(**options, forcing_energy_rate=scale**2)

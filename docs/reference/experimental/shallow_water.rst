@@ -32,9 +32,11 @@ eddy scales.
 ``"balanced_double_jet"`` creates a smooth, periodic zonal double jet with
 zero net transport and a small configurable wave perturbation. Both new
 generated states construct height in constant-``f`` geostrophic balance,
-which is approximate when evolved with ``periodic_beta``. ``"restart"``
-accepts a finite ``[nx, ny, 3]`` tensor in ``[h, u, v]`` order, which is useful
-for branching deterministic and stochastic runs from exactly the same
+which is approximate when evolved with ``periodic_beta``. The double-jet
+initializer preserves positive balanced heights within the output range and
+rejects configurations that would need height clipping; reduce ``amp`` or
+increase ``jet_mode`` if that occurs. ``"restart"`` accepts a finite
+``[nx, ny, 3]`` tensor in ``[h, u, v]`` order, which is useful for branching deterministic and stochastic runs from exactly the same
 spun-up physical state. A restart does not preserve the latent OU forcing
 tendency, so correlated forcing is initialized anew rather than continuing an
 interrupted stochastic path exactly. Because the supplied state already fixes
@@ -48,7 +50,12 @@ Differentiable forcing-free forecasts
 It shares the generator's deterministic RHS, RK4 stages, spectral projection
 and hyperviscosity, but preserves the input's float32/float64 precision,
 device and autograd graph. Leading batch and ensemble axes evolve independently.
-The existing data-generation and restart interfaces are unchanged.
+With ``dealias=True``, both interfaces project each RK-stage state onto the
+retained Fourier band before evaluating nonlinear products. This prevents
+unresolved modes in restarts or learned corrections from aliasing into resolved
+modes. The differentiable interface validates both the raw and projected
+states; a projection that creates nonphysical values raises an error. A zero
+forecast interval remains an exact identity, without projection.
 
 Supply the dataset's physical parameters explicitly and choose a fixed
 ``n_substeps`` by convergence testing. For example, for a valid 32 by 32 state
@@ -76,8 +83,11 @@ later rollout loss through the intervening physics solves. This correction
 represents the net finite-interval residual, not an instantaneous forcing.
 
 The interface rejects non-finite states, states needing the generator's
-clipping, and steps exceeding the wave/advection CFL or viscosity bound. It
-does not silently detach, sanitize or adapt a learned state. These checks
+clipping, and steps exceeding the wave/advection CFL or the combined linear
+viscosity/drag/Coriolis bound. The generator caps its adaptive steps with the
+same linear bound, including the maximum absolute periodic Coriolis value.
+The differentiable interface does not silently detach, sanitize or adapt a
+learned state. These checks
 are safeguards, not a general stability guarantee; their control flow is not
 differentiated and currently synchronizes on CUDA. Fixed-step and adaptive
 forecasts need not be bitwise identical over a full forecast interval.
@@ -174,8 +184,10 @@ normalization statistics.
 
 Set ``forcing_backscatter_fraction`` above zero to add that fraction of the
 diagnosed Laplacian-viscosity and exact numerical hyperviscosity loss to the
-forcing diffusion rate. The default zero keeps forcing fixed. Linear-drag loss
-is excluded because drag normally represents a physical large-scale sink; set
+forcing diffusion rate. Depth-weighted loss diagnostics are divided by
+``h_mean`` to match the forcing's specific-energy convention. The default zero
+keeps forcing fixed. Linear-drag loss is excluded because drag normally
+represents a physical large-scale sink; set
 ``backscatter_include_drag=True`` to include it for controlled experiments.
 This is an idealized energy calibration, not a closure derived from the
 resolved flow.
@@ -188,17 +200,31 @@ correlation, are used in atmospheric stochastic-backscatter schemes; see
 application by `Duda et al. (2016)
 <https://doi.org/10.1175/MWR-D-15-0092.1>`_.
 
+Stochastic increments that take height or velocity outside the generator's
+output bounds cause an error, even when only one grid cell is affected. Reduce
+the forcing strength or adjust the initial state rather than relying on
+clipping to repair such a trajectory: clipping invalidates the saved state's
+energy budget and, for height, alters mass.
+
 Energy diagnostics
 ------------------
 
 ``return_energy_budget=True`` records total shallow-water energy and the exact
 energy changes across the deterministic RK4 step, spectral hyperviscosity,
 and stochastic increment for each saved transition. Their sum closes the
-recorded total-energy change up to floating-point precision. Positive
+recorded total-energy change up to the float32 precision of the stored
+budget, even when integration uses float64. Positive
 viscosity and drag loss estimates accumulated over the saved transition and
 the interval-mean effective forcing diffusion rate are also returned. These
 estimates explain the source used by dissipation-linked forcing but are not
 extra terms in the exact closure.
+
+The first six budget columns use depth-weighted energy units. The final
+``effective_forcing_energy_rate`` column uses specific energy per unit model
+time, consistent with ``forcing_energy_rate``. Multiplying this rate by
+``h_mean`` converts it to depth-weighted energy per unit time; multiplying
+again by the saved interval gives its integrated diffusion scale. This scale
+need not equal the realized ``forcing_energy_change`` of the nonlinear flow.
 
 CRPS spatial-coherence dataset presets
 ---------------------------------------
@@ -241,7 +267,14 @@ distribution, sampling interval, trajectory length, split sizes, and seed, but
 sets ``forcing_type=none``. An unforced trajectory decays under the retained
 drag and viscosity, so the control uses a shorter spin-up and returns 128 states
 from time 5.0 through 36.75; the original time-40 sampling window would be
-almost static. Generate it with:
+almost static. The retained window still decays, so cross-dataset error
+comparisons must account for different amplitudes and time-varying statistics.
+
+The control matches the initial-state distribution, not individual
+trajectories. Using the same seed does not preserve trajectory pairing once
+the forced runs consume extra random draws. For paired comparisons, restart
+both forecasts from the same physical state with ``initial_condition="restart"``.
+Generate the distribution-matched control with:
 
 .. code-block:: console
 

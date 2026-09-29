@@ -1010,9 +1010,15 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     also converges to the white-noise increment as the correlation time tends
     to zero.
 
+    A stochastic increment that would require height or velocity output
+    clipping raises ``RuntimeError``, even if only one cell is affected.
+    Clipping would invalidate energy diagnostics of the saved state and,
+    for height, change mass.
+
     A positive ``forcing_backscatter_fraction`` adds the requested fraction
     of diagnosed Laplacian-viscosity and exact hyperviscosity loss to the
-    configured base diffusion rate. Linear-drag loss is included only when
+    configured base diffusion rate, after converting the depth-weighted loss
+    to specific energy by dividing by ``h_mean``. Linear-drag loss is included when
     ``backscatter_include_drag=True``.
 
     When ``return_additional_input_fields=True``, three forcing-impulse channels
@@ -1027,7 +1033,11 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     reported Laplacian-viscosity and drag entries are positive loss estimates
     accumulated over each saved transition. They are used to interpret
     dissipation, not as extra terms in that closure. The effective forcing
-    energy rate is an interval mean.
+    energy rate is an interval mean in specific-energy units per model time;
+    multiply it by ``h_mean`` to match the depth-weighted convention of the
+    other columns. Its integrated diffusion scale need not equal realized
+    forcing work. The returned budget is stored as float32, even for float64
+    integration, so closure checks must allow for that storage precision.
     """
     if forcing_type not in FORCING_TYPES:
         msg = f"forcing_type must be one of {FORCING_TYPES}"
@@ -1137,7 +1147,6 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     iKx = 1j * dKx
     iKy = 1j * dKy
     dealias_mask = two_thirds_mask(nx, ny) if dealias else torch.ones_like(K2).bool()
-    max_retained_k2 = float(K2[dealias_mask].max())
 
     forcing_spectrum: torch.Tensor | None = None
     forcing_expected_unit_energy: float | None = None
@@ -1204,8 +1213,8 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
             dim=-1,
         )
 
-    # Hyperviscosity integrating factor damps grid-scale modes in ~1 time unit
-    # while leaving large-scale vortices nearly untouched.
+    # Hyperviscosity has a unit damping rate at the larger axis Nyquist
+    # wavenumber. Dealiased retained modes lie below that calibration scale.
     k_max = math.pi * max(nx / Lx, ny / Ly)
     nu_h = 1.0 / k_max ** (2 * N_HYPERVISC)
     hyp_op = -nu_h * K2**N_HYPERVISC
@@ -1223,6 +1232,8 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         drag=drag,
         height_floor=H_MIN_CLIP,
     )
+
+    linear_step_limit = dynamics.linear_timestep_limit()
 
     def to_spec(field: torch.Tensor) -> torch.Tensor:
         return torch.fft.rfft2(field)
@@ -1336,11 +1347,15 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         psi0 = to_phys(psi_h)
         u0 = to_phys(-iKy * psi_h)
         v0 = to_phys(iKx * psi_h)
-        h0 = (
-            (h_mean + (f0 / g) * psi0).clamp(min=0.5 * h_mean)
-            if g > 0
-            else torch.full_like(psi0, h_mean)
-        )
+        h0 = h_mean + (f0 / g) * psi0 if g > 0 else torch.full_like(psi0, h_mean)
+        # Clipping even positive heights would break geostrophic balance and
+        # alter the prescribed mean depth. Reject invalid configurations.
+        if torch.any((h0 < H_MIN_CLIP) | (h0 > H_MAX_CLIP)):
+            msg = (
+                "balanced_double_jet produced height outside the unclipped range; "
+                "reduce amp or increase jet_mode"
+            )
+            raise RuntimeError(msg)
     else:
         # Specify vorticity, invert ∇²ψ=ζ, then derive balanced u, v, and h.
         k_min = 2.0 * math.pi / max(Lx, Ly)
@@ -1405,6 +1420,10 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     def rhs(
         h: torch.Tensor, u: torch.Tensor, v: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        if dealias:
+            # Truncate operands before nonlinear products: projecting only the
+            # tendencies cannot remove aliases from unresolved restart modes.
+            h, u, v = (dynamics.project(field) for field in (h, u, v))
         return dynamics.rhs(h, u, v)
 
     def output(h: torch.Tensor, u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
@@ -1504,8 +1523,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
             break
 
         step_dt = cfl * min(dx, dy) / max_speed
-        if nu > 0:
-            step_dt = min(step_dt, 2.5 / (nu * max_retained_k2))
+        step_dt = min(step_dt, linear_step_limit)
         step_dt = min(step_dt, T - t)
         if return_timeseries and next_save_idx < expected_frames:
             step_dt = min(step_dt, save_times[next_save_idx] - t)
@@ -1543,10 +1561,13 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
             diagnosed_dissipation_rate = viscous_loss_rate + hyperviscous_loss_rate
             if backscatter_include_drag:
                 diagnosed_dissipation_rate += drag_loss_rate
+            # Loss diagnostics are depth-weighted; the forcing sampler uses
+            # the linearized specific-energy norm (energy / h_mean).
             effective_forcing_energy_rate = (
                 forcing_energy_rate
                 + forcing_backscatter_fraction
                 * float(diagnosed_dissipation_rate.item())
+                / h_mean
             )
             if forcing_correlation_time == 0:
                 forcing_increment = sample_forcing_field(
@@ -1584,6 +1605,20 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
             h += dh
             u += du
             v += dv
+            # Even one clipped field makes saved states inconsistent with
+            # the internal energy budget; clipping height also changes mass.
+            if torch.any((h < H_MIN_CLIP) | (h > H_MAX_CLIP)):
+                raise RuntimeError(
+                    "ShallowWater2D simulation failed: "
+                    "height outside clipping bounds after stochastic forcing "
+                    f"at t={t + step_dt:.6f} (amp={amp:.6f})."
+                )
+            if torch.any((u.abs() > UV_ABS_CLIP) | (v.abs() > UV_ABS_CLIP)):
+                raise RuntimeError(
+                    "ShallowWater2D simulation failed: "
+                    "velocity outside clipping bounds after stochastic forcing "
+                    f"at t={t + step_dt:.6f} (amp={amp:.6f})."
+                )
             if return_additional_input_fields:
                 forcing_since_save += forcing_increment
         if return_energy_budget:

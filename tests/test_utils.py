@@ -34,3 +34,27 @@ def test_plot_video_accepts_physical_row_labels() -> None:
     assert "Forced" in row_labels
     assert "Control" in row_labels
     assert "Difference (Forced - Control)" in row_labels
+
+
+def test_plot_video_preserves_original_positional_arguments() -> None:
+    true = torch.rand(1, 2, 4, 8, 1)
+    anim = plot_spatiotemporal_video(
+        true,
+        torch.rand_like(true),
+        torch.rand_like(true),
+        0,
+        5,
+        None,
+        None,
+        "viridis",
+        None,
+        "Comparison",
+        "Uncertainty",
+        "column",
+        "row",
+        ["Depth"],
+        True,
+    )
+    figure = cast(Any, anim)._fig
+    assert "Uncertainty" in [axis.get_ylabel() for axis in figure.axes]
+    assert "Depth" in [axis.get_title() for axis in figure.axes]

@@ -222,3 +222,124 @@ def test_cuda_preserves_device_and_backpropagates():
     assert grad.abs().max() > 0
     reference = advance_swe_2d(initial.detach().cpu(), 0.02, n_substeps=4, **PHYSICS)
     torch.testing.assert_close(result.cpu(), reference, atol=1e-6, rtol=1e-5)
+
+
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("n_substeps", [1, 4])
+def test_unresolved_inputs_do_not_alias_into_retained_modes(axis, n_substeps):
+    coordinate = torch.arange(12, dtype=torch.float64) * DOMAIN / 12
+    mode = torch.cos(5 * coordinate)
+    basis = torch.zeros(12, 12, 3, dtype=torch.float64)
+    basis[..., axis + 1] = mode[:, None] if axis == 0 else mode[None, :]
+    rest = torch.zeros_like(basis)
+    rest[..., 0] = 1.0
+    amplitude = torch.tensor(0.1, dtype=torch.float64, requires_grad=True)
+    initial = rest + amplitude * basis
+    physics = {**PHYSICS, "g": 0.0, "f0": 0.0, "beta": 0.0, "nu": 0.0, "drag": 0.0}
+
+    result = advance_swe_2d(initial, 0.001, n_substeps=n_substeps, **physics)
+    torch.testing.assert_close(result, rest, atol=1e-12, rtol=0)
+    weight = torch.sin(2 * coordinate)
+    loss = (result[..., axis + 1] * (weight[:, None] if axis == 0 else weight)).mean()
+    (gradient,) = torch.autograd.grad(loss, amplitude)
+    torch.testing.assert_close(gradient, torch.zeros_like(gradient), atol=1e-12, rtol=0)
+
+    # Projection belongs to evolution: a zero lead remains an exact identity,
+    # and disabling dealiasing keeps the supplied high-frequency mode.
+    identity = advance_swe_2d(initial, 0, n_substeps=1, **physics)
+    torch.testing.assert_close(identity, initial, atol=0, rtol=0)
+    unfiltered = advance_swe_2d(initial, 0.001, n_substeps=1, dealias=False, **physics)
+    assert (unfiltered[..., axis + 1] * basis[..., axis + 1]).mean().abs() > 0.01
+
+
+def test_projected_state_must_remain_in_physical_range():
+    initial = torch.zeros(12, 12, 3, dtype=torch.float64)
+    initial[..., 0] = 0.01
+    initial[0, :, 0] += 1.0
+    with pytest.raises(ValueError, match="valid unclipped physical range"):
+        advance_swe_2d(initial, 0.001, n_substeps=1, **PHYSICS)
+
+
+@pytest.mark.parametrize(
+    ("drag", "f0", "nu"),
+    [(3.0, 0.0, 0.0), (0.0, 3.0, 0.0), (2.5, 2.5, 0.0), (1.5, 0.0, 0.08)],
+)
+def test_unstable_linear_steps_are_rejected(drag, f0, nu):
+    initial = torch.zeros(12, 12, 3, dtype=torch.float64)
+    initial[..., 0] = 1
+    # A divergence-free diagonal shear makes viscosity and drag act on the
+    # same mode, without advective or gravity-wave timestep restrictions.
+    coordinates = torch.arange(12, dtype=torch.float64) * DOMAIN / 12
+    velocity = 0.001 * torch.cos(3 * (coordinates[:, None] + coordinates[None, :]))
+    initial[..., 1], initial[..., 2] = velocity, -velocity
+    physics = {
+        **PHYSICS,
+        "g": 0.0,
+        "nu": nu,
+        "drag": drag,
+        "f0": f0,
+        "beta": 0.0,
+        "coriolis_mode": "f_plane",
+    }
+    with pytest.raises(ValueError, match=r"linear.*viscosity.*drag.*Coriolis"):
+        advance_swe_2d(initial, 1.0, n_substeps=1, **physics)
+    result = advance_swe_2d(initial, 1.0, n_substeps=32, **physics)
+    assert torch.isfinite(result).all()
+
+
+def test_periodic_coriolis_extrema_constrain_fixed_steps():
+    initial = torch.zeros(12, 12, 3, dtype=torch.float64)
+    initial[..., 0], initial[..., 1] = 1, 0.001
+    # f0 is zero, but the periodic Coriolis field has extrema +/-3.
+    with pytest.raises(ValueError, match=r"linear.*Coriolis"):
+        advance_swe_2d(
+            initial,
+            1.0,
+            n_substeps=1,
+            **{**PHYSICS, "g": 0.0, "nu": 0.0, "drag": 0.0, "f0": 0.0, "beta": 3.0},
+        )
+
+
+def test_realistic_forecast_lead_converges_and_matches_generator():
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        initial = simulate_swe_2d(
+            amp=0.1,
+            return_timeseries=True,
+            nx=32,
+            ny=32,
+            T=0.0,
+            dt_save=0.25,
+            cfl=0.12,
+            dtype=torch.float64,
+            initial_condition="balanced_random_pv",
+            initial_wavenumber=4.0,
+            initial_bandwidth=1.5,
+            **PHYSICS,
+        )
+    assert isinstance(initial, torch.Tensor)
+    initial = initial[0].double()
+    reference = simulate_swe_2d(
+        amp=0.0,
+        return_timeseries=True,
+        nx=32,
+        ny=32,
+        T=0.25,
+        dt_save=0.25,
+        cfl=0.12,
+        dtype=torch.float64,
+        initial_condition="restart",
+        initial_state=initial,
+        **PHYSICS,
+    )
+    assert isinstance(reference, torch.Tensor)
+    coarse, medium, fine = (
+        advance_swe_2d(initial, 0.25, n_substeps=count, **PHYSICS)
+        for count in (64, 128, 256)
+    )
+    # The generator stores float32 frames even when its integration is float64.
+    torch.testing.assert_close(coarse, reference[-1].double(), atol=2e-7, rtol=0)
+    coarse_error = torch.linalg.vector_norm(coarse - medium)
+    fine_error = torch.linalg.vector_norm(medium - fine)
+    # RK4 plus a separate hyperviscosity filter need not converge at order four.
+    assert 0 < fine_error < 0.75 * coarse_error

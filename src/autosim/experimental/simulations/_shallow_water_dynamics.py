@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -26,6 +27,19 @@ class ShallowWaterDynamics:
     nu: float
     drag: float
     height_floor: float
+
+    def linear_timestep_limit(self) -> float:
+        """Bound explicit RK4 steps for viscosity, drag and rotation together.
+
+        The sum bounds the combined linear rate, including variable Coriolis
+        frequency. Separate limits can admit unstable mixed damping/rotation.
+        The factor 2.5 retains the existing viscous stability margin; this is
+        a safeguard alongside the wave/advection CFL check, not an accuracy
+        guarantee or a general nonlinear stability theorem.
+        """
+        viscous_rate = self.nu * float(self.K2[self.dealias_mask].max())
+        rate = viscous_rate + self.drag + float(self.f_grid.abs().max())
+        return 2.5 / rate if rate > 0 else math.inf
 
     def to_phys(self, field_hat: torch.Tensor) -> torch.Tensor:
         """Invert the last two Fourier axes using the original grid shape."""
