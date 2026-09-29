@@ -1,0 +1,40 @@
+_target_: autosim.experimental.simulations.ShallowWater2D
+return_timeseries: true
+return_additional_input_fields: false
+return_energy_budget: false
+log_level: warning
+
+# Match the 32 by 32 aleatoric benchmark except for stochastic forcing and the
+# sampling window. Without forcing, the original 40-unit spin-up leaves an
+# almost-static flow because drag and viscosity continuously remove energy.
+nx: 32
+ny: 32
+Lx: 6.283185307179586
+Ly: 6.283185307179586
+T: 36.75
+dt_save: 0.25
+# Discard the initial adjustment and retain 128 states from t=5.0 to t=36.75.
+skip_nt: 20
+cfl: 0.12
+
+g: 9.81
+h_mean: 1.0
+f0: 1.0
+beta: 0.5
+nu: 1.0e-4
+drag: 0.05
+coriolis_mode: periodic_beta
+dealias: true
+
+initial_condition: balanced_random_pv
+initial_wavenumber: 4.0
+initial_bandwidth: 1.5
+
+# Remove the only stochastic term. All other physical parameters match the
+# corresponding aleatoric preset.
+forcing_type: none
+forcing_backscatter_fraction: 0.0
+backscatter_include_drag: false
+
+parameters_range:
+  amp: [0.1, 0.1]

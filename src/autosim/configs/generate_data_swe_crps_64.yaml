@@ -1,0 +1,35 @@
+defaults:
+  - simulator: experimental/shallow_water2d_crps_64
+  - _self_
+
+dataset:
+  output_dir: outputs/${now:%Y-%m-%d}/swe_crps_64_${shortuuid:7}
+  n_train: 64
+  n_valid: 8
+  n_test: 8
+  ensure_exact_n: true
+
+seed: 0
+overwrite: false
+
+stratify:
+  enabled: false
+  key: null
+  values: []
+
+visualize:
+  enabled: true
+  split: test
+  batch_indices: null
+  max_examples: 4
+  fps: 5
+  file_ext: mp4
+  overwrite: true
+  preserve_aspect: true
+
+normalization:
+  shared_core_field_groups: []
+
+hydra:
+  run:
+    dir: ${dataset.output_dir}

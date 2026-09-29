@@ -153,6 +153,53 @@ the interval-mean effective forcing diffusion rate are also returned. These
 estimates explain the source used by dissipation-linked forcing but are not
 extra terms in the exact closure.
 
+CRPS spatial-coherence dataset presets
+---------------------------------------
+
+The ``shallow_water2d_crps_32`` and ``shallow_water2d_crps_64`` simulator
+presets generate independent trajectories with ``balanced_random_pv`` initial
+conditions and a coherent vortical forcing ring centred on Fourier mode 3.
+All physical parameters are fixed within each dataset, including ``amp=0.1``.
+
+The forcing is white in time (``forcing_correlation_time=0``), so the returned
+``[h, u, v]`` fields form the complete state for a one-step conditional model.
+After spin-up, each trajectory contains 128 states from time 40.0 through 71.75
+at intervals of 0.25. Downstream data loaders can extract adjacent one-step
+pairs while retaining the complete trajectory for rollout evaluation.
+
+Run a small 32 by 32 pilot before generating either full dataset:
+
+.. code-block:: console
+
+   uv run autosim --config-name=generate_data_swe_crps_32 \
+     dataset.n_train=8 dataset.n_valid=2 dataset.n_test=2
+
+The production commands are:
+
+.. code-block:: console
+
+   uv run autosim --config-name=generate_data_swe_crps_32
+   uv run autosim --config-name=generate_data_swe_crps_64
+
+Both resolutions use 64/8/8 trajectories for the train/validation/test splits.
+Generation is serial, so the 64 by 64 dataset should only be started after
+inspecting the 32 by 32 output. ``forcing_energy_rate`` controls the forcing
+diffusion scale; it should not be interpreted as a direct target for the ratio
+of stochastic to deterministic forecast spread. Nor should these forced,
+dissipative presets be expected to exhibit a ``k^-3`` inertial range.
+
+The ``shallow_water2d_crps_deterministic_32`` preset provides a matched
+deterministic control. It keeps the 32 by 32 physical parameters, initial-state
+distribution, sampling interval, trajectory length, split sizes, and seed, but
+sets ``forcing_type=none``. An unforced trajectory decays under the retained
+drag and viscosity, so the control uses a shorter spin-up and returns 128 states
+from time 5.0 through 36.75; the original time-40 sampling window would be
+almost static. Generate it with:
+
+.. code-block:: console
+
+   uv run autosim --config-name=generate_data_swe_crps_deterministic_32
+
 .. automodule:: autosim.experimental.simulations.shallow_water
    :members:
    :undoc-members:
