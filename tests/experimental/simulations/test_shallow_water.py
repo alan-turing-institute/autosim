@@ -1335,3 +1335,43 @@ def test_restart_unresolved_modes_do_not_alias_into_retained_modes() -> None:
     expected = torch.zeros_like(initial)
     expected[..., 0] = 1.0
     torch.testing.assert_close(result[-1], expected.float(), atol=1e-12, rtol=0)
+
+
+@pytest.mark.parametrize(("drag", "f0"), [(3.0, 0.0), (0.0, 3.0), (2.5, 2.5)])
+def test_generator_bounds_linear_damping_and_rotation(drag: float, f0: float) -> None:
+    initial = torch.zeros(12, 12, 3, dtype=torch.float64)
+    initial[..., 0], initial[..., 1] = 1, 0.001
+    options = {
+        "nx": 12,
+        "ny": 12,
+        "Lx": 2 * math.pi,
+        "Ly": 2 * math.pi,
+        "g": 0.0,
+        "nu": 0.0,
+        "drag": drag,
+        "f0": f0,
+        "beta": 0.0,
+        "coriolis_mode": "f_plane",
+        "initial_condition": "restart",
+        "initial_state": initial,
+        "T": 1.0,
+    }
+    coarse = _run_small_swe(**options, dt_save=1.0)
+    # Neither pure rotation nor positive drag can amplify a uniform velocity.
+    assert torch.linalg.vector_norm(coarse[-1, ..., 1:]) <= torch.linalg.vector_norm(
+        coarse[0, ..., 1:]
+    )
+    # The stability guard is not an accuracy guarantee: a resolved schedule
+    # should also recover the known inertial-oscillation solution.
+    fine = _run_small_swe(**options, dt_save=0.01)
+    expected = torch.tensor(
+        [
+            1,
+            0.001 * math.exp(-drag) * math.cos(f0),
+            -0.001 * math.exp(-drag) * math.sin(f0),
+        ],
+        dtype=fine.dtype,
+    )
+    torch.testing.assert_close(
+        fine[-1], expected.expand_as(fine[-1]), atol=2e-10, rtol=0
+    )

@@ -1138,7 +1138,6 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
     iKx = 1j * dKx
     iKy = 1j * dKy
     dealias_mask = two_thirds_mask(nx, ny) if dealias else torch.ones_like(K2).bool()
-    max_retained_k2 = float(K2[dealias_mask].max())
 
     forcing_spectrum: torch.Tensor | None = None
     forcing_expected_unit_energy: float | None = None
@@ -1224,6 +1223,8 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
         drag=drag,
         height_floor=H_MIN_CLIP,
     )
+
+    linear_step_limit = dynamics.linear_timestep_limit()
 
     def to_spec(field: torch.Tensor) -> torch.Tensor:
         return torch.fft.rfft2(field)
@@ -1509,8 +1510,7 @@ def simulate_swe_2d(  # noqa: PLR0912, PLR0915
             break
 
         step_dt = cfl * min(dx, dy) / max_speed
-        if nu > 0:
-            step_dt = min(step_dt, 2.5 / (nu * max_retained_k2))
+        step_dt = min(step_dt, linear_step_limit)
         step_dt = min(step_dt, T - t)
         if return_timeseries and next_save_idx < expected_frames:
             step_dt = min(step_dt, save_times[next_save_idx] - t)

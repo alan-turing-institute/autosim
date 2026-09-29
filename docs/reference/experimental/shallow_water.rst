@@ -81,8 +81,11 @@ later rollout loss through the intervening physics solves. This correction
 represents the net finite-interval residual, not an instantaneous forcing.
 
 The interface rejects non-finite states, states needing the generator's
-clipping, and steps exceeding the wave/advection CFL or viscosity bound. It
-does not silently detach, sanitize or adapt a learned state. These checks
+clipping, and steps exceeding the wave/advection CFL or the combined linear
+viscosity/drag/Coriolis bound. The generator caps its adaptive steps with the
+same linear bound, including the maximum absolute periodic Coriolis value.
+The differentiable interface does not silently detach, sanitize or adapt a
+learned state. These checks
 are safeguards, not a general stability guarantee; their control flow is not
 differentiated and currently synchronizes on CUDA. Fixed-step and adaptive
 forecasts need not be bitwise identical over a full forecast interval.

@@ -96,7 +96,8 @@ def advance_swe_2d(  # noqa: PLR0915
         TypeError: Physics or time parameters are supplied as tensors rather
             than fixed Python scalars.
         ValueError: Invalid configuration, invalid raw state at any RK stage
-            or after filtering, or a timestep violating the CFL/viscosity bound.
+            or after filtering, or a timestep violating the CFL or combined
+            viscosity/drag/Coriolis bound.
             These validation branches are not differentiated. The retained
             state evolution is differentiable within the accepted domain.
 
@@ -175,8 +176,11 @@ def advance_swe_2d(  # noqa: PLR0915
         height_floor=H_MIN_CLIP,
     )
     step_dt = dt / n_substeps
-    if nu > 0 and step_dt * nu * float(K2[mask].max()) > 2.5:
-        msg = "Fixed step exceeds the viscosity bound; increase n_substeps"
+    if step_dt > operators.linear_timestep_limit():
+        msg = (
+            "Fixed step exceeds the combined linear viscosity/drag/Coriolis bound; "
+            "increase n_substeps"
+        )
         raise ValueError(msg)
     dx = min(Lx / nx, Ly / ny)
 
