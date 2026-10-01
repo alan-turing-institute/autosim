@@ -44,6 +44,8 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
     colorbar_mode_uq: Literal["none", "row"] = "none",
     channel_names: list[str] | None = None,
     preserve_aspect: bool = False,
+    true_label: str = "Ground Truth",
+    pred_label: str = "Prediction",
 ):
     """Create a video comparing ground truth and predicted spatiotemporal time series.
 
@@ -72,6 +74,8 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
             ratio of the data so the image fills the panel without distortion. If False
             (default), panels are square and the image is stretched to fill via
             ``aspect='auto'``.
+        true_label: Row label used for ``true``.
+        pred_label: Row label used for ``pred``.
 
     Returns:
         Animation object that can be displayed in notebooks.
@@ -154,11 +158,13 @@ def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912
         diff_norm = TwoSlopeNorm(vmin=-diff_span, vcenter=0, vmax=diff_span)
 
     rows_to_plot: list[tuple[np.ndarray | Tensor | None, str, str]] = [
-        (true_batch, "Ground Truth", cmap),
+        (true_batch, true_label, cmap),
     ]
     if pred is not None:
-        rows_to_plot.append((pred_batch, "Prediction", cmap))
-        rows_to_plot.append((diff_batch, "Difference (True - Pred)", "RdBu"))
+        rows_to_plot.append((pred_batch, pred_label, cmap))
+        rows_to_plot.append(
+            (diff_batch, f"Difference ({true_label} - {pred_label})", "RdBu")
+        )
     if pred_uq is not None:
         rows_to_plot.append((pred_uq_batch, pred_uq_label, "inferno"))
     total_rows = len(rows_to_plot)
