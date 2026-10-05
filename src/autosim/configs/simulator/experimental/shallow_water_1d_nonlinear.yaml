@@ -1,0 +1,23 @@
+_target_: autosim.experimental.simulations.ShallowWater1D
+return_timeseries: true
+log_level: warning
+nx: 512
+L: 1.0
+T: 1.0
+dt_save: 0.01
+dt_max: 0.001
+cfl: 0.4
+g: 1.0
+
+# Relative height increments of 0.3 to 0.8 generate nonlinear wave transients.
+# These bounds vary initial conditions, independently of the physical scalar g.
+initial_condition_kwargs:
+  h_mean: 1.0
+  amplitude_range: [0.3, 0.8]
+  width_fraction_range: [0.03, 0.08]
+  position_fraction_range: [0.0, 1.0]
+
+# Gravity changes wave speed; it does not by itself select a chaotic regime.
+# Flat bed, periodic boundaries, no forcing or Coriolis.
+parameters_range:
+  g: [0.5, 2.0]
