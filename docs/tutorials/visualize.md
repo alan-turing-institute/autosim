@@ -28,6 +28,10 @@ uv run autosim [...] ++visualize.file_ext=gif
 
 ## One-dimensional fields
 
+For governing equations and model-specific run examples, see
+[Burgers1D](../reference/experimental/burgers_1d.rst) and
+[ShallowWater1D](../reference/experimental/shallow_water_1d.rst).
+
 For trajectories with one singleton spatial axis, the CLI automatically saves
 space-time heatmaps as `examples/<split>/batch_<index>.png`. This applies to the
 new 1D simulators and the existing 1D field simulators. The `file_ext` setting
