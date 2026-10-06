@@ -1,0 +1,22 @@
+_target_: autosim.experimental.simulations.KuramotoSivashinsky1D
+return_timeseries: true
+log_level: warning
+nx: 128
+L: 22.0
+T: 100.0
+dt_save: 0.5
+dt_max: 0.1
+nu: 1.0
+warmup_time: 100.0
+# Accept only samples passing this finite-time diagnostic; failures raise.
+# This numerical criterion is not a proof of asymptotic chaos for every field.
+chaos_validation_time: 200.0
+lyapunov_threshold: 0.01
+activity_threshold: 1.0e-6
+initial_condition_kwargs:
+  n_modes: 8
+  spectral_decay: 1.5
+  peak_amplitude_range: [0.5, 1.0]
+# L=22, nu=1 targets the established chaotic benchmark, without external forcing.
+parameters_range:
+  nu: [1.0, 1.0]

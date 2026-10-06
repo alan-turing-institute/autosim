@@ -11,10 +11,11 @@ from typing import Any, cast
 import hydra
 import torch
 from hydra.utils import get_original_cwd, instantiate
+from matplotlib import pyplot as plt
 from omegaconf import DictConfig, OmegaConf
 
 from autosim.simulations.base import SpatioTemporalSimulator
-from autosim.utils import plot_spatiotemporal_video
+from autosim.utils import plot_spatiotemporal_1d, plot_spatiotemporal_video
 
 if not OmegaConf.has_resolver("shortuuid"):
     OmegaConf.register_new_resolver(
@@ -136,7 +137,7 @@ def save_example_videos(
     visualize_cfg: Any | None,
     channel_names: list[str] | None = None,
 ) -> None:
-    """Optionally render example videos for selected batch indices.
+    """Render example videos, or PNG space-time plots for 1D trajectories.
 
     Expected data shape is ``[batch, time, x, y, channels]``.
     """
@@ -165,13 +166,16 @@ def save_example_videos(
     if not batch_indices:
         return
 
+    is_1d = (data.shape[2] > 1 and data.shape[3] == 1) or (
+        data.shape[2] == 1 and data.shape[3] > 1
+    )
     fps = int(visualize_cfg.get("fps", 5))
-    if fps <= 0:
+    if not is_1d and fps <= 0:
         msg = "visualize.fps must be positive."
         raise ValueError(msg)
 
     file_ext = str(visualize_cfg.get("file_ext", "gif")).lstrip(".").lower()
-    if file_ext not in {"gif", "mp4"}:
+    if not is_1d and file_ext not in {"gif", "mp4"}:
         msg = "visualize.file_ext must be one of ['gif', 'mp4']."
         raise ValueError(msg)
 
@@ -187,8 +191,20 @@ def save_example_videos(
         resolved_channel_names = [str(name) for name in configured_channel_names]
 
     for idx in batch_indices:
-        save_path = videos_dir / f"batch_{idx}.{file_ext}"
+        save_path = videos_dir / f"batch_{idx}.{'png' if is_1d else file_ext}"
         if save_path.exists() and not overwrite:
+            continue
+        if is_1d:
+            xs, times = split_payload.get("x"), split_payload.get("times")
+            figure = plot_spatiotemporal_1d(
+                true=data,
+                batch_idx=idx,
+                x=xs[idx] if xs is not None else None,
+                times=times[idx] if times is not None else None,
+                save_path=str(save_path),
+                channel_names=resolved_channel_names,
+            )
+            plt.close(figure)
             continue
         plot_spatiotemporal_video(
             true=data,

@@ -1,0 +1,23 @@
+_target_: autosim.experimental.simulations.Burgers1D
+return_timeseries: true
+log_level: warning
+nx: 256
+L: 1.0
+T: 1.0
+dt_save: 0.01
+dt_max: 0.005
+cfl: 0.4
+nu: 0.1
+
+# FNO Burgers covariance, projected to zero spatial mean.
+# No per-sample peak normalization; change to sine or fourier for other families.
+initial_condition: gaussian_random_field
+initial_condition_kwargs:
+  alpha: 2.0
+  tau: 5.0
+  sigma: 25.0
+  zero_mean: true
+
+# Physical parameters are separate from the initial-field distribution.
+parameters_range:
+  nu: [0.1, 0.1]

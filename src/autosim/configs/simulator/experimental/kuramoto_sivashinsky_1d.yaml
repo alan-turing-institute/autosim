@@ -1,0 +1,18 @@
+_target_: autosim.experimental.simulations.KuramotoSivashinsky1D
+return_timeseries: true
+log_level: warning
+nx: 128
+L: 22.0
+T: 100.0
+dt_save: 0.5
+dt_max: 0.1
+nu: 1.0
+warmup_time: 0.0
+chaos_validation_time: 0.0
+initial_condition_kwargs:
+  n_modes: 8
+  spectral_decay: 1.5
+  peak_amplitude_range: [0.5, 1.0]
+# Fixed standard KS coefficients; raw initial states are recorded at time zero.
+parameters_range:
+  nu: [1.0, 1.0]
