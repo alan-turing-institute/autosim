@@ -173,6 +173,9 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
     assert "experimental/shallow_water_1d" in output_lines
     assert "experimental/burgers_1d_nonlinear" in output_lines
     assert "experimental/shallow_water_1d_nonlinear" in output_lines
+    assert "experimental/kuramoto_sivashinsky_1d" in output_lines
+    assert "experimental/kuramoto_sivashinsky_1d_chaotic" in output_lines
+    assert "experimental/kuramoto_sivashinsky_1d_stable" in output_lines
     assert "experimental/shallow_water2d_forced" in output_lines
     assert "experimental/shallow_water2d_crps_32" in output_lines
     assert "experimental/shallow_water2d_crps_64" in output_lines
@@ -187,6 +190,9 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
         "shallow_water_1d",
         "burgers_1d_nonlinear",
         "shallow_water_1d_nonlinear",
+        "kuramoto_sivashinsky_1d",
+        "kuramoto_sivashinsky_1d_chaotic",
+        "kuramoto_sivashinsky_1d_stable",
     ],
 )
 def test_1d_configs_generate_fields_stats_and_png(
@@ -197,6 +203,9 @@ def test_1d_configs_generate_fields_stats_and_png(
         repo_root / "src/autosim/configs/simulator/experimental" / f"{config_name}.yaml"
     )
     config.nx, config.T, config.dt_save = 32, 0.02, 0.01
+    if config_name.startswith("kuramoto_sivashinsky"):
+        # Numerical regime/screening is checked at full settings in solver tests.
+        config.warmup_time, config.chaos_validation_time = 0.0, 0.0
     sim = build_simulator(config)
     splits = generate_dataset_splits(sim, 1, 1, 1, base_seed=5)
     stats = compute_normalization_stats(

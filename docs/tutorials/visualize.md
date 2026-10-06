@@ -30,7 +30,9 @@ uv run autosim [...] ++visualize.file_ext=gif
 
 For governing equations and model-specific run examples, see
 [Burgers1D](../reference/experimental/burgers_1d.rst) and
-[ShallowWater1D](../reference/experimental/shallow_water_1d.rst).
+[ShallowWater1D](../reference/experimental/shallow_water_1d.rst), plus
+[KuramotoSivashinsky1D](../reference/experimental/kuramoto_sivashinsky_1d.rst)
+for deterministic chaotic dynamics and a stable control.
 
 For trajectories with one singleton spatial axis, the CLI automatically saves
 space-time heatmaps as `examples/<split>/batch_<index>.png`. This applies to the
@@ -169,3 +171,42 @@ uv run autosim simulator=experimental/shallow_water_1d_nonlinear \
 
 Lower viscosity or narrower initial features require spatial convergence checks;
 a smaller timestep alone cannot compensate for insufficient grid resolution.
+
+### Nonlinear transients and deterministic chaos
+
+The 1D presets cover several different behaviors:
+
+| Model/preset | Description |
+| --- | --- |
+| Burgers | Decaying nonlinear advection–diffusion transients |
+| Shallow water | Nonlinear gravity-wave and shock transients |
+| KS stable control | Relaxation toward the conserved spatial mean |
+| KS chaotic preset | Deterministic dynamics screened for sustained activity and positive finite-time Lyapunov growth |
+
+Nonlinear transients describe finite-time wave steepening, propagation and
+interactions. Chaotic dynamics are also nonlinear, with sustained sensitivity
+to small initial perturbations. A complicated heatmap or transient growth alone
+does not establish chaos. A deterministic system can be chaotic without process
+noise or external forcing.
+
+The standard periodic KS equation is `u_t + u*u_x + u_xx + nu*u_xxxx = 0`.
+Its destabilizing second derivative and stabilizing fourth derivative can
+balance to maintain evolving structures. The chaotic preset uses the established
+`L=22, nu=1` case, with a deterministic 100-unit warm-up and finite-time activity
+and Lyapunov checks. It raises on failed checks, retaining the diagnostics and
+raw sampled initial fields in the dataset payload. These acceptance criteria
+are numerical evidence, not a universal mathematical guarantee of chaos.
+
+```bash
+uv run autosim simulator=experimental/kuramoto_sivashinsky_1d_chaotic \
+  dataset.n_train=4 dataset.n_valid=1 dataset.n_test=1 seed=7
+
+uv run autosim simulator=experimental/kuramoto_sivashinsky_1d_stable \
+  dataset.n_train=4 dataset.n_valid=1 dataset.n_test=1 seed=7
+```
+
+KS uses the same 1D trajectory layout and automatic PNG visualization. Recorded
+time zero is the actual post-warm-up forecast state; `seed_fields` retains the
+raw fields and `warmup_times` gives the warm-up duration. Direct `rollout` applies
+no warm-up or screening. See the [KS reference](../reference/experimental/kuramoto_sivashinsky_1d.rst)
+for equations, parameter meanings, examples and diagnostic limitations.

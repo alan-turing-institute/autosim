@@ -8,6 +8,11 @@ from .cox_ingersoll_ross import CoxIngersollRoss
 from .double_well import DoubleWell
 from .gray_scott_stochastic import GrayScottStochastic
 from .hydrodynamics_2d import Hydrodynamics2D
+from .kuramoto_sivashinsky_1d import (
+    KuramotoSivashinsky1D,
+    estimate_ks_lyapunov,
+    simulate_kuramoto_sivashinsky_1d,
+)
 from .lattice_boltzmann import LatticeBoltzmann
 from .lorenz96 import Lorenz96
 from .lorenz96_correlated import Lorenz96Correlated
@@ -21,6 +26,7 @@ ALL_SIMULATORS = [
     Burgers1D,
     CompressibleFluid2D,
     Hydrodynamics2D,
+    KuramotoSivashinsky1D,
     LatticeBoltzmann,
     ShallowWater2D,
     ShallowWater1D,
@@ -44,6 +50,7 @@ __all__ = [
     "DoubleWell",
     "GrayScottStochastic",
     "Hydrodynamics2D",
+    "KuramotoSivashinsky1D",
     "LatticeBoltzmann",
     "Lorenz96",
     "Lorenz96Correlated",
@@ -52,7 +59,9 @@ __all__ = [
     "ShallowWater1D",
     "ShallowWater2D",
     "advance_swe_2d",
+    "estimate_ks_lyapunov",
     "simulate_burgers_1d",
+    "simulate_kuramoto_sivashinsky_1d",
     "simulate_shallow_water_1d",
 ]
 

@@ -40,6 +40,7 @@ chapters:
           - file: reference/experimental/burgers_1d
           - file: reference/experimental/compressible_fluid
           - file: reference/experimental/hydrodynamics_2d
+          - file: reference/experimental/kuramoto_sivashinsky_1d
           - file: reference/experimental/lattice_boltzmann
           - file: reference/experimental/shallow_water
           - file: reference/experimental/shallow_water_1d

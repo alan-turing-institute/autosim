@@ -160,6 +160,14 @@ class Deterministic1DSimulator(SpatioTemporalSimulator):
     def _rollout(self, state: torch.Tensor, parameter: float) -> torch.Tensor:
         """Evolve a supplied field, retaining the initial frame."""
 
+    def _prepare_initial_conditions(
+        self,
+        states: torch.Tensor,
+        parameters: torch.Tensor,  # noqa: ARG002
+    ) -> tuple[torch.Tensor, dict]:
+        """Prepare dataset forecast states and optional sampling metadata."""
+        return states, {}
+
     def _forward(self, x: torch.Tensor) -> torch.Tensor:
         """Evolve the deterministic reference field for one physical parameter."""
         if x.shape != (1, 1):
@@ -185,9 +193,15 @@ class Deterministic1DSimulator(SpatioTemporalSimulator):
         Invalid evolutions raise rather than silently changing the distribution.
         """
         states = self.sample_initial_conditions(n, random_seed)
-        parameters = self.sample_inputs(n, random_seed)
+        # SciPy's variable-range scaler cannot reduce an empty sample array.
+        parameters = (
+            self.sample_inputs(n, random_seed)
+            if n
+            else torch.empty((0, 1), dtype=torch.float32)
+        )
         times = self.times if self.return_timeseries else self.times[-1:]
         with torch.no_grad():
+            states, metadata = self._prepare_initial_conditions(states, parameters)
             trajectories = [
                 self._rollout(state, float(parameter[0]))
                 for state, parameter in zip(states, parameters, strict=True)
@@ -204,4 +218,5 @@ class Deterministic1DSimulator(SpatioTemporalSimulator):
             "constant_fields": None,
             "x": repeat(self.x, "x -> b x", b=n),
             "times": repeat(times, "t -> b t", b=n),
+            **metadata,
         }
