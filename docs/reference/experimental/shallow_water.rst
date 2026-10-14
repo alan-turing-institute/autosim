@@ -280,6 +280,43 @@ Generate the distribution-matched control with:
 
    uv run autosim --config-name=generate_data_swe_crps_deterministic_32
 
+Additional 64 by 64 training trajectories
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``generate_data_swe_ae_diversity_64`` prepares an additive training-only dataset
+for an autoencoder data-diversity comparison. It matches the existing
+200/20/20-trajectory, 321-frame SWE dataset: fixed physical parameters, viscosity
+``nu=1e-4``, initial PV ring at mode 4 with bandwidth 1.5, and white-in-time
+vortical forcing at mode 3 with bandwidth 0.7 and energy rate ``1.5e-3``.
+It retains 321 frames from time 40 through 120 at intervals of 0.25. Integration
+uses the solver's float64 default; saved fields are float32.
+
+This preset generates **200 additional training trajectories**, not a replacement
+200/20/20 dataset. Both held-out splits are empty. The original validation/test
+trajectories and normalization statistics must remain unchanged for the
+controlled comparison. The automatically generated ``stats.yml`` describes only
+the new training trajectories; do not substitute it for the original training
+normalization or derive normalization from validation/test data.
+
+The seed is ``20261014``, outside the original seed-0 dataset's split/retry
+namespaces (0 through 12002). Each trajectory draws a new balanced initial PV
+field and forcing history; the physical parameters are not resampled. The seed
+identifies the sequential generation stream, not a per-trajectory seed.
+
+After reviewing the configuration, generation can be requested with:
+
+.. code-block:: console
+
+   uv run autosim --config-name=generate_data_swe_ae_diversity_64
+
+The default output directory includes a fresh identifier and ``overwrite=false``.
+If overriding ``dataset.output_dir``, use a new directory: existing dataset files
+and metadata are protected before simulation or configuration writing begins.
+Hydra's own run logs use a separate, uniquely named directory so they cannot
+modify the original dataset's records when only ``dataset.output_dir`` is changed.
+Videos are disabled by default; an optional training
+example can be requested with ``visualize.enabled=true visualize.max_examples=1``.
+
 .. automodule:: autosim.experimental.simulations.shallow_water
    :members:
    :undoc-members:

@@ -1,0 +1,32 @@
+defaults:
+  - generate_data_swe_crps_64
+  - _self_
+
+# Match the existing 200/20/20, 321-frame dataset, not the shorter 64 preset.
+# The solver retains its float64 integration default; saved fields are float32.
+simulator:
+  T: 120.0
+  nu: 1.0e-4
+
+# Additional training trajectories only. Keep the original held-out splits.
+dataset:
+  output_dir: outputs/${now:%Y-%m-%d}/swe_stochastic_64_ae_diversity_${shortuuid:7}
+  n_train: 200
+  n_valid: 0
+  n_test: 0
+  ensure_exact_n: true
+
+# Distinct from the original seed 0 and its split/retry namespaces (0--12002).
+seed: 20261014
+overwrite: false
+
+visualize:
+  enabled: false
+  split: train
+  overwrite: false
+
+# Hydra writes its own records before entering the CLI's overwrite guard.
+# Keep those separate even if dataset.output_dir is accidentally reused.
+hydra:
+  run:
+    dir: outputs/${now:%Y-%m-%d}/swe_ae_diversity_runs/${shortuuid:7}
