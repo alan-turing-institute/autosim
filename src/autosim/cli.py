@@ -607,6 +607,24 @@ def combine_stratified_splits(
 @hydra.main(version_base=None, config_path="configs", config_name="generate_data")
 def _generate_main(cfg: Any) -> None:
     """Generate simulation datasets from a Hydra-configured simulator."""
+    output_dir = Path(cfg.dataset.output_dir)
+    if not output_dir.is_absolute():
+        output_dir = Path(get_original_cwd()) / output_dir
+    if not cfg.overwrite and any(
+        (output_dir / name).exists()
+        for name in (
+            "resolved_config.yaml",
+            "stats.yml",
+            "train/data.pt",
+            "valid/data.pt",
+            "test/data.pt",
+        )
+    ):
+        msg = (
+            f"Refusing to overwrite existing data or metadata in '{output_dir}'. "
+            "Use a new output directory or set overwrite=true to replace them."
+        )
+        raise FileExistsError(msg)
     channel_names_for_visualization: list[str] | None = None
     stratify_cfg = cfg.get("stratify")
     if stratify_cfg is not None and bool(stratify_cfg.get("enabled", False)):
@@ -662,10 +680,6 @@ def _generate_main(cfg: Any) -> None:
             base_seed=cfg.seed,
             ensure_exact_n=bool(cfg.dataset.get("ensure_exact_n", False)),
         )
-
-    output_dir = Path(cfg.dataset.output_dir)
-    if not output_dir.is_absolute():
-        output_dir = Path(get_original_cwd()) / output_dir
 
     save_resolved_config(cfg=cfg, output_dir=output_dir)
 

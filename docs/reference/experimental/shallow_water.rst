@@ -280,6 +280,41 @@ Generate the distribution-matched control with:
 
    uv run autosim --config-name=generate_data_swe_crps_deterministic_32
 
+Larger SWE64 representation-training pool
+-----------------------------------------
+
+``generate_data_swe_ae_pretraining_64`` retains 321 states from time 40
+through 120 at interval 0.25 for 1,000 new training trajectories. It fixes
+the physical parameters, uses independently sampled balanced random-PV
+states and vortical forcing realizations, and overrides viscosity to
+``nu=1e-4`` to match the existing long-window dataset. Integration remains
+float64 and saved fields are float32. No validation/test trajectories are
+generated; consumers can reuse a separate held-out dataset and its training
+normalization. The generated ``stats.yml`` describes only the new pool.
+
+The default seed 20280000 avoids the seed/retry namespaces of the original
+seed-0 dataset and the earlier seed-20261014, 200-trajectory pool. Hydra
+records use a separate directory; existing dataset metadata and tensors are
+protected unless ``overwrite=true`` is explicitly supplied.
+
+Compose without running simulations:
+
+.. code-block:: console
+
+   uv run autosim --config-name=generate_data_swe_ae_pretraining_64 --cfg job
+
+The CLI currently integrates trajectories serially. CPU parallelism can use
+independent processes generating fixed-size shards with explicit seeds and
+separate output directories. For example, ten 100-trajectory shards can use
+seeds ``20280000 + 6003*i`` for shard indices 0 through 9. Each shard reserves
+three split/retry namespaces of ``max(100,20*100)+1 = 2001`` seeds, so the
+namespaces do not overlap. Fix these shard identities independently of the
+number of simultaneous workers. Use one Torch/BLAS thread per process and
+combine shards in index order after checking settings, counts and hashes.
+Sharded samples differ from a single 1,000-trajectory call; record the shard
+plan as part of dataset identity. No multiprocessing or solver defaults are
+changed by this preset.
+
 .. automodule:: autosim.experimental.simulations.shallow_water
    :members:
    :undoc-members:
