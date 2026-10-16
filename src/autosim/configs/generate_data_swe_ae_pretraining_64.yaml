@@ -8,12 +8,12 @@ simulator:
   T: 120.0
   nu: 1.0e-4
 
-# A separate representation-training pool; reuse existing held-out splits.
+# A standalone representation-training dataset with fresh held-out splits.
 dataset:
   output_dir: outputs/${now:%Y-%m-%d}/swe_stochastic_64_ae_pretraining_${shortuuid:7}
   n_train: 1000
-  n_valid: 0
-  n_test: 0
+  n_valid: 20
+  n_test: 20
   ensure_exact_n: true
 
 # Beyond the original seed-0 namespaces and the extra seed-20261014 pool,

@@ -288,9 +288,10 @@ through 120 at interval 0.25 for 1,000 new training trajectories. It fixes
 the physical parameters, uses independently sampled balanced random-PV
 states and vortical forcing realizations, and overrides viscosity to
 ``nu=1e-4`` to match the existing long-window dataset. Integration remains
-float64 and saved fields are float32. No validation/test trajectories are
-generated; consumers can reuse a separate held-out dataset and its training
-normalization. The generated ``stats.yml`` describes only the new pool.
+float64 and saved fields are float32. The preset generates 1,000 training,
+20 validation and 20 test trajectories in separate seed namespaces. This is
+a new standalone dataset; it does not modify existing forecasting datasets.
+The generated ``stats.yml`` uses only its 1,000 training trajectories.
 
 The default seed 20280000 avoids the seed/retry namespaces of the original
 seed-0 dataset and the earlier seed-20261014, 200-trajectory pool. Hydra
@@ -303,17 +304,21 @@ Compose without running simulations:
 
    uv run autosim --config-name=generate_data_swe_ae_pretraining_64 --cfg job
 
-The CLI currently integrates trajectories serially. CPU parallelism can use
-independent processes generating fixed-size shards with explicit seeds and
-separate output directories. For example, ten 100-trajectory shards can use
-seeds ``20280000 + 6003*i`` for shard indices 0 through 9. Each shard reserves
-three split/retry namespaces of ``max(100,20*100)+1 = 2001`` seeds, so the
-namespaces do not overlap. Fix these shard identities independently of the
-number of simultaneous workers. Use one Torch/BLAS thread per process and
-combine shards in index order after checking settings, counts and hashes.
-Sharded samples differ from a single 1,000-trajectory call; record the shard
-plan as part of dataset identity. No multiprocessing or solver defaults are
-changed by this preset.
+Generate directly using 16 independent CPU workers, without manual sharding:
+
+.. code-block:: console
+
+   CUDA_VISIBLE_DEVICES= OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+     uv run autosim --config-name=generate_data_swe_ae_pretraining_64 \
+     dataset.num_workers=16
+
+The worker count is an execution override, not a solver parameter. Omitted
+worker settings retain legacy serial execution; explicit positive counts
+use the same per-trajectory seed policy regardless of concurrency. This
+produces different stochastic realizations from the earlier proposed
+ten-shard scheme, which is not needed for this preset. Record the resolved
+configuration and source revision with the generated dataset. See
+:doc:`../core/cli` for CPU, memory and library-API details.
 
 .. automodule:: autosim.experimental.simulations.shallow_water
    :members:

@@ -43,13 +43,14 @@ def test_pool_matches_baseline_physics_and_preserves_all_frames():
     assert (times[0], times[-1]) == (40.0, 120.0)
     assert (cfg.dataset.n_train, cfg.dataset.n_valid, cfg.dataset.n_test) == (
         1000,
-        0,
-        0,
+        20,
+        20,
     )
     assert cfg.dataset.ensure_exact_n
     assert not cfg.overwrite
     assert not cfg.visualize.enabled
     assert not cfg.visualize.overwrite
+    assert cfg.dataset.num_workers is None
 
 
 def test_pool_seed_and_hydra_output_are_separate(tmp_path):
