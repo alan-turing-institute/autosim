@@ -8,6 +8,7 @@ dataset:
   n_valid: 8
   n_test: 8
   ensure_exact_n: true
+  num_workers: null
 
 seed: 0
 overwrite: false
