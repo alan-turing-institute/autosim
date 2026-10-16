@@ -68,6 +68,20 @@ class ThreadSimulator(IdentitySimulator):
         return torch.tensor([[torch.get_num_threads(), os.getpid()]], dtype=torch.int64)
 
 
+class InconsistentOutputSimulator(IdentitySimulator):
+    def __init__(self, first: torch.Tensor, second: torch.Tensor):
+        super().__init__()
+        self.outputs = [first, second]
+
+    def _forward(self, x):
+        return self.outputs[int(x[0, 0])]
+
+
+class DefaultDTypeSimulator(IdentitySimulator):
+    def _forward(self, x):
+        return torch.rand((1, 1)) + x
+
+
 class RetrySimulator(SpatioTemporalSimulator):
     def __init__(self):
         super().__init__({"x": (0.0, 1.0)}, ["y"], log_level="warning")
@@ -197,6 +211,84 @@ def test_previous_result_buffer_is_not_copied_to_workers():
     sim.__dict__["results_tensor"] = lambda value: value
     result, _ = sim.forward_batch(torch.ones(2, 1), num_workers=2, random_seed=42)
     assert torch.equal(result, torch.full((2, 1), 2.0))
+
+
+@pytest.mark.parametrize("workers", [1, 2])
+@pytest.mark.parametrize("second", [torch.ones(1, 1), torch.ones(1, 1, 2)])
+def test_inconsistent_output_shapes_are_rejected(workers, second):
+    sim = InconsistentOutputSimulator(torch.ones(1, 2), second)
+    with pytest.raises(ValueError, match=r"sample 1.*shape.*expected"):
+        sim.forward_batch(
+            torch.tensor([[0.0], [1.0]]), num_workers=workers, random_seed=42
+        )
+
+
+@pytest.mark.parametrize("workers", [1, 2])
+@pytest.mark.parametrize(
+    ("first_dtype", "second_dtype"),
+    [(torch.float32, torch.float64), (torch.float64, torch.float32)],
+)
+def test_inconsistent_output_dtypes_are_rejected(workers, first_dtype, second_dtype):
+    first = torch.zeros(1, 1, dtype=first_dtype)
+    second = torch.full(
+        (1, 1), 1e40 if second_dtype == torch.float64 else 1.0, dtype=second_dtype
+    )
+    sim = InconsistentOutputSimulator(first, second)
+    with pytest.raises(ValueError, match=r"sample 1.*dtype.*expected"):
+        sim.forward_batch(
+            torch.tensor([[0.0], [1.0]]), num_workers=workers, random_seed=42
+        )
+
+
+def test_legacy_serial_mixed_dtype_promotion_is_unchanged():
+    sim = InconsistentOutputSimulator(
+        torch.zeros(1, 1, dtype=torch.float32),
+        torch.full((1, 1), 1e40, dtype=torch.float64),
+    )
+    result, _ = sim.forward_batch(torch.tensor([[0.0], [1.0]]))
+    assert result.dtype == torch.float64
+    assert torch.isfinite(result).all()
+
+
+def test_validation_error_closes_pending_result_generator(monkeypatch):
+    closed = []
+
+    def inconsistent_results(*_args):
+        try:
+            yield np.ones((1, 2), dtype=np.float32)
+            yield np.ones((1, 1), dtype=np.float32)
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr("autosim.parallel._ordered_results", inconsistent_results)
+    with pytest.raises(ValueError, match=r"sample 1.*shape") as caught:
+        IdentitySimulator().forward_batch(
+            torch.ones(2, 1), num_workers=2, random_seed=42
+        )
+    # Retaining the traceback must not postpone cleanup until garbage collection.
+    assert caught.value.__traceback__ is not None
+    assert closed == [True]
+
+
+def test_workers_preserve_non_default_torch_dtype():
+    x = torch.zeros(3, 1, dtype=torch.float32)
+    original_dtype = torch.get_default_dtype()
+    original_threads = torch.get_num_threads()
+    try:
+        torch.set_default_dtype(torch.float64)
+        expected, _ = DefaultDTypeSimulator().forward_batch(
+            x, num_workers=1, random_seed=42
+        )
+        actual, valid = DefaultDTypeSimulator().forward_batch(
+            x, num_workers=2, random_seed=42
+        )
+        assert actual.dtype == expected.dtype == torch.float64
+        assert torch.equal(actual, expected)
+        assert torch.equal(valid, x)
+        assert torch.get_default_dtype() == torch.float64
+        assert torch.get_num_threads() == original_threads
+    finally:
+        torch.set_default_dtype(original_dtype)
 
 
 def test_swe_reproducible_with_auxiliary_outputs():

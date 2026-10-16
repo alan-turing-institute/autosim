@@ -17,7 +17,7 @@ from tqdm import tqdm
 from autosim.validation import set_random_seed
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
 
     from autosim.simulations.base import Simulator
 
@@ -35,9 +35,10 @@ def validate_num_workers(num_workers: int | None) -> None:
         raise ValueError(msg)
 
 
-def _initialize_worker(simulator: bytes) -> None:
+def _initialize_worker(simulator: bytes, default_dtype: torch.dtype) -> None:
     global _WORKER_SIMULATOR  # noqa: PLW0603 -- process-local immutable template
     _WORKER_SIMULATOR = simulator
+    torch.set_default_dtype(default_dtype)
     torch.set_num_threads(1)
     torch.set_num_interop_threads(1)
 
@@ -85,12 +86,13 @@ def _ordered_results(
     seeds: list[int],
     num_workers: int,
     allow_failures: bool,
-) -> Iterator[np.ndarray | None]:
+    default_dtype: torch.dtype,
+) -> Generator[np.ndarray | None, None, None]:
     with ProcessPoolExecutor(
         max_workers=min(num_workers, len(inputs)),
         mp_context=multiprocessing.get_context("spawn"),
         initializer=_initialize_worker,
-        initargs=(simulator,),
+        initargs=(simulator, default_dtype),
     ) as executor:
         pending = deque()
         cursor = 0
@@ -106,6 +108,32 @@ def _ordered_results(
                 )
                 cursor += 1
             yield pending.popleft().result()
+
+
+def _prepare_output(
+    output: torch.Tensor | None,
+    sample: torch.Tensor,
+    *,
+    size: int,
+    index: int,
+) -> torch.Tensor:
+    """Allocate or validate the batch buffer before copying a result."""
+    if output is None:
+        output = torch.empty((size, *sample.shape[1:]), dtype=sample.dtype)
+    expected_shape = (1, *output.shape[1:])
+    if sample.shape != expected_shape:
+        msg = (
+            f"Simulation sample {index} returned shape {tuple(sample.shape)}; "
+            f"expected {expected_shape}."
+        )
+        raise ValueError(msg)
+    if sample.dtype != output.dtype:
+        msg = (
+            f"Simulation sample {index} returned dtype {sample.dtype}; "
+            f"expected {output.dtype}."
+        )
+        raise ValueError(msg)
+    return output
 
 
 def forward_batch_cpu(
@@ -140,6 +168,8 @@ def forward_batch_cpu(
         for index in range(len(inputs))
     ]
     old_threads = torch.get_num_threads()
+    default_dtype = torch.get_default_dtype()
+    results: Generator[np.ndarray | None, None, None] | None = None
     try:
         if num_workers == 1:
             torch.set_num_threads(1)
@@ -149,7 +179,7 @@ def forward_batch_cpu(
             )
         else:
             results = _ordered_results(
-                serialized, inputs, seeds, num_workers, allow_failures
+                serialized, inputs, seeds, num_workers, allow_failures, default_dtype
             )
         output = None
         valid_indices = []
@@ -165,10 +195,7 @@ def forward_batch_cpu(
             if result is None:
                 continue
             sample = torch.from_numpy(result)
-            if output is None:
-                output = torch.empty(
-                    (len(inputs), *sample.shape[1:]), dtype=sample.dtype
-                )
+            output = _prepare_output(output, sample, size=len(inputs), index=index)
             output[len(valid_indices)].copy_(sample[0])
             valid_indices.append(index)
         if output is None:
@@ -176,5 +203,11 @@ def forward_batch_cpu(
         sim.results_tensor = output[: len(valid_indices)]
         return sim.results_tensor, inputs[valid_indices]
     finally:
-        if num_workers == 1:
-            torch.set_num_threads(old_threads)
+        try:
+            # Validation can stop iteration early; still close the process pool
+            # even when the caller retains the resulting exception traceback.
+            if results is not None:
+                results.close()
+        finally:
+            if num_workers == 1:
+                torch.set_num_threads(old_threads)

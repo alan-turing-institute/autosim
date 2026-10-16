@@ -19,6 +19,8 @@ sampling (including Latin hypercube sampling) remains in the parent process;
 only the independent trajectory solves run in workers. Spawned processes
 avoid the Python GIL and each uses one Torch thread. Set the environment
 variables above before starting Python to also limit BLAS threads.
+Workers inherit the caller's default Torch dtype, so factories without an
+explicit dtype behave consistently with the one-worker path.
 
 Omitting the option (or using ``null``) preserves the existing serial
 implementation and its RNG stream. Explicit ``num_workers=1`` selects the
@@ -41,6 +43,12 @@ worker count is in flight. The parent fills one result buffer rather than
 retaining every trajectory and then concatenating a second full copy; the
 complete dataset still needs to fit in memory. No extra dataset shards or
 file-format changes are required.
+
+In the opt-in CPU path, all successful results must have the same shape and
+dtype as the first successful result. Inconsistencies raise ``ValueError``
+instead of silently broadcasting or casting into the result buffer. This
+keeps allocation bounded without a second full buffer for dtype promotion.
+The legacy serial path retains its existing concatenation and promotion.
 
 .. automodule:: autosim.cli
    :members:
