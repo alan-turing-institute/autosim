@@ -102,6 +102,8 @@ class ReactionDiffusion(SpatioTemporalSimulator):
         n: int,
         random_seed: int | None = None,
         ensure_exact_n: bool = False,
+        *,
+        num_workers: int | None = None,
     ) -> dict:
         """Reshape to spatiotemporal format.
 
@@ -110,6 +112,7 @@ class ReactionDiffusion(SpatioTemporalSimulator):
             random_seed: Random seed for reproducibility. Defaults to None.
             ensure_exact_n: Whether to resample failed trajectories until exactly ``n``
                 succeed.
+            num_workers: Optional independent-sample CPU execution.
 
         Returns:
             A dictionary containing the reshaped spatiotemporal data, constant
@@ -120,6 +123,7 @@ class ReactionDiffusion(SpatioTemporalSimulator):
             n=n,
             random_seed=random_seed,
             ensure_exact_n=ensure_exact_n,
+            num_workers=num_workers,
         )
 
         # Reshape and permute output

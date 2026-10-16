@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import inspect
 import sys
 import uuid
 from pathlib import Path
@@ -14,6 +15,7 @@ from hydra.utils import get_original_cwd, instantiate
 from matplotlib import pyplot as plt
 from omegaconf import DictConfig, OmegaConf
 
+from autosim.parallel import validate_num_workers
 from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.utils import plot_spatiotemporal_1d, plot_spatiotemporal_video
 
@@ -43,8 +45,22 @@ def generate_dataset_splits(
     n_test: int,
     base_seed: int | None = None,
     ensure_exact_n: bool = False,
+    num_workers: int | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Generate train/valid/test splits from a simulator."""
+    validate_num_workers(num_workers)
+    execution: dict[str, Any] = {}
+    if num_workers is not None:
+        if (
+            "num_workers"
+            not in inspect.signature(sim.forward_samples_spatiotemporal).parameters
+        ):
+            msg = (
+                f"{type(sim).__name__} does not support independent-sample execution; "
+                "leave dataset.num_workers unset for its native batch implementation."
+            )
+            raise ValueError(msg)
+        execution = {"num_workers": num_workers}
     # Reserve disjoint seed ranges so retries in one split cannot collide with
     # initial or retry seeds in another.
     split_seed_stride = (
@@ -60,16 +76,19 @@ def generate_dataset_splits(
         n=n_train,
         random_seed=get_seed(0),
         ensure_exact_n=ensure_exact_n,
+        **execution,
     )
     valid = sim.forward_samples_spatiotemporal(
         n=n_valid,
         random_seed=get_seed(1),
         ensure_exact_n=ensure_exact_n,
+        **execution,
     )
     test = sim.forward_samples_spatiotemporal(
         n=n_test,
         random_seed=get_seed(2),
         ensure_exact_n=ensure_exact_n,
+        **execution,
     )
     return {"train": train, "valid": valid, "test": test}
 
@@ -662,6 +681,7 @@ def _generate_main(cfg: Any) -> None:
                 n_test=n_test_each,
                 base_seed=cfg.seed,
                 ensure_exact_n=bool(cfg.dataset.get("ensure_exact_n", False)),
+                num_workers=cfg.dataset.get("num_workers"),
             )
             per_strata_outputs.append(splits)
 
@@ -677,6 +697,7 @@ def _generate_main(cfg: Any) -> None:
             n_test=cfg.dataset.n_test,
             base_seed=cfg.seed,
             ensure_exact_n=bool(cfg.dataset.get("ensure_exact_n", False)),
+            num_workers=cfg.dataset.get("num_workers"),
         )
 
     output_dir = Path(cfg.dataset.output_dir)

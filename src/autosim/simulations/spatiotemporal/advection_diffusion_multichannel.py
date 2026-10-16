@@ -143,6 +143,8 @@ class AdvectionDiffusionMultichannel(SpatioTemporalSimulator):
         n: int,
         random_seed: int | None = None,
         ensure_exact_n: bool = False,
+        *,
+        num_workers: int | None = None,
     ) -> dict:
         """Produce simulator rollouts along with the sampled parameters.
 
@@ -151,6 +153,7 @@ class AdvectionDiffusionMultichannel(SpatioTemporalSimulator):
             random_seed: Seed for reproducible parameter draws.
             ensure_exact_n: Whether to resample failed trajectories until exactly ``n``
                 succeed.
+            num_workers: Optional independent-sample CPU execution.
 
         Returns:
             Spatiotemporal payload with ``data``, ``constant_scalars``, and
@@ -161,6 +164,7 @@ class AdvectionDiffusionMultichannel(SpatioTemporalSimulator):
             n=n,
             random_seed=random_seed,
             ensure_exact_n=ensure_exact_n,
+            num_workers=num_workers,
         )
 
         channels = 4

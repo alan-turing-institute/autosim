@@ -609,6 +609,8 @@ class GrayScott(SpatioTemporalSimulator):
         n: int,
         random_seed: int | None = None,
         ensure_exact_n: bool = False,
+        *,
+        num_workers: int | None = None,
     ) -> dict:
         """Run multiple trajectories and return `[batch, time, x, y, channels]` data."""
         if not self.return_timeseries:
@@ -618,6 +620,7 @@ class GrayScott(SpatioTemporalSimulator):
             n=n,
             random_seed=random_seed,
             ensure_exact_n=ensure_exact_n,
+            num_workers=num_workers,
         )
 
         timesteps = _compute_snapshot_count(self.T, self.dt, self.snapshot_dt)

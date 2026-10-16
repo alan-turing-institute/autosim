@@ -3,6 +3,7 @@
 import abc
 import logging
 from abc import ABC, abstractmethod
+from typing import Any
 
 import torch
 from scipy.stats import qmc
@@ -10,6 +11,7 @@ from tqdm import tqdm
 
 from autosim.device import TorchDeviceMixin
 from autosim.logging import get_configured_logger
+from autosim.parallel import forward_batch_cpu, validate_num_workers
 from autosim.types import DeviceLike, TensorLike
 from autosim.validation import ValidationMixin, set_random_seed
 
@@ -237,7 +239,12 @@ class Simulator(ABC, ValidationMixin):
         return None
 
     def forward_batch(
-        self, x: TensorLike, allow_failures: bool = True
+        self,
+        x: TensorLike,
+        allow_failures: bool = True,
+        *,
+        num_workers: int | None = None,
+        random_seed: int | None = None,
     ) -> tuple[TensorLike, TensorLike]:
         """Run multiple simulations.
 
@@ -250,11 +257,23 @@ class Simulator(ABC, ValidationMixin):
             allow_failures: Whether to allow failures during simulation. Default is
                 True. When true, failed simulations will return None instead of raising
                 an error. When False, error is raised.
+            num_workers: None preserves legacy serial execution. Positive counts
+                opt into independent CPU samples; 1 avoids starting a process pool.
+            random_seed: Independent-sample seed, invariant to worker count.
 
         Returns:
             Tuple of (simulation_results, valid_input_parameters).
             Only successful simulations are included.
         """
+        validate_num_workers(num_workers)
+        if num_workers is not None or random_seed is not None:
+            return forward_batch_cpu(
+                self,
+                x,
+                num_workers=1 if num_workers is None else num_workers,
+                random_seed=random_seed,
+                allow_failures=allow_failures,
+            )
         self.logger.info("Running batch simulation for %d samples", len(x))
 
         results = []
@@ -386,7 +405,12 @@ class TorchSimulator(Simulator, TorchDeviceMixin):
         return y
 
     def forward_batch(
-        self, x: TensorLike, allow_failures: bool = True
+        self,
+        x: TensorLike,
+        allow_failures: bool = True,
+        *,
+        num_workers: int | None = None,
+        random_seed: int | None = None,
     ) -> tuple[TensorLike, TensorLike]:
         """Run a batch of simulations with device management.
 
@@ -394,13 +418,18 @@ class TorchSimulator(Simulator, TorchDeviceMixin):
             x: Batch of inputs with shape ``(batch_size, in_dim)``.
             allow_failures: Whether to skip failures (True) or raise immediately
                 (False).
+            num_workers: Optional independent-sample CPU execution.
+            random_seed: Independent-sample seed, invariant to worker count.
 
         Returns:
             Tuple of ``(results, valid_inputs)`` residing on ``self.device``.
         """
         (x_device,) = self._move_tensors_to_device(x)
         results, valid_inputs = super().forward_batch(
-            x_device, allow_failures=allow_failures
+            x_device,
+            allow_failures=allow_failures,
+            num_workers=num_workers,
+            random_seed=random_seed,
         )
         results = results.to(self.device)
         self.results_tensor = results
@@ -446,6 +475,8 @@ class SpatioTemporalSimulator(Simulator, abc.ABC):
         n: int,
         random_seed: int | None = None,
         ensure_exact_n: bool = False,
+        *,
+        num_workers: int | None = None,
     ) -> tuple[TensorLike, TensorLike]:
         """Run a batch and optionally retry until exactly ``n`` successes.
 
@@ -453,12 +484,19 @@ class SpatioTemporalSimulator(Simulator, abc.ABC):
             n: Number of successful samples requested.
             random_seed: Base random seed for deterministic sampling.
             ensure_exact_n: Whether to keep resampling failed simulations.
+            num_workers: Optional independent-sample CPU execution.
 
         Returns:
             Tuple of ``(simulation_results, valid_input_parameters)``.
         """
+        validate_num_workers(num_workers)
         x = self.sample_inputs(n, random_seed)
-        y, x_valid = self.forward_batch(x)
+        execution: dict[str, Any] = (
+            {}
+            if num_workers is None
+            else {"num_workers": num_workers, "random_seed": random_seed}
+        )
+        y, x_valid = self.forward_batch(x, **execution)
 
         if not ensure_exact_n or y.shape[0] == n:
             return y, x_valid
@@ -478,7 +516,11 @@ class SpatioTemporalSimulator(Simulator, abc.ABC):
         for retry_round in range(1, self._retry_budget(n) + 1):
             remaining = n - successful
             retry_seed = None if random_seed is None else random_seed + retry_round
-            y_b, x_b = self.forward_batch(self.sample_inputs(remaining, retry_seed))
+            if num_workers is not None:
+                execution = {"num_workers": num_workers, "random_seed": retry_seed}
+            y_b, x_b = self.forward_batch(
+                self.sample_inputs(remaining, retry_seed), **execution
+            )
             recovered = y_b.shape[0]
             failed = remaining - recovered
 
