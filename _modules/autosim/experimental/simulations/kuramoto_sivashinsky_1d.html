@@ -1,0 +1,900 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>autosim.experimental.simulations.kuramoto_sivashinsky_1d &#8212; AutoSim: simulation data generation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=7f8ff830"></script>
+    <script src="../../../../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../../../../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../../../../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/autosim/experimental/simulations/kuramoto_sivashinsky_1d';</script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/AS.png" class="logo__image only-light" alt="AutoSim: simulation data generation - Home"/>
+    <img src="../../../../_static/AS.png" class="logo__image only-dark pst-js-only" alt="AutoSim: simulation data generation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../../../index.html">
+                    Welcome to AutoSim
+                </a>
+            </li>
+        </ul>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../tutorials/visualize.html">Visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../../tutorials/stratified.html">Stratified sampling</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../../reference/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../reference/core/index.html">Core Modules</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/cli.html">autosim.cli</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/device.html">autosim.device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/logging.html">autosim.logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/types.html">autosim.types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/utils.html">autosim.utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/core/validation.html">autosim.validation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../reference/simulations/index.html">Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/base.html">autosim.simulations.base</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/index.html">Spatiotemporal Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/advection_diffusion.html">autosim.simulations.spatiotemporal.advection_diffusion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/advection_diffusion_multichannel.html">autosim.simulations.spatiotemporal.advection_diffusion_multichannel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/gray_scott.html">autosim.simulations.spatiotemporal.gray_scott</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/gross_pitaevskii.html">autosim.simulations.spatiotemporal.gross_pitaevskii</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/navier_stokes_conditioned.html">autosim.simulations.spatiotemporal.navier_stokes_conditioned</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../../reference/simulations/spatiotemporal/reaction_diffusion.html">autosim.simulations.spatiotemporal.reaction_diffusion</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/double_pendulum.html">autosim.simulations.double_pendulum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/epidemic.html">autosim.simulations.epidemic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/flow_problem.html">autosim.simulations.flow_problem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/projectile.html">autosim.simulations.projectile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/simulations/seir.html">autosim.simulations.seir</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../../reference/experimental/index.html">Experimental Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/burgers_1d.html">autosim.experimental.simulations.burgers_1d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/compressible_fluid.html">autosim.experimental.simulations.compressible_fluid</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/hydrodynamics_2d.html">autosim.experimental.simulations.hydrodynamics_2d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/kuramoto_sivashinsky_1d.html">autosim.experimental.simulations.kuramoto_sivashinsky_1d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/lattice_boltzmann.html">autosim.experimental.simulations.lattice_boltzmann</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/shallow_water.html">autosim.experimental.simulations.shallow_water</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../../reference/experimental/shallow_water_1d.html">autosim.experimental.simulations.shallow_water_1d</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim/issues/new?title=Issue%20on%20page%20%2F_modules/autosim/experimental/simulations/kuramoto_sivashinsky_1d.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for autosim.experimental.simulations.kuramoto_sivashinsky_1d</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Deterministic periodic Kuramoto-Sivashinsky evolution and chaos diagnostics.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">lru_cache</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">einops</span><span class="w"> </span><span class="kn">import</span> <span class="n">rearrange</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">._deterministic_1d</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Deterministic1DSimulator</span><span class="p">,</span>
+    <span class="n">check_range</span><span class="p">,</span>
+    <span class="n">check_state</span><span class="p">,</span>
+    <span class="n">generator</span><span class="p">,</span>
+    <span class="n">save_times</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_settings</span><span class="p">(</span><span class="n">nu</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">L</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">dt_max</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate geometry, fourth-order dissipation and timestep.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">dt_max</span><span class="p">)):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;nu, L and dt_max must be finite and positive&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_etdrk4_coefficients</span><span class="p">(</span><span class="n">linear</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Evaluate real ETDRK4 coefficients using Kassam-Trefethen contours.</span>
+
+<span class="sd">    Contour means avoid cancellation at zero and small linear eigenvalues.</span>
+<span class="sd">    ``f2`` is multiplied by ``2*(Na+Nb)`` in the step, including at zero.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">angles</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">math</span><span class="o">.</span><span class="n">pi</span>
+        <span class="o">*</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">linear</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">linear</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="o">/</span> <span class="mi">32</span>
+    <span class="p">)</span>
+    <span class="n">roots</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">polar</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">angles</span><span class="p">),</span> <span class="n">angles</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">dt</span> <span class="o">*</span> <span class="n">linear</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">+</span> <span class="n">roots</span>
+    <span class="n">exp_z</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">Q</span> <span class="o">=</span> <span class="n">dt</span> <span class="o">*</span> <span class="p">((</span><span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">z</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">z</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+    <span class="n">f1</span> <span class="o">=</span> <span class="n">dt</span> <span class="o">*</span> <span class="p">((</span><span class="o">-</span><span class="mi">4</span> <span class="o">-</span> <span class="n">z</span> <span class="o">+</span> <span class="n">exp_z</span> <span class="o">*</span> <span class="p">(</span><span class="mi">4</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">z</span> <span class="o">+</span> <span class="n">z</span><span class="o">.</span><span class="n">square</span><span class="p">()))</span> <span class="o">/</span> <span class="n">z</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+    <span class="n">f2</span> <span class="o">=</span> <span class="n">dt</span> <span class="o">*</span> <span class="p">((</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span> <span class="o">+</span> <span class="n">exp_z</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="p">))</span> <span class="o">/</span> <span class="n">z</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+    <span class="n">f3</span> <span class="o">=</span> <span class="n">dt</span> <span class="o">*</span> <span class="p">((</span><span class="o">-</span><span class="mi">4</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">z</span> <span class="o">-</span> <span class="n">z</span><span class="o">.</span><span class="n">square</span><span class="p">()</span> <span class="o">+</span> <span class="n">exp_z</span> <span class="o">*</span> <span class="p">(</span><span class="mi">4</span> <span class="o">-</span> <span class="n">z</span><span class="p">))</span> <span class="o">/</span> <span class="n">z</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">dt</span> <span class="o">*</span> <span class="n">linear</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">*</span> <span class="n">linear</span><span class="p">),</span> <span class="n">Q</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">f3</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_spectral_advance</span><span class="p">(</span>
+    <span class="n">state</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">nu</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">L</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">dt_max</span><span class="p">:</span> <span class="nb">float</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a spectral propagator, reusing operators and timestep coefficients.&quot;&quot;&quot;</span>
+    <span class="n">nx</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="mi">2</span>
+        <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span>
+        <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfftfreq</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">d</span><span class="o">=</span><span class="n">L</span> <span class="o">/</span> <span class="n">nx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">linear</span> <span class="o">=</span> <span class="n">k</span><span class="o">.</span><span class="n">square</span><span class="p">()</span> <span class="o">-</span> <span class="n">nu</span> <span class="o">*</span> <span class="n">k</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">k</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">nx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">3</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">nonlinear</span><span class="p">(</span><span class="n">v</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="n">resolved</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">irfft</span><span class="p">(</span><span class="n">v</span> <span class="o">*</span> <span class="n">mask</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">nx</span><span class="p">)</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mf">0.5</span><span class="n">j</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfft</span><span class="p">(</span><span class="n">resolved</span><span class="o">.</span><span class="n">square</span><span class="p">())</span> <span class="o">*</span> <span class="n">mask</span>
+
+    <span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">coefficients</span><span class="p">(</span><span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">_etdrk4_coefficients</span><span class="p">(</span><span class="n">linear</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">advance</span><span class="p">(</span><span class="n">v</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">duration</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="c1"># Use an integer count to avoid accumulating time-rounding errors.</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">duration</span> <span class="o">/</span> <span class="n">dt_max</span><span class="p">)):</span>
+            <span class="n">dt</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">dt_max</span><span class="p">,</span> <span class="n">duration</span> <span class="o">-</span> <span class="n">index</span> <span class="o">*</span> <span class="n">dt_max</span><span class="p">)</span>
+            <span class="n">E</span><span class="p">,</span> <span class="n">E2</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">f2</span><span class="p">,</span> <span class="n">f3</span> <span class="o">=</span> <span class="n">coefficients</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
+            <span class="n">Nv</span> <span class="o">=</span> <span class="n">nonlinear</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="n">E2</span> <span class="o">*</span> <span class="n">v</span> <span class="o">+</span> <span class="n">Q</span> <span class="o">*</span> <span class="n">Nv</span>
+            <span class="n">Na</span> <span class="o">=</span> <span class="n">nonlinear</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="n">E2</span> <span class="o">*</span> <span class="n">v</span> <span class="o">+</span> <span class="n">Q</span> <span class="o">*</span> <span class="n">Na</span>
+            <span class="n">Nb</span> <span class="o">=</span> <span class="n">nonlinear</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">E2</span> <span class="o">*</span> <span class="n">a</span> <span class="o">+</span> <span class="n">Q</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">Nb</span> <span class="o">-</span> <span class="n">Nv</span><span class="p">)</span>
+            <span class="n">Nc</span> <span class="o">=</span> <span class="n">nonlinear</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">E</span> <span class="o">*</span> <span class="n">v</span> <span class="o">+</span> <span class="n">f1</span> <span class="o">*</span> <span class="n">Nv</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">f2</span> <span class="o">*</span> <span class="p">(</span><span class="n">Na</span> <span class="o">+</span> <span class="n">Nb</span><span class="p">)</span> <span class="o">+</span> <span class="n">f3</span> <span class="o">*</span> <span class="n">Nc</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()):</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;KS evolution became non-finite; refine timestep and grid&quot;</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span>
+
+    <span class="k">return</span> <span class="n">advance</span>
+
+
+<div class="viewcode-block" id="simulate_kuramoto_sivashinsky_1d">
+<a class="viewcode-back" href="../../../../reference/experimental/kuramoto_sivashinsky_1d.html#autosim.experimental.simulations.kuramoto_sivashinsky_1d.simulate_kuramoto_sivashinsky_1d">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">simulate_kuramoto_sivashinsky_1d</span><span class="p">(</span>
+    <span class="n">initial_state</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">nu</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">L</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">22.0</span><span class="p">,</span>
+    <span class="n">T</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">,</span>
+    <span class="n">dt_save</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">dt_max</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Evolve ``u_t + (u²/2)_x + u_xx + nu*u_xxxx = 0`` periodically.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        initial_state: Float32/float64 nodal fields ``(..., nx, 1)`` at</span>
+<span class="sd">            ``x_j=j*L/nx``. Leading batch axes are supported.</span>
+<span class="sd">        nu: Positive fourth-order dissipation coefficient, shared by fields.</span>
+<span class="sd">        L: Periodic domain length. The standard chaotic benchmark uses 22.</span>
+<span class="sd">        T: Forecast duration, including the supplied state at time zero.</span>
+<span class="sd">        dt_save: Saved-frame interval; the terminal time is always included.</span>
+<span class="sd">        dt_max: Maximum internal step. Refine it to check time convergence.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Fields ``(..., nt, nx, 1)`` preserving input precision, device and</span>
+<span class="sd">        state gradients. The supplied field is never mutated.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        Uses Fourier differentiation, two-thirds-dealiased conservative</span>
+<span class="sd">        advection and fourth-order ETDRK4 with contour-evaluated coefficients.</span>
+<span class="sd">        The linear multiplier is ``k² - nu*k⁴``: long wavelengths grow while</span>
+<span class="sd">        short wavelengths decay. The spatial mean is conserved. Modes above</span>
+<span class="sd">        the dealiasing cutoff evolve linearly. There is no noise or forcing.</span>
+<span class="sd">        The stiff linear term is integrated exponentially; ``dt_max`` still</span>
+<span class="sd">        needs to resolve nonlinear evolution. No warm-up is applied here.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check_state</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">_check_settings</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">dt_max</span><span class="p">)</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="n">save_times</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">dt_save</span><span class="p">)</span>
+    <span class="n">nx</span> <span class="o">=</span> <span class="n">initial_state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">advance</span> <span class="o">=</span> <span class="n">_spectral_advance</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">dt_max</span><span class="p">)</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfft</span><span class="p">(</span><span class="n">initial_state</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="n">snapshots</span> <span class="o">=</span> <span class="p">[</span><span class="n">initial_state</span><span class="o">.</span><span class="n">clone</span><span class="p">()]</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">target_tensor</span> <span class="ow">in</span> <span class="n">times</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">target_tensor</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">advance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">target</span> <span class="o">-</span> <span class="n">t</span><span class="p">)</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">target</span>
+        <span class="n">snapshots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">irfft</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">nx</span><span class="p">)[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">snapshots</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">3</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="estimate_ks_lyapunov">
+<a class="viewcode-back" href="../../../../reference/experimental/kuramoto_sivashinsky_1d.html#autosim.experimental.simulations.kuramoto_sivashinsky_1d.estimate_ks_lyapunov">[docs]</a>
+<span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">estimate_ks_lyapunov</span><span class="p">(</span>
+    <span class="n">initial_state</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">nu</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">L</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">22.0</span><span class="p">,</span>
+    <span class="n">T</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">200.0</span><span class="p">,</span>
+    <span class="n">warmup_time</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">,</span>
+    <span class="n">dt_max</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">renormalize_interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">perturbation</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-7</span><span class="p">,</span>
+    <span class="n">random_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Estimate the largest Lyapunov exponent using renormalized trajectories.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        initial_state: Float64 field ``(..., nx, 1)``. Perturbations have zero</span>
+<span class="sd">            spatial mean so both trajectories conserve the same mean.</span>
+<span class="sd">        nu: Fourth-order dissipation coefficient.</span>
+<span class="sd">        L: Domain length.</span>
+<span class="sd">        T: Positive duration over which logarithmic growth is accumulated.</span>
+<span class="sd">        warmup_time: Non-negative deterministic warm-up before perturbing.</span>
+<span class="sd">        dt_max: Maximum internal ETDRK4 step.</span>
+<span class="sd">        renormalize_interval: Positive time between perturbation resets.</span>
+<span class="sd">        perturbation: Positive initial/reset RMS distance between trajectories.</span>
+<span class="sd">        random_seed: Local seed for the initial perturbation direction.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A float64 tensor with the input&#39;s leading batch shape, in inverse</span>
+<span class="sd">        simulation time units. An unbatched field gives a scalar tensor.</span>
+
+<span class="sd">    Notes:</span>
+<span class="sd">        This is a finite-time estimate, not a proof of asymptotic chaos.</span>
+<span class="sd">        Check longer windows, multiple seeds, perturbation sizes and numerical</span>
+<span class="sd">        refinement. Positive growth at an unstable equilibrium alone is not</span>
+<span class="sd">        evidence of a chaotic attractor. Float64 is required to resolve the</span>
+<span class="sd">        small separations. No stochastic forcing is added to either rollout.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check_state</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">_check_settings</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">dt_max</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">initial_state</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Lyapunov estimation requires float64 fields&quot;</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">T</span><span class="p">)</span> <span class="ow">or</span> <span class="n">T</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Lyapunov estimation T must be finite and positive&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">warmup_time</span><span class="p">)</span> <span class="ow">or</span> <span class="n">warmup_time</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;warmup_time must be finite and non-negative&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">perturbation</span><span class="p">)</span> <span class="ow">or</span> <span class="n">perturbation</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;perturbation must be finite and positive&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="n">intervals</span> <span class="o">=</span> <span class="n">save_times</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">renormalize_interval</span><span class="p">)</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">simulate_kuramoto_sivashinsky_1d</span><span class="p">(</span>
+        <span class="n">initial_state</span><span class="p">,</span>
+        <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span>
+        <span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">,</span>
+        <span class="n">T</span><span class="o">=</span><span class="n">warmup_time</span><span class="p">,</span>
+        <span class="n">dt_save</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">warmup_time</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+        <span class="n">dt_max</span><span class="o">=</span><span class="n">dt_max</span><span class="p">,</span>
+    <span class="p">)[</span><span class="o">...</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+    <span class="n">direction</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span>
+        <span class="n">base</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">(</span><span class="n">random_seed</span><span class="p">)</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">direction</span> <span class="o">-=</span> <span class="n">direction</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">2</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">direction</span> <span class="o">/=</span> <span class="n">direction</span><span class="o">.</span><span class="n">square</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+    <span class="n">perturbed</span> <span class="o">=</span> <span class="n">base</span> <span class="o">+</span> <span class="n">perturbation</span> <span class="o">*</span> <span class="n">direction</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">base</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">1</span><span class="p">,</span> <span class="p">:</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">advance</span> <span class="o">=</span> <span class="n">_spectral_advance</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">dt_max</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">duration</span> <span class="ow">in</span> <span class="n">torch</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">intervals</span><span class="p">):</span>
+        <span class="n">spectrum</span> <span class="o">=</span> <span class="n">advance</span><span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfft</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">base</span><span class="p">,</span> <span class="n">perturbed</span><span class="p">))[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">duration</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">pair</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">irfft</span><span class="p">(</span><span class="n">spectrum</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">base</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">])[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="n">base</span><span class="p">,</span> <span class="n">perturbed</span> <span class="o">=</span> <span class="n">pair</span><span class="o">.</span><span class="n">unbind</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">perturbed</span> <span class="o">-</span> <span class="n">base</span>
+        <span class="n">delta</span> <span class="o">-=</span> <span class="n">delta</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">2</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">distance</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">square</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">((</span><span class="n">distance</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Perturbation vanished; increase its size or numerical precision&quot;</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">total</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">distance</span> <span class="o">/</span> <span class="n">perturbation</span><span class="p">)</span>
+        <span class="n">perturbed</span> <span class="o">=</span> <span class="n">base</span> <span class="o">+</span> <span class="n">perturbation</span> <span class="o">*</span> <span class="n">delta</span> <span class="o">/</span> <span class="n">distance</span>
+    <span class="k">return</span> <span class="n">rearrange</span><span class="p">(</span><span class="n">total</span> <span class="o">/</span> <span class="n">T</span><span class="p">,</span> <span class="s2">&quot;... 1 1 -&gt; ...&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="KuramotoSivashinsky1D">
+<a class="viewcode-back" href="../../../../reference/experimental/kuramoto_sivashinsky_1d.html#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">KuramotoSivashinsky1D</span><span class="p">(</span><span class="n">Deterministic1DSimulator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;KS datasets with explicit initial fields and optional chaos screening.</span>
+
+<span class="sd">    ``sample_initial_conditions`` draws generic zero-mean Fourier fields,</span>
+<span class="sd">    independently of ``parameters_range={&quot;nu&quot;: (...)}``. ``rollout`` evolves</span>
+<span class="sd">    those supplied fields directly. Dataset generation can first apply</span>
+<span class="sd">    ``warmup_time`` and then a finite-time Lyapunov acceptance criterion.</span>
+<span class="sd">    The recorded first frame is the actual post-warm-up forecast state; raw</span>
+<span class="sd">    sampled fields and warm-up durations are retained in payload metadata.</span>
+
+<span class="sd">    Standard coefficients ``nu=1`` and ``L=22`` target the chaotic benchmark</span>
+<span class="sd">    of Cvitanovic, Davidchack and Siminos (2010):</span>
+<span class="sd">    https://arxiv.org/abs/0709.2944. ``L &lt; 2*pi*sqrt(nu)`` gives a stable control.</span>
+<span class="sd">    Passing a finite-time criterion does not prove every output is chaotic.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">parameters_range</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">return_timeseries</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">log_level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;progress_bar&quot;</span><span class="p">,</span>
+        <span class="n">nx</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">128</span><span class="p">,</span>
+        <span class="n">L</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">22.0</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">100.0</span><span class="p">,</span>
+        <span class="n">dt_save</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">nu</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">dt_max</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">initial_condition_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">initial_state</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">warmup_time</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">chaos_validation_time</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">lyapunov_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span>
+        <span class="n">activity_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-6</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure Fourier sampling, dynamics, dataset warm-up and screening.&quot;&quot;&quot;</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;u&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">output_names</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">output_names</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;KuramotoSivashinsky1D requires one output name&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">_check_settings</span><span class="p">(</span><span class="n">nu</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">dt_max</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="n">warmup_time</span><span class="p">,</span>
+            <span class="n">chaos_validation_time</span><span class="p">,</span>
+            <span class="n">lyapunov_threshold</span><span class="p">,</span>
+            <span class="n">activity_threshold</span><span class="p">,</span>
+        <span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s2">&quot;Warm-up, validation time and screening thresholds &quot;</span>
+                    <span class="s2">&quot;must be finite and non-negative&quot;</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">parameter_name</span><span class="o">=</span><span class="s2">&quot;nu&quot;</span><span class="p">,</span>
+            <span class="n">parameter_value</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span>
+            <span class="n">parameters_range</span><span class="o">=</span><span class="n">parameters_range</span><span class="p">,</span>
+            <span class="n">output_names</span><span class="o">=</span><span class="n">names</span><span class="p">,</span>
+            <span class="n">nx</span><span class="o">=</span><span class="n">nx</span><span class="p">,</span>
+            <span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">,</span>
+            <span class="n">T</span><span class="o">=</span><span class="n">T</span><span class="p">,</span>
+            <span class="n">dt_save</span><span class="o">=</span><span class="n">dt_save</span><span class="p">,</span>
+            <span class="n">return_timeseries</span><span class="o">=</span><span class="n">return_timeseries</span><span class="p">,</span>
+            <span class="n">initial_state</span><span class="o">=</span><span class="n">initial_state</span><span class="p">,</span>
+            <span class="n">grid_offset</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">log_level</span><span class="o">=</span><span class="n">log_level</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dt_max</span> <span class="o">=</span> <span class="n">nu</span><span class="p">,</span> <span class="n">dt_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warmup_time</span> <span class="o">=</span> <span class="n">warmup_time</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chaos_validation_time</span> <span class="o">=</span> <span class="n">chaos_validation_time</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lyapunov_threshold</span> <span class="o">=</span> <span class="n">lyapunov_threshold</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activity_threshold</span> <span class="o">=</span> <span class="n">activity_threshold</span>
+        <span class="n">defaults</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;n_modes&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+            <span class="s2">&quot;spectral_decay&quot;</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span>
+            <span class="s2">&quot;peak_amplitude_range&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">initial_condition_kwargs</span> <span class="ow">or</span> <span class="p">{})</span>
+        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">defaults</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Unsupported initial_condition_kwargs&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initial_condition_kwargs</span> <span class="o">=</span> <span class="n">defaults</span> <span class="o">|</span> <span class="n">settings</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_condition_kwargs</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">settings</span><span class="p">[</span><span class="s2">&quot;n_modes&quot;</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;n_modes&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">nx</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">3</span>
+        <span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;n_modes must be a positive integer within the dealiasing cutoff&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="ow">not</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">settings</span><span class="p">[</span><span class="s2">&quot;spectral_decay&quot;</span><span class="p">])</span>
+            <span class="ow">or</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;spectral_decay&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span>
+        <span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;spectral_decay must be finite and non-negative&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">check_range</span><span class="p">(</span>
+            <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;peak_amplitude_range&quot;</span><span class="p">],</span> <span class="s2">&quot;peak_amplitude_range&quot;</span><span class="p">,</span> <span class="n">positive</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="KuramotoSivashinsky1D.sample_initial_conditions">
+<a class="viewcode-back" href="../../../../reference/experimental/kuramoto_sivashinsky_1d.html#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.sample_initial_conditions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sample_initial_conditions</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">random_seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sample unburned zero-mean nodal fields, independently of nu.&quot;&quot;&quot;</span>
+        <span class="n">fixed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fixed_initial_states</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fixed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">fixed</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_condition_kwargs</span>
+        <span class="n">rng</span> <span class="o">=</span> <span class="n">generator</span><span class="p">(</span><span class="n">random_seed</span><span class="p">)</span>
+        <span class="n">modes</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;n_modes&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">phases</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">modes</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span>
+        <span class="n">coefficients</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">modes</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">generator</span><span class="o">=</span><span class="n">rng</span>
+        <span class="p">)</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">modes</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="o">-</span><span class="n">settings</span><span class="p">[</span><span class="s2">&quot;spectral_decay&quot;</span><span class="p">])</span>
+        <span class="n">field</span> <span class="o">=</span> <span class="p">(</span><span class="n">coefficients</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">weights</span><span class="p">)</span> <span class="o">@</span> <span class="n">phases</span><span class="o">.</span><span class="n">cos</span><span class="p">()</span> <span class="o">+</span> <span class="p">(</span>
+            <span class="n">coefficients</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">weights</span>
+        <span class="p">)</span> <span class="o">@</span> <span class="n">phases</span><span class="o">.</span><span class="n">sin</span><span class="p">()</span>
+        <span class="n">amplitude</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">uniform_</span><span class="p">(</span>
+            <span class="o">*</span><span class="n">settings</span><span class="p">[</span><span class="s2">&quot;peak_amplitude_range&quot;</span><span class="p">],</span> <span class="n">generator</span><span class="o">=</span><span class="n">rng</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">amplitude</span> <span class="o">*</span> <span class="n">field</span> <span class="o">/</span> <span class="n">field</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">))[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="KuramotoSivashinsky1D.rollout">
+<a class="viewcode-back" href="../../../../reference/experimental/kuramoto_sivashinsky_1d.html#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.rollout">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rollout</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">nu</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evolve supplied fields directly; dataset warm-up/screening is separate.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_grid</span><span class="p">(</span><span class="n">initial_state</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">simulate_kuramoto_sivashinsky_1d</span><span class="p">(</span>
+            <span class="n">initial_state</span><span class="p">,</span>
+            <span class="n">nu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_resolve_parameter</span><span class="p">(</span><span class="n">nu</span><span class="p">),</span>
+            <span class="n">L</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span>
+            <span class="n">T</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+            <span class="n">dt_save</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dt_save</span><span class="p">,</span>
+            <span class="n">dt_max</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dt_max</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="KuramotoSivashinsky1D.warmup_state">
+<a class="viewcode-back" href="../../../../reference/experimental/kuramoto_sivashinsky_1d.html#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.warmup_state">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">warmup_state</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">initial_state</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">nu</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the field after the configured deterministic warm-up.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_grid</span><span class="p">(</span><span class="n">initial_state</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">simulate_kuramoto_sivashinsky_1d</span><span class="p">(</span>
+            <span class="n">initial_state</span><span class="p">,</span>
+            <span class="n">nu</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_resolve_parameter</span><span class="p">(</span><span class="n">nu</span><span class="p">),</span>
+            <span class="n">L</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span>
+            <span class="n">T</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">warmup_time</span><span class="p">,</span>
+            <span class="n">dt_save</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">warmup_time</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+            <span class="n">dt_max</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dt_max</span><span class="p">,</span>
+        <span class="p">)[</span><span class="o">...</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_grid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate an explicit field against the configured spatial grid.&quot;&quot;&quot;</span>
+        <span class="n">check_state</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;initial_state spatial size must match nx&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_initial_conditions</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">states</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">parameters</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Warm each field using its sampled nu; optionally reject failed criteria.&quot;&quot;&quot;</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;seed_fields&quot;</span><span class="p">:</span> <span class="n">states</span><span class="p">,</span>
+            <span class="s2">&quot;warmup_times&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+                <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">states</span><span class="p">),),</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_time</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span>
+            <span class="p">),</span>
+        <span class="p">}</span>
+        <span class="n">prepared</span><span class="p">,</span> <span class="n">estimates</span><span class="p">,</span> <span class="n">activities</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">parameter</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+            <span class="nb">zip</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="n">nu</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">parameter</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">warmed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_state</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">chaos_validation_time</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># An unstable equilibrium can have positive perturbation growth</span>
+                <span class="c1"># without its own trajectory being chaotic. Reject quiescent</span>
+                <span class="c1"># forecast states before using the Lyapunov criterion.</span>
+                <span class="n">evolved</span> <span class="o">=</span> <span class="n">simulate_kuramoto_sivashinsky_1d</span><span class="p">(</span>
+                    <span class="n">warmed</span><span class="p">,</span>
+                    <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span>
+                    <span class="n">L</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span>
+                    <span class="n">T</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                    <span class="n">dt_save</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                    <span class="n">dt_max</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dt_max</span><span class="p">,</span>
+                <span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">activity</span> <span class="o">=</span> <span class="p">(</span><span class="n">evolved</span> <span class="o">-</span> <span class="n">warmed</span><span class="p">)</span><span class="o">.</span><span class="n">square</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+                <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">activity</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activity_threshold</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;KS sample </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> failed the forecast activity criterion&quot;</span>
+                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="n">estimate</span> <span class="o">=</span> <span class="n">estimate_ks_lyapunov</span><span class="p">(</span>
+                    <span class="n">warmed</span><span class="p">,</span>
+                    <span class="n">nu</span><span class="o">=</span><span class="n">nu</span><span class="p">,</span>
+                    <span class="n">L</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">,</span>
+                    <span class="n">T</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chaos_validation_time</span><span class="p">,</span>
+                    <span class="n">warmup_time</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                    <span class="n">dt_max</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dt_max</span><span class="p">,</span>
+                    <span class="n">random_seed</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">estimate</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lyapunov_threshold</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;KS sample </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> failed the finite-time Lyapunov criterion: &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">estimate</span><span class="p">)</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2"> &lt;= </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">lyapunov_threshold</span><span class="si">}</span><span class="s2">. &quot;</span>
+                        <span class="s2">&quot;No sample was silently replaced; &quot;</span>
+                        <span class="s2">&quot;use another seed or review the regime.&quot;</span>
+                    <span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="n">estimates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">estimate</span><span class="p">)</span>
+                <span class="n">activities</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">activity</span><span class="p">)</span>
+            <span class="n">prepared</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">warmed</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">chaos_validation_time</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;lyapunov_estimates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">rearrange</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">estimates</span><span class="p">),</span> <span class="s2">&quot;b -&gt; b 1&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">estimates</span>
+                <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;activity_estimates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">rearrange</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">activities</span><span class="p">),</span> <span class="s2">&quot;b -&gt; b 1&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">activities</span>
+                <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">prepared</span><span class="p">)</span> <span class="k">if</span> <span class="n">prepared</span> <span class="k">else</span> <span class="n">states</span><span class="p">,</span> <span class="n">metadata</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_rollout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">parameter</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evolve a prepared forecast state.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rollout</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="n">parameter</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The Alan Turing Institute
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Copyright &copy; 2026
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
