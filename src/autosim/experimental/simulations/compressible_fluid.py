@@ -108,11 +108,14 @@ class CompressibleFluid2D(SpatioTemporalSimulator):
         n: int,
         random_seed: int | None = None,
         ensure_exact_n: bool = False,
+        *,
+        num_workers: int | None = None,
     ) -> dict:
         y, x = self._forward_batch_with_optional_retries(
             n=n,
             random_seed=random_seed,
             ensure_exact_n=ensure_exact_n,
+            num_workers=num_workers,
         )
 
         channels = 4
