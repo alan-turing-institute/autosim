@@ -1,0 +1,22 @@
+_target_: autosim.experimental.simulations.ShallowWater1D
+return_timeseries: true
+log_level: warning
+nx: 256
+L: 1.0
+T: 1.0
+dt_save: 0.01
+dt_max: 0.005
+cfl: 0.4
+g: 1.0
+
+# Periodic Gaussian height perturbation over resting water, in [h, u] order.
+# Width and location bounds are fractions of the domain length.
+initial_condition_kwargs:
+  h_mean: 1.0
+  amplitude_range: [0.05, 0.2]
+  width_fraction_range: [0.05, 0.15]
+  position_fraction_range: [0.0, 1.0]
+
+# Flat bed, no Coriolis, no forcing. The finite-volume solver evolves [h, h*u].
+parameters_range:
+  g: [1.0, 1.0]

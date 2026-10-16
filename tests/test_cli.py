@@ -18,7 +18,7 @@ from autosim.cli import (
     save_dataset_splits,
     save_example_videos,
 )
-from autosim.experimental.simulations import ShallowWater2D
+from autosim.experimental.simulations import Burgers1D, ShallowWater1D, ShallowWater2D
 from autosim.simulations.base import SpatioTemporalSimulator
 
 
@@ -169,11 +169,95 @@ def test_cli_list_subcommand_outputs_simulator_names() -> None:
     output_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     assert "spatiotemporal/advection_diffusion" in output_lines
     assert "experimental/shallow_water2d" in output_lines
+    assert "experimental/burgers_1d" in output_lines
+    assert "experimental/shallow_water_1d" in output_lines
+    assert "experimental/burgers_1d_nonlinear" in output_lines
+    assert "experimental/shallow_water_1d_nonlinear" in output_lines
+    assert "experimental/kuramoto_sivashinsky_1d" in output_lines
+    assert "experimental/kuramoto_sivashinsky_1d_chaotic" in output_lines
+    assert "experimental/kuramoto_sivashinsky_1d_stable" in output_lines
     assert "experimental/shallow_water2d_forced" in output_lines
     assert "experimental/shallow_water2d_crps_32" in output_lines
     assert "experimental/shallow_water2d_crps_64" in output_lines
     assert "experimental/shallow_water2d_crps_deterministic_32" in output_lines
     assert all("\\" not in line for line in output_lines)
+
+
+@pytest.mark.parametrize(
+    "config_name",
+    [
+        "burgers_1d",
+        "shallow_water_1d",
+        "burgers_1d_nonlinear",
+        "shallow_water_1d_nonlinear",
+        "kuramoto_sivashinsky_1d",
+        "kuramoto_sivashinsky_1d_chaotic",
+        "kuramoto_sivashinsky_1d_stable",
+    ],
+)
+def test_1d_configs_generate_fields_stats_and_png(
+    config_name: str, tmp_path: Path
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    config = OmegaConf.load(
+        repo_root / "src/autosim/configs/simulator/experimental" / f"{config_name}.yaml"
+    )
+    config.nx, config.T, config.dt_save = 32, 0.02, 0.01
+    if config_name.startswith("kuramoto_sivashinsky"):
+        # Numerical regime/screening is checked at full settings in solver tests.
+        config.warmup_time, config.chaos_validation_time = 0.0, 0.0
+    sim = build_simulator(config)
+    splits = generate_dataset_splits(sim, 1, 1, 1, base_seed=5)
+    stats = compute_normalization_stats(
+        splits["train"], core_field_names=sim.output_names
+    )
+    assert list(stats["stats"]["mean"]) == sim.output_names
+    save_example_videos(
+        splits,
+        tmp_path,
+        OmegaConf.create({"enabled": True}),
+        channel_names=sim.output_names,
+    )
+    assert (tmp_path / "examples/train/batch_0.png").exists()
+    assert not torch.equal(splits["train"]["data"][:, 0], splits["valid"]["data"][:, 0])
+
+
+@pytest.mark.parametrize(
+    ("config_name", "parameter_name"),
+    [
+        ("burgers_1d_nonlinear", "nu"),
+        ("shallow_water_1d_nonlinear", "g"),
+    ],
+)
+def test_1d_nonlinear_configs_sample_variable_physical_parameters(
+    config_name: str, parameter_name: str
+) -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    config = OmegaConf.load(
+        repo_root / "src/autosim/configs/simulator/experimental" / f"{config_name}.yaml"
+    )
+    sim = build_simulator(config)
+    assert isinstance(sim, Burgers1D | ShallowWater1D)
+    values = sim.sample_inputs(32, random_seed=7)[:, 0]
+    lower, upper = sim.parameters_range[parameter_name]
+    assert lower < upper
+    assert torch.all((values >= lower) & (values <= upper))
+    # Latin hypercube draws cover every stratum, including both range extremes.
+    assert float(values.min()) < lower + (upper - lower) / 32
+    assert float(values.max()) > upper - (upper - lower) / 32
+    assert torch.equal(values, sim.sample_inputs(32, random_seed=7)[:, 0])
+
+    fields = sim.sample_initial_conditions(32, random_seed=7)
+    if parameter_name == "nu":
+        peak_speeds = fields[..., 0].abs().amax(dim=-1)
+        assert torch.all((peak_speeds >= 0.5) & (peak_speeds <= 1.0))
+        reynolds = peak_speeds * sim.L / values
+        assert torch.all((reynolds >= 25) & (reynolds <= 200))
+    else:
+        relative_peaks = fields[..., 0].amax(dim=-1) - 1
+        assert torch.all((relative_peaks > 0.29) & (relative_peaks <= 0.8))
+        assert torch.all(fields[..., 0] > 0)
+        assert torch.count_nonzero(fields[..., 1]) == 0
 
 
 @pytest.mark.parametrize(

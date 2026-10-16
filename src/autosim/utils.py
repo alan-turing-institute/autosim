@@ -9,6 +9,7 @@ from einops import rearrange
 from matplotlib import animation
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize, TwoSlopeNorm
+from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 from torch import Tensor
 
@@ -26,6 +27,154 @@ def generate_output_data(
     valid = sim.forward_samples_spatiotemporal(n=n_valid, random_seed=None)
     test = sim.forward_samples_spatiotemporal(n=n_test, random_seed=None)
     return {"train": train, "valid": valid, "test": test}
+
+
+def plot_spatiotemporal_1d(  # noqa: PLR0915
+    true: Tensor,
+    pred: Tensor | None = None,
+    pred_uq: Tensor | None = None,
+    batch_idx: int = 0,
+    *,
+    x: Tensor | np.ndarray | None = None,
+    times: Tensor | np.ndarray | None = None,
+    channel_names: list[str] | None = None,
+    save_path: str | None = None,
+    cmap: str = "viridis",
+    title: str = "One-dimensional trajectories",
+    true_label: str = "Ground Truth",
+    pred_label: str = "Prediction",
+    pred_uq_label: str = "Prediction UQ",
+) -> Figure:
+    """Plot space-time heatmaps for 1D fields, optionally comparing forecasts.
+
+    Args:
+        true: Trajectories ``(batch, time, nx, channels)`` or the standard
+            ``(batch, time, nx, 1, channels)`` layout. A singleton x axis with
+            a non-singleton y axis is also accepted.
+        pred: Predictions matching the shape of ``true``. A difference row
+            is shown, and true/predicted fields share each channel's scale.
+        pred_uq: Uncertainty fields matching ``true``, on independent scales.
+        batch_idx: Trajectory to display.
+        x: Spatial coordinates of length nx; defaults to grid indices.
+        times: Saved times; defaults to frame indices.
+        channel_names: Names for channels, with defaults for missing names.
+        save_path: Optional image output path, such as a PNG or PDF.
+        cmap: Colormap for physical fields and uncertainty.
+        title: Figure title.
+        true_label: Label for the true-data row.
+        pred_label: Label for the prediction row.
+        pred_uq_label: Label for the uncertainty row.
+
+    Returns:
+        A Matplotlib figure. Columns are channels; horizontal axes are space
+        and vertical axes are time. The caller owns the figure's lifetime.
+    """
+
+    def field(data: Tensor) -> np.ndarray:
+        if not isinstance(data, Tensor) or data.ndim not in (4, 5):
+            msg = "1D trajectories must be a 4D or 5D tensor"
+            raise ValueError(msg)
+        if data.ndim == 5:
+            if data.shape[3] == 1:
+                data = rearrange(data, "b t x 1 c -> b t x c")
+            elif data.shape[2] == 1:
+                data = rearrange(data, "b t 1 x c -> b t x c")
+            else:
+                msg = "1D trajectories require a singleton spatial axis"
+                raise ValueError(msg)
+        if any(size == 0 for size in data.shape) or not 0 <= batch_idx < len(data):
+            msg = "Trajectories must be nonempty and batch_idx must be in range"
+            raise ValueError(msg)
+        if not bool(data[batch_idx].isfinite().all()):
+            msg = "Trajectory values must be finite"
+            raise ValueError(msg)
+        return data[batch_idx].detach().cpu().numpy()
+
+    actual = field(true)
+    predicted = field(pred) if pred is not None else None
+    uncertainty = field(pred_uq) if pred_uq is not None else None
+    for other in (predicted, uncertainty):
+        if other is not None and other.shape != actual.shape:
+            msg = "Prediction and uncertainty shapes must match the true trajectory"
+            raise ValueError(msg)
+    nt, nx, nc = actual.shape
+
+    def coordinates(values: Tensor | np.ndarray | None, size: int) -> np.ndarray:
+        if values is None:
+            return np.arange(size)
+        result = (
+            values.detach().cpu().numpy()
+            if isinstance(values, Tensor)
+            else np.asarray(values)
+        )
+        if (
+            result.shape != (size,)
+            or not np.isfinite(result).all()
+            or np.any(np.diff(result) <= 0)
+        ):
+            msg = (
+                "Coordinates must be finite, strictly increasing vectors "
+                "of matching length"
+            )
+            raise ValueError(msg)
+        return result
+
+    xs, ts = coordinates(x, nx), coordinates(times, nt)
+    rows = [(true_label, actual, False)]
+    if predicted is not None:
+        rows.extend(
+            (
+                (pred_label, predicted, False),
+                (f"Difference ({true_label} - {pred_label})", actual - predicted, True),
+            )
+        )
+    if uncertainty is not None:
+        rows.append((pred_uq_label, uncertainty, False))
+    figure, axes = plt.subplots(
+        len(rows),
+        nc,
+        squeeze=False,
+        figsize=(5 * nc, 3.5 * len(rows)),
+        constrained_layout=True,
+    )
+    for channel in range(nc):
+        reference = actual[..., channel]
+        if predicted is not None:
+            reference = np.concatenate(
+                (reference.ravel(), predicted[..., channel].ravel())
+            )
+        shared_norm = Normalize(
+            vmin=float(reference.min()), vmax=float(reference.max())
+        )
+        name = (
+            channel_names[channel]
+            if channel_names is not None and channel < len(channel_names)
+            else f"Channel {channel}"
+        )
+        for row, (label, values, difference) in enumerate(rows):
+            axis = axes[row, channel]
+            norm = shared_norm
+            if difference:
+                limit = max(float(np.abs(values[..., channel]).max()), 1e-12)
+                norm = TwoSlopeNorm(vmin=-limit, vcenter=0, vmax=limit)
+            elif uncertainty is not None and values is uncertainty:
+                norm = Normalize()
+            mesh = axis.pcolormesh(
+                xs,
+                ts,
+                values[..., channel],
+                shading="auto",
+                cmap="RdBu_r" if difference else cmap,
+                norm=norm,
+            )
+            axis.set_title(f"{label}: {name}")
+            axis.set_xlabel("x" if x is not None else "Grid index")
+            axis.set_ylabel("Time" if times is not None else "Frame index")
+            figure.colorbar(mesh, ax=axis)
+    figure.suptitle(title)
+    if save_path is not None:
+        figure.savefig(save_path, bbox_inches="tight")
+    return figure
 
 
 def plot_spatiotemporal_video(  # noqa: PLR0915, PLR0912

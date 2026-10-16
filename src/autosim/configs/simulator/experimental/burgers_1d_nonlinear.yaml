@@ -1,0 +1,22 @@
+_target_: autosim.experimental.simulations.Burgers1D
+return_timeseries: true
+log_level: warning
+nx: 512
+L: 1.0
+T: 1.0
+dt_save: 0.01
+dt_max: 0.001
+cfl: 0.4
+nu: 0.01
+
+# Several interacting modes with bounded initial peak speed.
+initial_condition: fourier
+initial_condition_kwargs:
+  n_modes: 8
+  spectral_decay: 1.5
+  peak_amplitude_range: [0.5, 1.0]
+
+# Nonlinear, decaying transients; this is not a sustained-chaos preset.
+# Initial peak speed * L / nu spans 25 to 200 across these bounds.
+parameters_range:
+  nu: [0.005, 0.02]
