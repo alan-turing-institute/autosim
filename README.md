@@ -31,6 +31,9 @@ uv run autosim \
 
 Do check out the [documentation](https://alan-turing-institute.github.io/autosim/) for more information on configuration options and simulators!
 
+For reproducible synthetic fields with configurable shapes and correlations,
+see [Synthetic performance datasets](docs/tutorials/synthetic.md).
+
 ## Citation
 
 ```bibtex

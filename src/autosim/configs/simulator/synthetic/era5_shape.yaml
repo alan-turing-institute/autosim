@@ -1,0 +1,9 @@
+# Shape-only example of a 1.5-degree ERA5 input layout; values remain synthetic.
+defaults:
+  - /simulator/synthetic/gaussian_field@_here_
+  - _self_
+
+height: 121
+width: 240
+# Example channel count: 65 pressure-level + 4 surface fields; names stay generic.
+n_channels: 69
