@@ -1,0 +1,19 @@
+defaults:
+  - generate_data_synthetic_zarr
+  - override simulator: synthetic/era5_shape
+  - _self_
+
+# Size reference only; generated values and channel labels remain synthetic.
+# Six-hourly counts for 1979-2018, 2019 and 2020, including leap days.
+# FP32 data: 468.4 GB train, 11.7 GB valid, 11.7 GB test (~491.8 GB total).
+dataset:
+  n_train: 1
+  n_valid: 1
+  n_test: 1
+  steps_per_split:
+    train: 58440
+    valid: 1460
+    test: 1464
+  # Starting layout for measurement, not a claim of optimal I/O performance.
+  chunk_steps: 1
+  shard_steps: 64

@@ -24,6 +24,9 @@ dependencies = [
 autosim = "autosim.cli:main"
 
 [project.optional-dependencies]
+zarr = [
+    "zarr>=3.1,<4; python_version >= '3.11'",
+]
 dev = [
     "ipykernel>=7.1.0",
     "pytest>=9.0.1",

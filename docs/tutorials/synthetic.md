@@ -42,7 +42,7 @@ The data retain unit marginal variance in expectation; individual finite
 datasets need not have exactly zero mean or unit variance. Correlations are
 separable across space, time and channels. The seed is local to the generator,
 does not reset the global Torch RNG, and is recorded in each split's provenance.
-The existing CLI assigns separate split seeds and writes training-derived
+The default CLI assigns separate split seeds and writes training-derived
 `stats.yml`, `resolved_config.yaml` and `train/valid/test/data.pt`.
 
 For a different shape and trajectory count:
@@ -58,7 +58,7 @@ uv run autosim --config-name=generate_data_synthetic \
 
 The output tensor uses `trajectories × frames × height × width × channels ×
 bytes_per_value` bytes (four bytes for FP32, eight for FP64). Generation is
-CPU-only and in memory; it is not a streaming dataset implementation.
+CPU-only. The default `.pt` export holds the complete dataset in memory.
 `max_output_bytes` defaults to 512 MiB and rejects an oversized **single output
 tensor** before allocation. It does not cap total process memory: the CLI holds
 all splits and computes additional delta tensors for normalisation. Prefer the
@@ -73,6 +73,51 @@ performance, required training duration, convergence or predictive quality.
 For distributed timing, use enough samples for the global batch and sampler;
 the default tiny dataset is for smoke tests. Report the timings as **synthetic
 workloads**, including their shape and whether input data were resident in memory.
+
+## Large datasets with Zarr
+
+The optional Zarr exporter writes continuous trajectories in bounded batches and
+computes training statistics incrementally. It requires Python 3.11 or later:
+
+```bash
+uv run --extra zarr autosim --config-name=generate_data_synthetic_zarr \
+  dataset.output_dir=outputs/gaussian_zarr
+```
+
+Each split contains a `data.zarr` group with a `data` array in the same
+`[trajectory, time, height, width, channels]` order. Group attributes record the
+`autosim.spatiotemporal` schema (version 1), axes, field names, provenance and
+completion status. `stats.yml` and `resolved_config.yaml` remain at dataset root.
+
+Two independent settings control storage:
+
+- `dataset.chunk_steps`: frames read independently, normally a small number
+  suitable for training windows.
+- `dataset.shard_steps`: frames packed into one storage file; this must be a
+  multiple of `chunk_steps`. Generation writes one complete shard at a time.
+
+Storage boundaries do not reset the random generator or temporal correlations,
+and windows can cross shards without duplicated frames. Trajectories and splits
+remain independent. `dataset.steps_per_split` sets each split's trajectory
+length separately; the usual `n_train`, `n_valid` and `n_test` set trajectory
+counts. Model context and forecast lengths are chosen by the reader, not stored
+as fixed training windows.
+
+The allocation limit applies to one shard payload. Generation, codecs and
+float64 statistics use additional working memory proportional to shard size.
+Statistics include temporal differences crossing shard boundaries and exclude
+differences between independent trajectories. Arrays, training statistics and
+resolved configuration are staged together; stores become complete only after
+publication finishes. Zarr export only creates new datasets: choose a fresh
+output directory for each run, and leave `overwrite=false`. Existing dataset
+stores or metadata are rejected before generation. This route currently supports
+Gaussian fields with per-channel normalization and serial generation;
+visualization and stratification remain available through the default `.pt` route.
+
+Tune read chunks using the actual DataLoader's window lengths and access pattern.
+Larger shards reduce file count, while larger read chunks can increase bytes
+read for short windows. Measure worker startup separately from steady-state
+loading, and distinguish warm filesystem-cache results from storage throughput.
 
 ## Example: matching an ERA5 input layout
 
@@ -89,3 +134,24 @@ This configuration inherits the generic preset's split counts, frame count and
 seed. It only changes the grid and channel count; it does not read ERA5 or model
 atmospheric statistics or dynamics. Each FP32 frame is about 7.64 MiB, giving
 about 122 MiB across the default splits before statistics and temporary buffers.
+
+For a full-size **synthetic size reference**, use:
+
+```bash
+uv run --extra zarr autosim --config-name=generate_data_era5_full \
+  dataset.output_dir=outputs/era5_full
+```
+
+This creates one continuous trajectory per split: 58,440 training frames,
+1,460 validation frames and 1,464 test frames, matching six-hourly counts for
+1979–2018, 2019 and 2020. Raw FP32 storage is approximately **468.4 GB for training
+and 491.8 GB overall**. These are synthetic sequences, without dates or
+meteorological variable identities. With two context frames and 12 target
+frames, the training sequence supplies 58,427 stride-one windows regardless of
+storage layout.
+
+The starting layout uses one-frame read chunks (about 7.64 MiB) and 64-frame
+shards (about 489 MiB). These are configurable starting values for DataLoader
+measurements, not an established optimum. A small check of the same preset can
+override `dataset.steps_per_split.train`, `.valid` and `.test` and the simulator
+dimensions before allocating a full dataset.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterator
 
 import torch
 from einops import rearrange
@@ -22,8 +23,9 @@ class GaussianField(SpatioTemporalSimulator):
     channel pair the same positive correlation.
 
     Generation uses a private CPU random-number generator. The output limit
-    applies to one returned data tensor, not total process memory: the CLI
-    retains all splits and allocates additional tensors for statistics.
+    applies to one returned data tensor, or one chunk when iterating, not total
+    process memory. The eager CLI retains all splits and allocates additional
+    tensors for statistics.
 
     Args:
         height: Number of points along the first spatial axis.
@@ -35,7 +37,7 @@ class GaussianField(SpatioTemporalSimulator):
             independent spatial positions; both axes have periodic boundaries.
         channel_correlation: Correlation of distinct channels, in [0, 1).
         dtype: Stored field precision, either ``float32`` or ``float64``.
-        max_output_bytes: Maximum bytes for one generated batch's data tensor.
+        max_output_bytes: Maximum bytes for one returned batch or chunk tensor.
         output_names: Optional unique channel labels; defaults to ``field_0``, etc.
         log_level: Logging verbosity inherited from the simulator interface.
     """
@@ -163,6 +165,112 @@ class GaussianField(SpatioTemporalSimulator):
         payload = self.forward_samples_spatiotemporal(n=x.shape[0])
         return rearrange(payload["data"], "b t h w c -> b (t h w c)")
 
+    def _check_output_size(self, shape: tuple[int, ...]) -> None:
+        item_size = torch.empty((), dtype=self.dtype, device="cpu").element_size()
+        output_bytes = math.prod(shape) * item_size
+        if output_bytes > self.max_output_bytes:
+            msg = (
+                f"Requested data tensor needs {output_bytes:,} bytes, exceeding "
+                f"max_output_bytes={self.max_output_bytes:,}. Reduce trajectories "
+                "or frames per output, or explicitly increase the limit. Other "
+                "splits and normalization statistics need additional memory."
+            )
+            raise ValueError(msg)
+
+    @staticmethod
+    def _make_generator(random_seed: int | None) -> torch.Generator:
+        generator = torch.Generator(device="cpu")
+        if random_seed is None:
+            generator.seed()
+        else:
+            generator.manual_seed(random_seed)
+        return generator
+
+    def _trajectory_frames(
+        self, generator: torch.Generator, smoothing_filter: torch.Tensor | None
+    ) -> Iterator[torch.Tensor]:
+        """Keep one previous frame for a continuous stationary trajectory."""
+        previous = None
+        innovation_scale = math.sqrt(1 - self.rho**2)
+        for _ in range(self.n_steps):
+            frame = self._draw_frame(generator, smoothing_filter)
+            if previous is not None and self.rho != 0:
+                frame.mul_(innovation_scale).add_(previous, alpha=self.rho)
+            yield frame
+            previous = frame
+
+    def _payload(self, data: torch.Tensor, seed: int) -> dict:
+        return {
+            "data": data,
+            "constant_scalars": None,
+            "constant_fields": None,
+            "provenance": {
+                "kind": "synthetic",
+                "generator": "GaussianField",
+                "random_seed": seed,
+                "rho": self.rho,
+                "spatial_length_scale": self.spatial_length_scale,
+                "spatial_boundaries": (
+                    "periodic" if self.spatial_length_scale > 0 else None
+                ),
+                "channel_correlation": self.channel_correlation,
+            },
+        }
+
+    def iter_samples_spatiotemporal(
+        self,
+        n: int,
+        chunk_steps: int,
+        random_seed: int | None = None,
+    ) -> Iterator[dict]:
+        """Yield trajectory chunks while preserving the eager sampling sequence.
+
+        Args:
+            n: Positive trajectory count.
+            chunk_steps: Maximum frames in each returned chunk. The final chunk
+                of each trajectory may be shorter. The output byte limit applies
+                to each chunk, independently of the full dataset size.
+            random_seed: Seed for all trajectories, with the same interpretation
+                as in ``forward_samples_spatiotemporal``.
+
+        Yields:
+            Standard payloads with data shaped ``[1, time, height, width,
+            channels]``, plus zero-based ``trajectory_index`` and ``start_step``.
+            Chunks are in trajectory/time order and are not reused or mutated.
+            Random draws and temporal correlations continue across chunk
+            boundaries; trajectories start independently. Discard consumed chunks
+            to keep memory bounded by the chunk and per-frame working buffers.
+        """
+        self._check_positive_int("n", n)
+        self._check_positive_int("chunk_steps", chunk_steps)
+        shape = (
+            1,
+            min(chunk_steps, self.n_steps),
+            self.height,
+            self.width,
+            self.n_channels,
+        )
+        self._check_output_size(shape)
+        generator = self._make_generator(random_seed)
+        smoothing_filter = self._smoothing_filter()
+        seed = generator.initial_seed()
+        for trajectory in range(n):
+            frames = self._trajectory_frames(generator, smoothing_filter)
+            for start in range(0, self.n_steps, chunk_steps):
+                length = min(chunk_steps, self.n_steps - start)
+                data = torch.empty(
+                    (1, length, self.height, self.width, self.n_channels),
+                    dtype=self.dtype,
+                    device="cpu",
+                )
+                for offset in range(length):
+                    data[0, offset].copy_(next(frames))
+                yield {
+                    **self._payload(data, seed),
+                    "trajectory_index": trajectory,
+                    "start_step": start,
+                }
+
     def forward_samples_spatiotemporal(
         self,
         n: int,
@@ -186,47 +294,13 @@ class GaussianField(SpatioTemporalSimulator):
         del ensure_exact_n
         self._check_positive_int("n", n)
         shape = (n, self.n_steps, self.height, self.width, self.n_channels)
-        item_size = torch.empty((), dtype=self.dtype, device="cpu").element_size()
-        output_bytes = math.prod(shape) * item_size
-        if output_bytes > self.max_output_bytes:
-            msg = (
-                f"Requested data tensor needs {output_bytes:,} bytes, exceeding "
-                f"max_output_bytes={self.max_output_bytes:,}. Reduce trajectories "
-                "or frames, or explicitly increase the limit. Other splits and "
-                "normalization statistics need additional memory."
-            )
-            raise ValueError(msg)
-
-        generator = torch.Generator(device="cpu")
-        if random_seed is None:
-            generator.seed()
-        else:
-            generator.manual_seed(random_seed)
+        self._check_output_size(shape)
+        generator = self._make_generator(random_seed)
         smoothing_filter = self._smoothing_filter()
         data = torch.empty(shape, dtype=self.dtype, device="cpu")
-        innovation_scale = math.sqrt(1 - self.rho**2)
         for trajectory in range(n):
-            for step in range(self.n_steps):
-                frame = self._draw_frame(generator, smoothing_filter)
-                if step and self.rho != 0:
-                    frame.mul_(innovation_scale).add_(
-                        data[trajectory, step - 1], alpha=self.rho
-                    )
+            for step, frame in enumerate(
+                self._trajectory_frames(generator, smoothing_filter)
+            ):
                 data[trajectory, step].copy_(frame)
-
-        return {
-            "data": data,
-            "constant_scalars": None,
-            "constant_fields": None,
-            "provenance": {
-                "kind": "synthetic",
-                "generator": "GaussianField",
-                "random_seed": generator.initial_seed(),
-                "rho": self.rho,
-                "spatial_length_scale": self.spatial_length_scale,
-                "spatial_boundaries": (
-                    "periodic" if smoothing_filter is not None else None
-                ),
-                "channel_correlation": self.channel_correlation,
-            },
-        }
+        return self._payload(data, generator.initial_seed())

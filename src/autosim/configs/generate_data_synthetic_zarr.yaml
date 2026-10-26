@@ -1,0 +1,13 @@
+defaults:
+  - generate_data_synthetic
+  - _self_
+
+# Small streamed example. Storage boundaries do not split trajectories.
+dataset:
+  format: zarr
+  chunk_steps: 1
+  shard_steps: 16
+  steps_per_split:
+    train: ${simulator.n_steps}
+    valid: ${simulator.n_steps}
+    test: ${simulator.n_steps}
