@@ -155,6 +155,23 @@ def test_base_forward_accepts_empty_parameter_vectors() -> None:
     assert result.shape == (2, 4 * 3 * 5 * 2)
 
 
+@pytest.mark.parametrize("workers", [None, 2])
+def test_base_batch_seed_is_repeatable_and_worker_invariant(
+    workers: int | None,
+) -> None:
+    sim = GaussianField(height=3, width=5, n_channels=2, n_steps=4, rho=0.7)
+    inputs = torch.empty(2, 0)
+    expected, _ = sim.forward_batch(inputs, random_seed=21, allow_failures=False)
+    actual, valid = sim.forward_batch(
+        inputs, num_workers=workers, random_seed=21, allow_failures=False
+    )
+    other, _ = sim.forward_batch(inputs, random_seed=22, allow_failures=False)
+    assert torch.equal(actual, expected)
+    assert torch.equal(valid, inputs)
+    assert not torch.equal(actual[0], actual[1])
+    assert not torch.equal(actual, other)
+
+
 @pytest.mark.parametrize(
     ("config_name", "shape"),
     [
@@ -174,7 +191,10 @@ def test_synthetic_presets_compose_with_small_defaults(
     assert not cfg.visualize.enabled
 
 
-def test_cli_exports_synthetic_splits_config_and_stats(tmp_path: Path) -> None:
+@pytest.mark.parametrize("stratified", [False, True])
+def test_cli_exports_synthetic_splits_config_and_stats(
+    tmp_path: Path, stratified: bool
+) -> None:
     repo_root = Path(__file__).resolve().parents[2]
     output_dir = tmp_path / "dataset"
     subprocess.run(
@@ -192,16 +212,43 @@ def test_cli_exports_synthetic_splits_config_and_stats(tmp_path: Path) -> None:
             "simulator.channel_correlation=0.3",
             f"hydra.run.dir={tmp_path / 'hydra'}",
             "hydra.output_subdir=null",
+            *(
+                [
+                    "stratify.enabled=true",
+                    "stratify.key=simulator.rho",
+                    "stratify.values=[0.0,0.8]",
+                    "dataset.n_valid=2",
+                    "dataset.n_test=2",
+                ]
+                if stratified
+                else []
+            ),
         ],
         check=True,
         cwd=repo_root,
     )
     train = torch.load(output_dir / "train/data.pt")
     assert train["data"].shape == (2, 4, 5, 7, 3)
-    assert train["provenance"]["kind"] == "synthetic"
+    if stratified:
+        assert [entry["rho"] for entry in train["provenance"]] == [0.0, 0.8]
+        for index, provenance in enumerate(train["provenance"]):
+            sim = GaussianField(
+                height=5,
+                width=7,
+                n_channels=3,
+                rho=provenance["rho"],
+                spatial_length_scale=0.5,
+                channel_correlation=0.3,
+            )
+            expected = sim.forward_samples_spatiotemporal(
+                1, random_seed=provenance["random_seed"]
+            )
+            assert torch.equal(train["data"][index], expected["data"][0])
+    else:
+        assert train["provenance"]["kind"] == "synthetic"
     for split in ("valid", "test"):
         payload = torch.load(output_dir / split / "data.pt")
-        assert payload["data"].shape == (1, 4, 5, 7, 3)
+        assert payload["data"].shape == (2 if stratified else 1, 4, 5, 7, 3)
     stats = OmegaConf.load(output_dir / "stats.yml")
     assert list(stats.core_field_names) == ["field_0", "field_1", "field_2"]
     expected = train["data"].mean(dim=(0, 1, 2, 3))

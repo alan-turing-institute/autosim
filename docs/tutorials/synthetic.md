@@ -44,6 +44,8 @@ separable across space, time and channels. The seed is local to the generator,
 does not reset the global Torch RNG, and is recorded in each split's provenance.
 The default CLI assigns separate split seeds and writes training-derived
 `stats.yml`, `resolved_config.yaml` and `train/valid/test/data.pt`.
+For stratified `.pt` generation, provenance is a list in `stratify.values` order,
+matching the concatenated, equally sized groups of trajectories.
 
 For a different shape and trajectory count:
 
@@ -113,6 +115,10 @@ output directory for each run, and leave `overwrite=false`. Existing dataset
 stores or metadata are rejected before generation. This route currently supports
 Gaussian fields with per-channel normalization and serial generation;
 visualization and stratification remain available through the default `.pt` route.
+
+A forcibly terminated export can leave a large hidden `.autosim-zarr-*` staging
+directory inside the output directory. Once the exporter has stopped, remove that
+staging directory before retrying to reclaim its disk space.
 
 Tune read chunks using the actual DataLoader's window lengths and access pattern.
 Larger shards reduce file count, while larger read chunks can increase bytes

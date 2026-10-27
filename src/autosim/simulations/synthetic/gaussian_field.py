@@ -162,7 +162,9 @@ class GaussianField(SpatioTemporalSimulator):
         if x.ndim != 2 or x.shape[1] != 0:
             msg = "GaussianField has no input parameters; expected shape (n, 0)."
             raise ValueError(msg)
-        payload = self.forward_samples_spatiotemporal(n=x.shape[0])
+        # The base API seeds the global CPU RNG for each independent sample.
+        seed = int(torch.randint(2**63 - 1, (), device="cpu"))
+        payload = self.forward_samples_spatiotemporal(n=x.shape[0], random_seed=seed)
         return rearrange(payload["data"], "b t h w c -> b (t h w c)")
 
     def _check_output_size(self, shape: tuple[int, ...]) -> None:

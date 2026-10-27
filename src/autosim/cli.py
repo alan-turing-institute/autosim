@@ -637,6 +637,10 @@ def combine_stratified_splits(
                 merged_payload[key] = torch.cat(values, dim=0)
             elif all(value is None for value in values):
                 merged_payload[key] = None
+            elif key == "provenance" and all(
+                isinstance(value, dict) for value in values
+            ):
+                merged_payload[key] = values
             else:
                 msg = (
                     f"Cannot combine non-tensor field '{key}' across strata. "
