@@ -17,7 +17,9 @@ from omegaconf import DictConfig, OmegaConf
 
 from autosim.parallel import validate_num_workers
 from autosim.simulations.base import SpatioTemporalSimulator
+from autosim.simulations.synthetic import GaussianField
 from autosim.utils import plot_spatiotemporal_1d, plot_spatiotemporal_video
+from autosim.zarr_export import export_chunked_dataset
 
 if not OmegaConf.has_resolver("shortuuid"):
     OmegaConf.register_new_resolver(
@@ -93,13 +95,12 @@ def generate_dataset_splits(
     return {"train": train, "valid": valid, "test": test}
 
 
-def save_dataset_splits(
-    splits: dict[str, dict[str, Any]],
-    output_dir: str | Path,
-    overwrite: bool = False,
-) -> None:
-    """Persist split dictionaries to `output_dir/{split}/data.pt`."""
-    output_path = Path(output_dir)
+def _check_pt_destinations(output_path: Path, overwrite: bool) -> None:
+    """Reject conflicting output formats before generation or metadata writes."""
+    for split in ("train", "valid", "test"):
+        if (output_path / split / "data.zarr").exists():
+            msg = f"Refusing to mix tensor output with existing {split}/data.zarr."
+            raise FileExistsError(msg)
     expected_files = [
         output_path / split / "data.pt" for split in ("train", "valid", "test")
     ]
@@ -110,6 +111,15 @@ def save_dataset_splits(
         )
         raise FileExistsError(msg)
 
+
+def save_dataset_splits(
+    splits: dict[str, dict[str, Any]],
+    output_dir: str | Path,
+    overwrite: bool = False,
+) -> None:
+    """Persist split dictionaries to `output_dir/{split}/data.pt`."""
+    output_path = Path(output_dir)
+    _check_pt_destinations(output_path, overwrite)
     for split_name, payload in splits.items():
         split_dir = output_path / split_name
         split_dir.mkdir(parents=True, exist_ok=True)
@@ -627,6 +637,10 @@ def combine_stratified_splits(
                 merged_payload[key] = torch.cat(values, dim=0)
             elif all(value is None for value in values):
                 merged_payload[key] = None
+            elif key == "provenance" and all(
+                isinstance(value, dict) for value in values
+            ):
+                merged_payload[key] = values
             else:
                 msg = (
                     f"Cannot combine non-tensor field '{key}' across strata. "
@@ -639,9 +653,63 @@ def combine_stratified_splits(
     return combined
 
 
+def _generate_zarr_dataset(cfg: Any) -> None:
+    """Export synthetic fields with bounded-memory Zarr generation."""
+    if bool(cfg.overwrite):
+        msg = "Zarr export only creates new datasets; overwrite=true is unsupported."
+        raise ValueError(msg)
+    if bool(cfg.get("stratify", {}).get("enabled", False)):
+        msg = "Zarr generation does not support stratification."
+        raise ValueError(msg)
+    if bool(cfg.get("visualize", {}).get("enabled", False)):
+        msg = "Set visualize.enabled=false for Zarr generation."
+        raise ValueError(msg)
+    if cfg.dataset.get("num_workers") is not None:
+        msg = "Leave dataset.num_workers=null for streamed Zarr generation."
+        raise ValueError(msg)
+    if _parse_shared_core_field_groups(cfg.get("normalization")):
+        msg = "Zarr generation does not yet support shared normalization groups."
+        raise ValueError(msg)
+
+    sim = build_simulator(cfg.simulator)
+    if not isinstance(sim, GaussianField):
+        msg = "Streamed Zarr generation currently requires GaussianField."
+        raise TypeError(msg)
+    splits = ("train", "valid", "test")
+    split_counts = {split: cfg.dataset[f"n_{split}"] for split in splits}
+    split_steps = dict(
+        cfg.dataset.get("steps_per_split", dict.fromkeys(splits, sim.n_steps))
+    )
+    output_dir = Path(cfg.dataset.output_dir)
+    if not output_dir.is_absolute():
+        output_dir = Path(get_original_cwd()) / output_dir
+
+    export_chunked_dataset(
+        sim=sim,
+        output_dir=output_dir,
+        split_counts=split_counts,
+        split_steps=split_steps,
+        chunk_steps=cfg.dataset.get("chunk_steps", 1),
+        shard_steps=cfg.dataset.get("shard_steps", 16),
+        base_seed=cfg.seed,
+        resolved_config=OmegaConf.to_yaml(cfg, resolve=True),
+    )
+
+
 @hydra.main(version_base=None, config_path="configs", config_name="generate_data")
 def _generate_main(cfg: Any) -> None:
     """Generate simulation datasets from a Hydra-configured simulator."""
+    data_format = cfg.dataset.get("format", "pt")
+    if data_format == "zarr":
+        _generate_zarr_dataset(cfg)
+        return
+    if data_format != "pt":
+        msg = f"Unsupported dataset format: {data_format!r}. Use 'pt' or 'zarr'."
+        raise ValueError(msg)
+    output_dir = Path(cfg.dataset.output_dir)
+    if not output_dir.is_absolute():
+        output_dir = Path(get_original_cwd()) / output_dir
+    _check_pt_destinations(output_dir, bool(cfg.overwrite))
     channel_names_for_visualization: list[str] | None = None
     stratify_cfg = cfg.get("stratify")
     if stratify_cfg is not None and bool(stratify_cfg.get("enabled", False)):
@@ -699,10 +767,6 @@ def _generate_main(cfg: Any) -> None:
             ensure_exact_n=bool(cfg.dataset.get("ensure_exact_n", False)),
             num_workers=cfg.dataset.get("num_workers"),
         )
-
-    output_dir = Path(cfg.dataset.output_dir)
-    if not output_dir.is_absolute():
-        output_dir = Path(get_original_cwd()) / output_dir
 
     save_resolved_config(cfg=cfg, output_dir=output_dir)
 

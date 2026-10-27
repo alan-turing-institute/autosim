@@ -1,0 +1,14 @@
+defaults:
+  - generate_data
+  - override simulator: synthetic/gaussian_field
+  - _self_
+
+# Small in-memory dataset for software checks and performance experiments.
+dataset:
+  n_train: 2
+  n_valid: 1
+  n_test: 1
+
+seed: 42
+visualize:
+  enabled: false

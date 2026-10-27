@@ -1,0 +1,6 @@
+defaults:
+  - generate_data_synthetic
+  - override simulator: synthetic/era5_shape
+  - _self_
+
+# Four frames at 121x240x69 FP32 take about 30.6 MiB per trajectory.

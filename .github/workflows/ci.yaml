@@ -24,6 +24,10 @@ jobs:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         # only run for MSV Python 3.10 on PRs, but all versions on pushes to main
         python-version: ${{ github.event_name == 'push' && fromJSON('["3.10", "3.11", "3.12"]') || fromJSON('["3.10"]') }}
+        # Exercise the optional Zarr path on PRs; it requires Python 3.11+.
+        include:
+          - os: ubuntu-latest
+            python-version: "3.11"
     env:
       TURN_OFF_MPS_IF_RUNNING_CI: 1
       MPLBACKEND: Agg
@@ -46,7 +50,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --extra dev
+          uv sync --extra dev --extra zarr
 
       - name: Run prek
         run: |

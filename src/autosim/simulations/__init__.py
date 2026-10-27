@@ -12,6 +12,7 @@ from .spatiotemporal import (
     GrossPitaevskiiEquation2D,
     ReactionDiffusion,
 )
+from .synthetic import GaussianField
 
 ALL_SIMULATORS = [
     AdvectionDiffusion,
@@ -25,6 +26,7 @@ ALL_SIMULATORS = [
     Projectile,
     ProjectileMultioutput,
     ReactionDiffusion,
+    GaussianField,
 ]
 
 __all__ = [
@@ -33,6 +35,7 @@ __all__ = [
     "ConditionedNavierStokes2D",
     "Epidemic",
     "FlowProblem",
+    "GaussianField",
     "GrayScott",
     "GrossPitaevskiiEquation2D",
     "Projectile",

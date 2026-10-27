@@ -9,6 +9,7 @@ chapters:
       - file: tutorials/quickstart
       - file: tutorials/visualize
       - file: tutorials/stratified
+      - file: tutorials/synthetic
   - file: reference/index
     sections:
       - file: reference/core/index
