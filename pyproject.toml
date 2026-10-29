@@ -24,6 +24,7 @@ dependencies = [
 autosim = "autosim.cli:main"
 
 [project.optional-dependencies]
+cu126 = ["torch>=2.0"]
 zarr = [
     "zarr>=3.1,<4; python_version >= '3.11'",
 ]
@@ -120,11 +121,11 @@ name = "pytorch-cu126"
 url = "https://download.pytorch.org/whl/cu126"
 explicit = true
 
+# PyTorch's CUDA 12.6 wheels are opt-in (`uv sync --extra cu126`), so this choice is not
+# forced on projects that install this package: a dependency's `tool.uv.sources` applies to
+# them too, and a pinned index here makes a project that picks another CUDA build unresolvable.
 [tool.uv.sources]
 autoemulate = { git = "https://github.com/alan-turing-institute/autoemulate.git" }
 torch = [
-  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-]
-torchvision = [
-  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+  { index = "pytorch-cu126", extra = "cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]

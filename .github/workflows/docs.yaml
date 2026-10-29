@@ -42,7 +42,7 @@ jobs:
         uses: nikeee/setup-pandoc@v1
 
       - name: Install dependencies
-        run: uv sync --extra dev --extra docs
+        run: uv sync --extra cu126 --extra dev --extra docs
 
       - name: Build docs
         run: uv run jupyter-book build docs --all
