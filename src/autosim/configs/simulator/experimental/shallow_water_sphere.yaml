@@ -15,7 +15,7 @@ T: 360.0
 dt_save: 3.0
 skip_nt: 61
 courant: 0.4
-noise_amplitude: 0.001
+noise_amplitude: 10.0
 noise_lmax: 120
 batch_size: 8
 device: cuda
