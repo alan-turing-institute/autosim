@@ -1,0 +1,26 @@
+# Shallow water on the rotating sphere from a Galewsky et al. (2004) jet (torch-harmonics).
+# Requires the "spherical" extra and a GPU; leave dataset.num_workers unset.
+_target_: autosim.experimental.simulations.SphericalShallowWater
+log_level: progress_bar
+# Sampling: legendre-gauss / equiangular / lobatto (nlat, nlon) or healpix (nside).
+grid: legendre-gauss
+lmax: 256
+nlat: 384
+nlon: 768
+# Time in hours. dt_save = 3 h is below a third of the 12 h decorrelation time of the
+# eddy vorticity; skip_nt = 61 drops the first 183 h, the latest end of the jet's
+# breakdown over 8 sampled runs; T = 360 h leaves 60 turbulent snapshots. Courant 0.4
+# keeps the divergence time-step error at 0.5% (checks of the 01_04 notebook).
+T: 360.0
+dt_save: 3.0
+skip_nt: 61
+courant: 0.4
+noise_amplitude: 0.001
+noise_lmax: 120
+batch_size: 8
+device: cuda
+parameters_range:
+  jet_speed: [60.0, 100.0]
+  height_perturbation_m: [60.0, 180.0]
+  perturbation_lon: [0.0, 6.283185307179586]
+  perturbation_lat: [0.6283185307179586, 1.0471975511965976]

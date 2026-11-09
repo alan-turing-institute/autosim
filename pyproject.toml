@@ -28,6 +28,10 @@ cu126 = ["torch>=2.0"]
 zarr = [
     "zarr>=3.1,<4; python_version >= '3.11'",
 ]
+spherical = [
+    # Grid descriptors and HEALPix are on torch-harmonics main (unreleased v1.0 line).
+    "torch-harmonics @ git+https://github.com/NVIDIA/torch-harmonics.git@c9bc3b8",
+]
 dev = [
     "ipykernel>=7.1.0",
     "pytest>=9.0.1",
