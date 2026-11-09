@@ -280,12 +280,16 @@ def galewsky_initial_condition(
     u = torch.where(inside, jet_speed / en * torch.exp(1.0 / product), 0.0)
     wind = torch.stack([u, torch.zeros_like(u)], dim=1)
     vorticity, divergence = dynamics.vorticity_divergence(wind)
+    # The jet as represented with degrees l < L: balancing this wind (not the analytic
+    # one) makes the represented jet exactly steady at any resolution.
+    wind = dynamics.wind(vorticity, divergence)
 
     # 2. Balanced geopotential, eq. (3): lap^-1 curl((zeta + f) u) - |u|^2 / 2 + const
     absolute_vorticity = dynamics.to_grid(vorticity) + dynamics.coriolis
     flux_curl, _ = dynamics.vorticity_divergence(wind * absolute_vorticity.unsqueeze(1))
+    kinetic_energy = 0.5 * (wind[:, 0] ** 2 + wind[:, 1] ** 2)
     geopotential = dynamics.inverse_laplacian * flux_curl - dynamics.to_coefficients(
-        0.5 * u**2
+        kinetic_energy
     )
     geopotential[:, 0, 0] = math.sqrt(4 * math.pi) * gravity * dynamics.mean_depth
 
