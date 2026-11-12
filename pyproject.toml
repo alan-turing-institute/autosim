@@ -30,7 +30,7 @@ zarr = [
 ]
 spherical = [
     # Grid descriptors and HEALPix are on torch-harmonics main (unreleased v1.0 line).
-    "torch-harmonics @ git+https://github.com/NVIDIA/torch-harmonics.git@c9bc3b8",
+    "torch-harmonics @ git+https://github.com/NVIDIA/torch-harmonics.git@c9bc3b8; python_version >= '3.11'",
 ]
 dev = [
     "ipykernel>=7.1.0",
