@@ -20,6 +20,7 @@ from .multivariate_ou_lens import MultivariateOULens
 from .ornstein_uhlenbeck import OrnsteinUhlenbeck
 from .shallow_water import ShallowWater2D
 from .shallow_water_1d import ShallowWater1D, simulate_shallow_water_1d
+from .shallow_water_sphere import SphericalShallowWater
 from .shallow_water_stepper import advance_swe_2d
 
 ALL_SIMULATORS = [
@@ -30,6 +31,7 @@ ALL_SIMULATORS = [
     LatticeBoltzmann,
     ShallowWater2D,
     ShallowWater1D,
+    SphericalShallowWater,
     OrnsteinUhlenbeck,
     CoxIngersollRoss,
     DoubleWell,
@@ -58,6 +60,7 @@ __all__ = [
     "OrnsteinUhlenbeck",
     "ShallowWater1D",
     "ShallowWater2D",
+    "SphericalShallowWater",
     "advance_swe_2d",
     "estimate_ks_lyapunov",
     "simulate_burgers_1d",
