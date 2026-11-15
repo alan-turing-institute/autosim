@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import math
 
 import numpy as np
@@ -13,6 +14,7 @@ from autosim.types import TensorLike
 from .dynamics import (
     SphereShallowWaterDynamics,
     coriolis_parameter,
+    fields_to_spectral,
     make_grid,
 )
 from .forcing import ForcingSettings
@@ -40,9 +42,12 @@ INITIAL_CONDITIONS = (
     "rossby_haurwitz",
     "mountain",
     "random_balanced",
+    "restart",
+    "from_fields",
 )
 FORCING_TYPES = ("none", "vortical", "momentum", "mass_pulses")
 BACKSCATTER_MODES = ("global", "local")
+BRANCH_FORCING_STATES = ("redraw", "carry")
 
 # Default sampling ranges of each family; their keys are the required parameters.
 DEFAULT_PARAMETER_RANGES: dict[str, dict[str, tuple[float, float]]] = {
@@ -52,6 +57,8 @@ DEFAULT_PARAMETER_RANGES: dict[str, dict[str, tuple[float, float]]] = {
     "rossby_haurwitz": ROSSBY_HAURWITZ_RANGES,
     "mountain": MOUNTAIN_RANGES,
     "random_balanced": RANDOM_BALANCED_RANGES,
+    "restart": {},  # the state is supplied: no sampled parameter
+    "from_fields": {},
 }
 
 # Constructor arguments that can also be keys of parameters_range: they are then
@@ -73,6 +80,8 @@ SAMPLED_SCALARS = (
 # Independent random streams of one simulation
 INITIAL_NOISE_STREAM = 0
 FORCING_STREAM = 1
+BASELINE_STREAM = 2
+REFERENCE_STREAM = 100  # member j of a reference ensemble uses stream 100 + j
 
 
 def sample_generators(
@@ -131,6 +140,14 @@ class SphericalShallowWater(SpatioTemporalSimulator):
     - ``"random_balanced"``: random flow without divergence and its balanced height,
       the spherical counterpart of the planar ``balanced_random_pv``. Parameters
       ``amp`` (root-mean-square speed), ``initial_wavenumber``, ``initial_bandwidth``.
+
+    - ``"restart"``: the state ``initial_state``, saved fields ``[h, u_phi,
+      u_theta]`` of this or another run. No parameter. All the simulations of a call
+      start from this one state, so with stochastic forcing they are the members of
+      an ensemble forecast, as in the planar simulator.
+    - ``"from_fields"``: the same after a balance step, which removes the divergence
+      and replaces the height by the one in nonlinear balance with the wind. This is
+      the interface of W92 case 7 for analysed fields.
 
     The arguments listed in ``SAMPLED_SCALARS`` (drag and relaxation times, forcing
     rate, decorrelation time, slope, fractions, pulse statistics) can also be keys of
@@ -226,6 +243,37 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         return_forcing_state: Return, as ``forcing_state``, the wind tendency of the
             forcing pattern at each saved frame, for a unit energy rate. The pattern
             has memory that the saved fields do not show.
+        initial_state: Fields ``[h, u_phi, u_theta]`` of shape ``(*grid.shape, 3)``,
+            for ``"restart"`` and ``"from_fields"``.
+        initial_constant_fields: Coriolis parameter and orography of that state,
+            shape ``(*grid.shape, 2)``, as returned in ``constant_fields``. Needed
+            when the state has an orography (h is the free surface) or a rotation
+            axis that ``rotation_axis`` does not give. None keeps a flat bottom and
+            the axis of ``rotation_axis``.
+        initial_forcing_state: Forcing pattern of that state, shape
+            ``(*grid.shape, 2)``, as returned in ``forcing_state``, for
+            ``branch_forcing_state="carry"``.
+        branch_forcing_state: What happens to the forcing pattern, which has memory,
+            where a forecast branches (a restart, or the first saved frame of a
+            generated run). ``"redraw"`` draws it from its stationary distribution:
+            the forecast then depends on the saved fields alone, and its
+            distribution is p(x_{n+1} | x_n). ``"carry"`` keeps the pattern: the
+            members share it at the branch point, and an emulator needs it as an
+            extra input (``forcing_state``) to see what the simulator sees.
+        reference_members: Number N of extra members branched from the first saved
+            frame of each simulation, with independent forcing. They are returned as
+            ``reference_ensemble``, shape ``(n, N, time, *grid.shape, 3)``. The
+            simulation itself (``data``) is one more member, the truth.
+        output_lmax: Band limit of the saved fields, below ``lmax``: the state is
+            truncated to it before it is saved (coarse-graining). None saves the
+            full state on the simulation grid.
+        output_nlat: Rings of the grid of the saved fields, with ``output_lmax``.
+        output_nlon: Points per ring of that grid.
+        output_nside: Resolution of that grid, for "healpix".
+        return_baseline: With ``output_lmax``, also run the solver at the band limit
+            ``output_lmax`` from the truncated first saved frame, and return it as
+            ``baseline``: the forecast of the low-resolution physics, which an
+            emulator at that resolution has to beat.
     """
 
     def __init__(  # noqa: PLR0912, PLR0915
@@ -275,6 +323,16 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         return_additional_input_fields: bool = False,
         return_energy_budget: bool = False,
         return_forcing_state: bool = False,
+        initial_state: TensorLike | None = None,
+        initial_constant_fields: TensorLike | None = None,
+        initial_forcing_state: TensorLike | None = None,
+        branch_forcing_state: str = "redraw",
+        reference_members: int = 0,
+        output_lmax: int | None = None,
+        output_nlat: int | None = None,
+        output_nlon: int | None = None,
+        output_nside: int | None = None,
+        return_baseline: bool = False,
     ) -> None:
         """Store the configuration and build the spectral operators once."""
         sphere_grid = make_grid(grid, nlat, nlon, nside)  # needs torch-harmonics
@@ -302,6 +360,57 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             raise ValueError(msg)
         if not 0 <= forcing_divergent_fraction <= 1:
             msg = "forcing_divergent_fraction must be between 0 and 1"
+            raise ValueError(msg)
+        if branch_forcing_state not in BRANCH_FORCING_STATES:
+            msg = f"branch_forcing_state must be one of {BRANCH_FORCING_STATES}"
+            raise ValueError(msg)
+        if reference_members < 0:
+            msg = "reference_members must be non-negative"
+            raise ValueError(msg)
+        supplied_state = initial_condition in ("restart", "from_fields")
+        if supplied_state and initial_state is None:
+            msg = (
+                f"initial_state is required for initial_condition='{initial_condition}'"
+            )
+            raise ValueError(msg)
+        if not supplied_state and initial_state is not None:
+            msg = (
+                "initial_state is only valid for initial_condition='restart' or "
+                "'from_fields'"
+            )
+            raise ValueError(msg)
+        if initial_state is not None:
+            initial_state = torch.as_tensor(initial_state).detach()
+            expected_shape = (*sphere_grid.shape, 3)
+            if tuple(initial_state.shape) == (1, *expected_shape):
+                initial_state = initial_state[0]
+            if tuple(initial_state.shape) != expected_shape:
+                msg = f"initial_state must have shape {expected_shape}"
+                raise ValueError(msg)
+            if not torch.isfinite(initial_state).all():
+                msg = "initial_state must be finite"
+                raise ValueError(msg)
+        if initial_constant_fields is not None:
+            initial_constant_fields = torch.as_tensor(initial_constant_fields).detach()
+            expected_shape = (*sphere_grid.shape, 2)
+            if tuple(initial_constant_fields.shape) != expected_shape:
+                msg = f"initial_constant_fields must have shape {expected_shape}"
+                raise ValueError(msg)
+        if initial_forcing_state is not None:
+            initial_forcing_state = torch.as_tensor(initial_forcing_state).detach()
+            expected_shape = (*sphere_grid.shape, 2)
+            if tuple(initial_forcing_state.shape) != expected_shape:
+                msg = f"initial_forcing_state must have shape {expected_shape}"
+                raise ValueError(msg)
+        carries_pattern = branch_forcing_state == "carry" and kinetic_forcing
+        if supplied_state and carries_pattern and initial_forcing_state is None:
+            msg = "branch_forcing_state='carry' requires initial_forcing_state"
+            raise ValueError(msg)
+        if output_lmax is not None and output_lmax > lmax:
+            msg = "output_lmax must not exceed lmax"
+            raise ValueError(msg)
+        if return_baseline and output_lmax is None:
+            msg = "return_baseline requires output_lmax"
             raise ValueError(msg)
         if forcing_degree_max is None:
             forcing_degree_max = lmax - 1
@@ -370,6 +479,12 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         self.return_additional_input_fields = return_additional_input_fields
         self.return_energy_budget = return_energy_budget
         self.return_forcing_state = return_forcing_state
+        self.initial_state = initial_state
+        self.initial_constant_fields = initial_constant_fields
+        self.initial_forcing_state = initial_forcing_state
+        self.branch_forcing_state = branch_forcing_state
+        self.reference_members = reference_members
+        self.return_baseline = return_baseline
         self.additional_input_names = ["forcing_h", "forcing_u_phi", "forcing_u_theta"]
         self.energy_budget_names = list(ENERGY_BUDGET_NAMES)
         self.forcing_state_names = ["forcing_state_u_phi", "forcing_state_u_theta"]
@@ -399,40 +514,69 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             sht_iterations,
         )
 
+        # Grid of the saved fields. With output_lmax the state is truncated to this
+        # band limit before it is saved, and the solver of the baseline runs on it,
+        # with its own Courant step.
+        self.output_grid = self.grid
+        self.output_dynamics = self.dynamics
+        self.output_steps_per_save = self.steps_per_save
+        if output_lmax is not None:
+            self.output_grid = make_grid(grid, output_nlat, output_nlon, output_nside)
+            output_dt = courant * (radius / output_lmax) / (wave_speed + max_wind)
+            self.output_steps_per_save = math.ceil(dt_save * 3600 / output_dt)
+            self.output_dynamics = SphereShallowWaterDynamics(
+                self.output_grid,
+                output_lmax,
+                radius,
+                omega,
+                gravity,
+                mean_depth,
+                dt_save * 3600 / self.output_steps_per_save,
+                device,
+                sht_iterations,
+            )
+
         # Content of one flat output row: (key, shape of one simulation). The extra
         # outputs travel in the row so that the retries of the base class keep them
         # aligned with the data.
+        output_shape = self.output_grid.shape
         self.row_layout: list[tuple[str, tuple[int, ...]]] = [
-            ("data", (self.n_frames, *self.grid.shape, len(self.output_names)))
+            ("data", (self.n_frames, *output_shape, len(self.output_names)))
         ]
         if return_constant_fields:
-            self.row_layout.append(("constant_fields", (*self.grid.shape, 2)))
+            self.row_layout.append(("constant_fields", (*output_shape, 2)))
         if return_additional_input_fields:
-            shape = (self.n_frames, *self.grid.shape, 3)
+            shape = (self.n_frames, *output_shape, 3)
             self.row_layout.append(("additional_input_fields", shape))
         if return_energy_budget:
             shape = (self.n_frames, len(self.energy_budget_names))
             self.row_layout.append(("energy_budget", shape))
         if return_forcing_state:
-            shape = (self.n_frames, *self.grid.shape, 2)
+            shape = (self.n_frames, *output_shape, 2)
             self.row_layout.append(("forcing_state", shape))
+        if reference_members > 0:
+            shape = (reference_members, self.n_frames, *output_shape, 3)
+            self.row_layout.append(("reference_ensemble", shape))
+        if return_baseline:
+            shape = (self.n_frames, *output_shape, 3)
+            self.row_layout.append(("baseline", shape))
 
-    def sampled_or_fixed(self, rows: TensorLike, name: str) -> TensorLike:
+    def sampled_or_fixed(self, rows: TensorLike, name: str, value: float) -> TensorLike:
         """Value of a scalar of ``SAMPLED_SCALARS`` for each simulation of a batch.
 
-        The value is the column of ``rows`` when ``name`` is a key of
-        ``parameters_range``, and the constructor argument otherwise.
+        The value is the column ``name`` of ``rows`` when ``name`` is a key of
+        ``parameters_range``, and ``value``, the constructor argument, otherwise.
 
         Args:
             rows: Parameter rows (B, n_parameters).
             name: Name of the scalar.
+            value: Constructor argument of that scalar.
 
         Returns:
             Values (B,), float64.
         """
         if name in self.param_names:
             return rows[:, self.get_parameter_idx(name)].to(torch.float64)
-        value = float(getattr(self, name))
         return torch.full((rows.shape[0],), value, dtype=torch.float64)
 
     def forcing_settings(self, rows: TensorLike) -> ForcingSettings | None:
@@ -449,26 +593,42 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         """
         if self.forcing_type == "none":
             return None
-        divergent_fraction = self.sampled_or_fixed(rows, "forcing_divergent_fraction")
+        energy_rate = self.sampled_or_fixed(
+            rows, "forcing_energy_rate", self.forcing_energy_rate
+        )
+        correlation_hours = self.sampled_or_fixed(
+            rows, "forcing_correlation_time", self.forcing_correlation_time
+        )
+        spectral_slope = self.sampled_or_fixed(
+            rows, "forcing_spectral_slope", self.forcing_spectral_slope
+        )
+        divergent_fraction = self.sampled_or_fixed(
+            rows, "forcing_divergent_fraction", self.forcing_divergent_fraction
+        )
         if self.forcing_type == "vortical":
             divergent_fraction = torch.zeros_like(divergent_fraction)
+        backscatter_fraction = self.sampled_or_fixed(
+            rows, "forcing_backscatter_fraction", self.forcing_backscatter_fraction
+        )
+        pulses_per_hour = self.sampled_or_fixed(rows, "pulse_rate", self.pulse_rate)
+        pulse_amplitude = self.sampled_or_fixed(
+            rows, "pulse_amplitude", self.pulse_amplitude
+        )
+        pulse_width = self.sampled_or_fixed(rows, "pulse_width", self.pulse_width)
         return ForcingSettings(
             forcing_type=self.forcing_type,
-            energy_rate=self.sampled_or_fixed(rows, "forcing_energy_rate"),
-            correlation_time=3600
-            * self.sampled_or_fixed(rows, "forcing_correlation_time"),
-            spectral_slope=self.sampled_or_fixed(rows, "forcing_spectral_slope"),
+            energy_rate=energy_rate,
+            correlation_time=3600 * correlation_hours,
+            spectral_slope=spectral_slope,
             degree_min=self.forcing_degree_min,
             degree_max=self.forcing_degree_max,
             divergent_fraction=divergent_fraction,
-            backscatter_fraction=self.sampled_or_fixed(
-                rows, "forcing_backscatter_fraction"
-            ),
+            backscatter_fraction=backscatter_fraction,
             backscatter_mode=self.forcing_backscatter_mode,
             backscatter_include_drag=self.backscatter_include_drag,
-            pulse_rate=self.sampled_or_fixed(rows, "pulse_rate") / 3600,
-            pulse_amplitude=self.sampled_or_fixed(rows, "pulse_amplitude"),
-            pulse_width=self.sampled_or_fixed(rows, "pulse_width"),
+            pulse_rate=pulses_per_hour / 3600,
+            pulse_amplitude=pulse_amplitude,
+            pulse_width=pulse_width,
             pulse_remove_mean=self.pulse_remove_mean,
         )
 
@@ -491,14 +651,21 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         """
         batch = rows.shape[0]
         drag_time = None
-        if self.drag_time is not None or "drag_time" in self.param_names:
-            drag_time = 3600 * self.sampled_or_fixed(rows, "drag_time")
+        if "drag_time" in self.param_names:
+            drag_time = 3600 * rows[:, self.get_parameter_idx("drag_time")]
+        elif self.drag_time is not None:
+            drag_time = torch.full((batch,), 3600 * self.drag_time)
 
         relaxation_time = None
         equilibrium_geopotential = None
-        if self.relaxation_time is not None or "relaxation_time" in self.param_names:
-            relaxation_time = 3600 * self.sampled_or_fixed(rows, "relaxation_time")
-            jet_speed = self.sampled_or_fixed(rows, "relaxation_jet_speed")
+        if "relaxation_time" in self.param_names:
+            relaxation_time = 3600 * rows[:, self.get_parameter_idx("relaxation_time")]
+        elif self.relaxation_time is not None:
+            relaxation_time = torch.full((batch,), 3600 * self.relaxation_time)
+        if relaxation_time is not None:
+            jet_speed = self.sampled_or_fixed(
+                rows, "relaxation_jet_speed", self.relaxation_jet_speed
+            )
             jet_latitude = torch.full(
                 (batch,), self.relaxation_jet_latitude, dtype=torch.float64
             )
@@ -507,6 +674,61 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 self.dynamics, vorticity, divergence, coriolis
             )
         return drag_time, relaxation_time, equilibrium_geopotential
+
+    def supplied_problem(
+        self, batch: int, coriolis: TensorLike | None
+    ) -> tuple[TensorLike, TensorLike | None, TensorLike | None]:
+        """Initial state and fixed fields of ``"restart"`` and ``"from_fields"``.
+
+        Every simulation of the batch starts from ``initial_state``. With
+        ``initial_constant_fields`` the Coriolis parameter and the orography are
+        those of the supplied problem. ``"from_fields"`` then applies its balance
+        step.
+
+        Args:
+            batch: Number of simulations B.
+            coriolis: Coriolis parameter of ``rotation_axis``, (B, *grid.shape), or
+                None for the polar one. Replaced by the supplied one, if any.
+
+        Returns:
+            The spectral state (B, 3, L, L), the Coriolis parameter or None, and the
+            coefficients of the surface geopotential or None.
+        """
+        if self.initial_state is None:
+            msg = "initial_state is required"  # checked by the constructor
+            raise ValueError(msg)
+        grid_shape = self.grid.shape
+        fields = self.initial_state.to(self.device, torch.float64)
+        fields = fields.expand(batch, *grid_shape, 3)
+
+        surface_geopotential = None
+        if self.initial_constant_fields is not None:
+            constant = self.initial_constant_fields.to(self.device, torch.float64)
+            coriolis = constant[..., 0].expand(batch, *grid_shape)
+            surface_height = constant[..., 1].expand(batch, *grid_shape)
+            surface_coefficients = self.dynamics.to_coefficients(surface_height)
+            surface_geopotential = torch.tril(
+                self.dynamics.gravity * surface_coefficients
+            )
+        state = fields_to_spectral(self.dynamics, fields, surface_geopotential)
+
+        if self.initial_condition == "from_fields":
+            # Balance step: no divergence, and the free surface in nonlinear balance
+            # with the wind, with the mean of the supplied free surface
+            vorticity = state[:, 1]
+            divergence = torch.zeros_like(vorticity)
+            free_surface = balanced_geopotential(
+                self.dynamics, vorticity, divergence, coriolis
+            )
+            supplied_free_surface = state[:, 0]
+            if surface_geopotential is not None:
+                supplied_free_surface = state[:, 0] + surface_geopotential
+            free_surface[:, 0, 0] = supplied_free_surface[:, 0, 0]
+            geopotential = free_surface
+            if surface_geopotential is not None:
+                geopotential = free_surface - surface_geopotential
+            state = torch.stack([geopotential, vorticity, divergence], dim=1)
+        return state, coriolis, surface_geopotential
 
     def initial_problem(
         self, rows: TensorLike, noise_generators: list[torch.Generator]
@@ -576,6 +798,10 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 wave_amplitude=rows[:, self.get_parameter_idx("wave_amplitude")],
                 mean_depth=rows[:, self.get_parameter_idx("mean_depth")],
             )
+        elif self.initial_condition in ("restart", "from_fields"):
+            state, coriolis, surface_geopotential = self.supplied_problem(
+                batch, coriolis
+            )
         elif self.initial_condition == "random_balanced":
             state = random_balanced_initial_condition(
                 self.dynamics,
@@ -604,18 +830,62 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         coriolis: TensorLike | None,
         surface_geopotential: TensorLike | None,
     ) -> TensorLike:
-        """Coriolis parameter and orography on the grid, shape (B, *grid.shape, 2)."""
+        """Coriolis parameter and orography on the grid of the saved fields.
+
+        Args:
+            batch: Number of simulations B.
+            coriolis: Coriolis parameter (B, *grid.shape); None is the polar one.
+            surface_geopotential: Coefficients of g h_s, (B, L, L); None is a flat
+                bottom.
+
+        Returns:
+            f and h_s, shape (B, *output_grid.shape, 2).
+        """
+        output_lmax = self.output_dynamics.lmax
         if coriolis is None:
             coriolis = self.dynamics.coriolis.expand(batch, *self.grid.shape)
+        if self.output_dynamics is not self.dynamics:
+            coefficients = self.dynamics.to_coefficients(coriolis)
+            coriolis = self.output_dynamics.to_grid(
+                coefficients[..., :output_lmax, :output_lmax]
+            )
         if surface_geopotential is None:
             surface_height = torch.zeros_like(coriolis)
         else:
+            truncated = surface_geopotential[..., :output_lmax, :output_lmax]
             surface_height = (
-                self.dynamics.to_grid(surface_geopotential) / self.dynamics.gravity
+                self.output_dynamics.to_grid(truncated) / self.dynamics.gravity
             )
         return torch.stack([coriolis, surface_height], dim=-1)
 
-    def forward_batch(
+    def initial_forcing_pattern(self, batch: int) -> TensorLike | None:
+        """Forcing pattern of a restart that carries it, None otherwise.
+
+        ``initial_forcing_state`` is the wind tendency of the pattern for a unit
+        energy rate, the Laplacian of the pattern divided by the time step. Its
+        vorticity and divergence give back the streamfunction and the velocity
+        potential of the pattern.
+
+        Args:
+            batch: Number of simulations B.
+
+        Returns:
+            Pattern coefficients (B, P, L, L), or None when the pattern is drawn.
+        """
+        if self.initial_forcing_state is None or self.branch_forcing_state != "carry":
+            return None
+        tendency = self.initial_forcing_state.to(self.device, torch.float64)
+        tendency = tendency.expand(batch, *self.grid.shape, 2)
+        wind = torch.stack([tendency[..., 0], -tendency[..., 1]], dim=1)
+        vorticity, divergence = self.dynamics.vorticity_divergence(wind)
+        scale = self.dynamics.inverse_laplacian * self.dynamics.dt
+        if self.forcing_type == "vortical":
+            pattern = (scale * vorticity).unsqueeze(1)
+        else:
+            pattern = torch.stack([scale * vorticity, scale * divergence], dim=1)
+        return torch.tril(pattern)
+
+    def forward_batch(  # noqa: PLR0912, PLR0915
         self,
         x: TensorLike,
         allow_failures: bool = True,
@@ -674,10 +944,12 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             forcing_generators = sample_generators(
                 entropy, row_numbers, FORCING_STREAM, self.device
             )
+            n_saves = round(self.T / self.dt_save)
+            carry = self.branch_forcing_state == "carry"
             output = integrate_trajectories(
                 self.dynamics,
                 state,
-                n_saves=round(self.T / self.dt_save),
+                n_saves=n_saves,
                 steps_per_save=self.steps_per_save,
                 skip_nt=self.skip_nt,
                 coriolis=coriolis,
@@ -690,7 +962,84 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 return_additional_input_fields=self.return_additional_input_fields,
                 return_energy_budget=self.return_energy_budget,
                 return_forcing_state=self.return_forcing_state,
+                initial_pattern=self.initial_forcing_pattern(batch),
+                redraw_pattern_at_first_save=not carry,
+                output_dynamics=self.output_dynamics,
             )
+
+            # Reference ensemble: N more members from the first saved frame, each
+            # with its own forcing stream. They continue the time stepping of the
+            # truth (same history), and their pattern is drawn anew or inherited.
+            if self.reference_members > 0:
+                members = []
+                for member in range(self.reference_members):
+                    member_generators = sample_generators(
+                        entropy, row_numbers, REFERENCE_STREAM + member, self.device
+                    )
+                    member_pattern = None  # drawn from its stationary distribution
+                    if carry:
+                        member_pattern = output["branch_pattern"]
+                    member_output = integrate_trajectories(
+                        self.dynamics,
+                        output["branch_state"],
+                        n_saves=n_saves - self.skip_nt,
+                        steps_per_save=self.steps_per_save,
+                        skip_nt=0,
+                        coriolis=coriolis,
+                        surface_geopotential=surface_geopotential,
+                        drag_time=drag_time,
+                        relaxation_time=relaxation_time,
+                        equilibrium_geopotential=equilibrium,
+                        forcing=forcing,
+                        forcing_generators=member_generators,
+                        previous_tendencies=output["branch_tendencies"],
+                        initial_pattern=member_pattern,
+                        output_dynamics=self.output_dynamics,
+                    )
+                    members.append(member_output["data"])
+                output["reference_ensemble"] = torch.stack(members, dim=1)
+
+            # Baseline: the solver at the band limit of the saved fields, from the
+            # truncated first saved frame
+            if self.return_baseline:
+                low = self.output_dynamics
+                low_coriolis = None
+                if coriolis is not None:
+                    coefficients = self.dynamics.to_coefficients(coriolis)
+                    low_coriolis = low.to_grid(
+                        coefficients[..., : low.lmax, : low.lmax]
+                    )
+                low_surface = None
+                if surface_geopotential is not None:
+                    low_surface = surface_geopotential[..., : low.lmax, : low.lmax]
+                low_equilibrium = None
+                if equilibrium is not None:
+                    low_equilibrium = equilibrium[..., : low.lmax, : low.lmax]
+                # The forced degrees stop at the band limit of the baseline
+                low_forcing = None
+                if forcing is not None:
+                    low_degree_max = min(forcing.degree_max, low.lmax - 1)
+                    low_forcing = dataclasses.replace(
+                        forcing, degree_max=low_degree_max
+                    )
+                baseline_generators = sample_generators(
+                    entropy, row_numbers, BASELINE_STREAM, self.device
+                )
+                baseline_output = integrate_trajectories(
+                    low,
+                    output["branch_state"][..., : low.lmax, : low.lmax],
+                    n_saves=n_saves - self.skip_nt,
+                    steps_per_save=self.output_steps_per_save,
+                    skip_nt=0,
+                    coriolis=low_coriolis,
+                    surface_geopotential=low_surface,
+                    drag_time=drag_time,
+                    relaxation_time=relaxation_time,
+                    equilibrium_geopotential=low_equilibrium,
+                    forcing=low_forcing,
+                    forcing_generators=baseline_generators,
+                )
+                output["baseline"] = baseline_output["data"]
             if self.return_constant_fields:
                 fields = self.constant_fields_on_grid(
                     batch, coriolis, surface_geopotential
@@ -731,8 +1080,10 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             ``{"data": (n, time, *grid.shape, 3), "constant_scalars": (n,
             n_parameters), "constant_fields": (n, *grid.shape, 2) or None}``, and
             when requested ``"additional_input_fields"`` (n, time, *grid.shape, 3),
-            ``"energy_budget"`` (n, time, 7) and ``"forcing_state"`` (n, time,
-            *grid.shape, 2).
+            ``"energy_budget"`` (n, time, 7), ``"forcing_state"`` (n, time,
+            *grid.shape, 2), ``"reference_ensemble"`` (n, N, time, *grid.shape, 3)
+            and ``"baseline"`` (n, time, *grid.shape, 3). With ``output_lmax`` the
+            grid is that of the saved fields.
         """
         y, x = self._forward_batch_with_optional_retries(
             n=n, random_seed=random_seed, ensure_exact_n=ensure_exact_n

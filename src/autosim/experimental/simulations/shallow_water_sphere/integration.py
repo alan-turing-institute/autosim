@@ -63,27 +63,6 @@ ENERGY_BUDGET_NAMES = (
 )
 
 
-def state_before_damping(
-    damped_state: TensorLike, step_damping: TensorLike, equilibrium: TensorLike | None
-) -> TensorLike:
-    """Recover the state before the damping of one step from the state after it.
-
-    The damping gives damped = s_eq + E (undamped - s_eq), with s_eq = 0 when the
-    damping does not relax towards an equilibrium.
-
-    Args:
-        damped_state: State after the damping, (B, 3, L, L).
-        step_damping: Damping E of one step, (3, L, L) or (B, 3, L, L).
-        equilibrium: Equilibrium state s_eq, (B, 3, L, L), or None.
-
-    Returns:
-        State before the damping, (B, 3, L, L).
-    """
-    if equilibrium is None:
-        return damped_state / step_damping
-    return equilibrium + (damped_state - equilibrium) / step_damping
-
-
 def backscatter_energy_rate(
     dynamics: SphereShallowWaterDynamics,
     forcing: ForcingSettings,
@@ -213,11 +192,19 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
     return_additional_input_fields: bool = False,
     return_energy_budget: bool = False,
     return_forcing_state: bool = False,
-) -> dict[str, TensorLike]:
+    previous_tendencies: list[TensorLike] | None = None,
+    initial_pattern: TensorLike | None = None,
+    redraw_pattern_at_first_save: bool = False,
+    output_dynamics: SphereShallowWaterDynamics | None = None,
+) -> dict:
     """Advance B simulations and save h, u_phi, u_theta at regular times.
 
     The state is saved at time 0 and after every ``steps_per_save`` steps, ``n_saves``
     times. The first ``skip_nt`` of these snapshots are dropped.
+
+    The first saved frame is the branch point of reference ensembles: its spectral
+    state, the history of the time stepping and the forcing pattern are returned, so
+    that other members can continue from it exactly as this run does.
 
     Args:
         dynamics: Fixed operators and time step.
@@ -239,13 +226,29 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
             each saved interval.
         return_energy_budget: Return the energy budget of each saved interval.
         return_forcing_state: Return the forcing pattern at each saved time.
+        previous_tendencies: Tendencies of the steps before the initial state, most
+            recent first, to continue a run without restarting the Adams-Bashforth
+            scheme. None starts it with an Euler step.
+        initial_pattern: Forcing pattern at the initial time, (B, P, L, L). None
+            draws it from its stationary distribution.
+        redraw_pattern_at_first_save: Draw a new forcing pattern from its stationary
+            distribution at the first saved frame. The forecast from that frame then
+            does not depend on the earlier forcing.
+        output_dynamics: Operators of the grid of the saved fields. With a lower band
+            limit than ``dynamics`` the state is truncated before it is saved
+            (coarse-graining). None saves on the grid of ``dynamics``.
 
     Returns:
-        A dictionary with, n_frames = n_saves + 1 - skip_nt:
+        A dictionary with, n_frames = n_saves + 1 - skip_nt, and the grid that of
+        ``output_dynamics``:
 
         - ``"data"``: the saved fields (B, n_frames, *grid.shape, 3), float32 on the
           CPU;
         - ``"final_state"``: the spectral state at the last time, (B, 3, L, L);
+        - ``"branch_state"``, ``"branch_tendencies"``, ``"branch_pattern"``: the
+          spectral state (B, 3, L, L), the list of previous tendencies and the
+          forcing pattern (B, P, L, L) at the first saved frame, the pattern before
+          it is redrawn;
         - ``"additional_input_fields"`` (on request): at frame i, the increments of
           h, u_phi, u_theta added by the forcing between frames i and i + 1, zero at
           the last frame, (B, n_frames, *grid.shape, 3), float32 on the CPU;
@@ -261,6 +264,15 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
     lmax = dynamics.lmax
     dt = dynamics.dt
     hyperdiffusion = dynamics.step_damping[1]  # (L, L), read now: tests may change it
+
+    # --- Grid of the saved fields. Coefficients are truncated to its band limit by
+    # keeping the degrees and orders below it: [..., :output_lmax, :output_lmax].
+    if output_dynamics is None:
+        output_dynamics = dynamics
+    output_lmax = output_dynamics.lmax
+    output_surface = None
+    if surface_geopotential is not None:
+        output_surface = surface_geopotential[..., :output_lmax, :output_lmax]
 
     # --- Linear damping of one step, per simulation when there is drag or relaxation
     step_damping = dynamics.step_damping
@@ -327,8 +339,11 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
                 ],
                 dim=1,
             )  # (B, 2, L)
-        noise = complex_noise(forcing_generators, amplitudes.shape[1], lmax)
-        pattern = stationary_pattern(noise, amplitudes, alpha)
+        if initial_pattern is None:
+            noise = complex_noise(forcing_generators, amplitudes.shape[1], lmax)
+            pattern = stationary_pattern(noise, amplitudes, alpha)
+        else:
+            pattern = initial_pattern.to(device)
         backscatter = bool((forcing.backscatter_fraction > 0).any())
 
     pulse_events: dict[int, list[tuple[int, float, float]]] = {}
@@ -338,22 +353,32 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
         )
 
     # --- Time loop
+    tendencies_history: list[TensorLike] = []
+    if previous_tendencies is not None:
+        tendencies_history = list(previous_tendencies)
+
+    # Branch point: the first saved frame (time 0 when no snapshot is dropped)
+    branch_state = state
+    branch_tendencies = list(tendencies_history)
+    branch_pattern = pattern
+
     frames = []
     increment_frames = []
     budget_frames = []
     pattern_frames = []
     if skip_nt == 0:
-        fields = spectral_to_fields(dynamics, state, surface_geopotential)
+        truncated = state[..., :output_lmax, :output_lmax]
+        fields = spectral_to_fields(output_dynamics, truncated, output_surface)
         frames.append(fields.float().cpu())
         if return_forcing_state:
             tendency = kinetic_forcing_increment(dynamics, pattern, unit_rate) / dt
-            pattern_fields = increment_to_fields(dynamics, tendency)[..., 1:]
+            truncated = tendency[..., :output_lmax, :output_lmax]
+            pattern_fields = increment_to_fields(output_dynamics, truncated)[..., 1:]
             pattern_frames.append(pattern_fields.float().cpu())
     energy = torch.zeros(batch, dtype=torch.float64, device=device)
     if return_energy_budget:
         energy = total_energy(dynamics, state, surface_geopotential)
 
-    previous_tendencies: list[TensorLike] = []
     undamped_state = state  # set at each step when the budget or backscatter need it
     step_index = 0
     for save in range(1, n_saves + 1):
@@ -364,19 +389,22 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
 
         for _ in range(steps_per_save):
             # 1. Conservative dynamics and linear damping
-            damped_state, previous_tendencies = adams_bashforth_step(
+            damped_state, tendencies_history = adams_bashforth_step(
                 dynamics,
                 state,
-                previous_tendencies,
+                tendencies_history,
                 coriolis,
                 surface_geopotential,
                 damping_argument,
                 equilibrium,
             )
+            # State before the damping, from damped = s_eq + E (undamped - s_eq)
             if return_energy_budget or backscatter:
-                undamped_state = state_before_damping(
-                    damped_state, step_damping, equilibrium
-                )
+                if equilibrium is None:
+                    undamped_state = damped_state / step_damping
+                else:
+                    departure = (damped_state - equilibrium) / step_damping
+                    undamped_state = equilibrium + departure
 
             # 2. Forcing increment, added by operator splitting
             increment = None
@@ -427,10 +455,20 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
                 changes_since_save += changes
             step_index += 1
 
+        # Branch point at the first saved frame
+        if save == skip_nt:
+            branch_state = state
+            branch_tendencies = list(tendencies_history)
+            branch_pattern = pattern
+            if kinetic_forcing and redraw_pattern_at_first_save:
+                noise = complex_noise(forcing_generators, amplitudes.shape[1], lmax)
+                pattern = stationary_pattern(noise, amplitudes, alpha)
+
         # Outputs of the interval that ends here, attached to the frame at its start
         if save - 1 >= skip_nt:
             if return_additional_input_fields:
-                fields = increment_to_fields(dynamics, increments_since_save)
+                truncated = increments_since_save[..., :output_lmax, :output_lmax]
+                fields = increment_to_fields(output_dynamics, truncated)
                 increment_frames.append(fields.float().cpu())
             if return_energy_budget:
                 row = torch.cat(
@@ -443,14 +481,22 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
                 )
                 budget_frames.append(row.cpu())
         if save >= skip_nt:
-            fields = spectral_to_fields(dynamics, state, surface_geopotential)
+            truncated = state[..., :output_lmax, :output_lmax]
+            fields = spectral_to_fields(output_dynamics, truncated, output_surface)
             frames.append(fields.float().cpu())
             if return_forcing_state:
                 tendency = kinetic_forcing_increment(dynamics, pattern, unit_rate) / dt
-                pattern_fields = increment_to_fields(dynamics, tendency)[..., 1:]
-                pattern_frames.append(pattern_fields.float().cpu())
+                truncated = tendency[..., :output_lmax, :output_lmax]
+                pattern_fields = increment_to_fields(output_dynamics, truncated)
+                pattern_frames.append(pattern_fields[..., 1:].float().cpu())
 
-    output = {"data": torch.stack(frames, dim=1), "final_state": state}
+    output = {
+        "data": torch.stack(frames, dim=1),
+        "final_state": state,
+        "branch_state": branch_state,
+        "branch_tendencies": branch_tendencies,
+        "branch_pattern": branch_pattern,
+    }
     if return_additional_input_fields:
         increment_frames.append(torch.zeros_like(frames[-1]))  # last frame
         output["additional_input_fields"] = torch.stack(increment_frames, dim=1)

@@ -22,7 +22,6 @@ from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E40
     invariants,
     kinetic_energy_spectrum,
     non_zonal_energy,
-    normalised_invariants,
     wind_error_norms,
 )
 
@@ -200,12 +199,6 @@ def test_invariants_of_a_fluid_at_rest():
     assert values[2].item() == pytest.approx(
         (2 * OMEGA) ** 2 * area / 3 / (2 * MEAN_DEPTH), rel=1e-12
     )
-
-
-def test_normalised_invariants_are_relative_to_the_first_time():
-    series = torch.tensor([[[2.0, 4.0, 8.0], [2.2, 4.0, 6.0]]])
-    expected = torch.tensor([[[0.0, 0.0, 0.0], [0.1, 0.0, -0.25]]])
-    torch.testing.assert_close(normalised_invariants(series), expected)
 
 
 def test_invariants_of_the_galewsky_jet_over_one_day():

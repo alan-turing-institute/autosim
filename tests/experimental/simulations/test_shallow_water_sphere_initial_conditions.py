@@ -66,6 +66,9 @@ PUBLISHED_RANGES = {
         "initial_bandwidth": (2.0, 2.0),
     },
 }
+# Families that build their own initial state ("restart" and "from_fields" take one)
+GENERATED_FAMILIES = list(PUBLISHED_RANGES)
+
 PUBLISHED_MEAN_DEPTH = {
     "galewsky": 1.0e4,
     "galewsky_unperturbed": 1.0e4,
@@ -127,7 +130,7 @@ def _williamson2(dynamics, tilt):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("family", INITIAL_CONDITIONS)
+@pytest.mark.parametrize("family", GENERATED_FAMILIES)
 def test_family_runs_with_default_and_published_parameters(family):
     default = _small_simulator(initial_condition=family)
     payload = default.forward_samples_spatiotemporal(n=3, random_seed=0)
@@ -146,6 +149,12 @@ def test_family_runs_with_default_and_published_parameters(family):
     # equal bounds: every simulation has the published parameters
     torch.testing.assert_close(
         payload["constant_scalars"][0], payload["constant_scalars"][1]
+    )
+
+
+def test_every_generated_family_is_tested():
+    assert set(GENERATED_FAMILIES) | {"restart", "from_fields"} == set(
+        INITIAL_CONDITIONS
     )
 
 
@@ -490,7 +499,7 @@ GRIDS = {
 
 
 @pytest.mark.parametrize("grid_name", list(GRIDS))
-@pytest.mark.parametrize("family", INITIAL_CONDITIONS)
+@pytest.mark.parametrize("family", GENERATED_FAMILIES)
 def test_family_runs_on_every_grid(family, grid_name):
     sim = _small_simulator(
         lmax=24,

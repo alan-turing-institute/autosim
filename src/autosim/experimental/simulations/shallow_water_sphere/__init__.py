@@ -49,7 +49,6 @@ from .diagnostics import (
     invariants,
     kinetic_energy_spectrum,
     non_zonal_energy,
-    normalised_invariants,
     wind_error_norms,
 )
 from .dynamics import (
@@ -142,7 +141,6 @@ __all__ = [
     "mountain_initial_condition",
     "mountain_orography",
     "non_zonal_energy",
-    "normalised_invariants",
     "random_balanced_initial_condition",
     "rossby_haurwitz_initial_condition",
     "sample_generators",

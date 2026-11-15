@@ -231,7 +231,7 @@ def invariants(
     These are the quantities conserved by the equations. The ORNL print of W92 eq.
     (146) reads :math:`h\,(g h + \mathbf{v}\cdot\mathbf{v}/2)`, which the equations do
     not conserve, so the conserved energy is used here. W92 eq. (144) normalises each
-    invariant as :math:`(I(t) - I(0)) / I(0)`; see ``normalised_invariants``.
+    invariant as :math:`(I(t) - I(0)) / I(0)`, its relative change since time 0.
 
     Args:
         dynamics: Fixed operators.
@@ -273,17 +273,3 @@ def invariants(
         ],
         dim=1,
     )
-
-
-def normalised_invariants(invariant_series: TensorLike) -> TensorLike:
-    r"""Relative change of each invariant since the first time, W92 eq. (144).
-
-    Args:
-        invariant_series: Invariants along a run, shape (B, time, 3), the output of
-            ``invariants`` stacked over time.
-
-    Returns:
-        :math:`(I(t) - I(0)) / I(0)`, same shape.
-    """
-    initial = invariant_series[:, :1]
-    return (invariant_series - initial) / initial
