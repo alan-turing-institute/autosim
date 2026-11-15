@@ -58,7 +58,10 @@ relative_files = true
 source = [".", "/tmp"]
 
 [tool.pytest.ini_options]
-addopts = "--ignore=v0 --ignore=outputs"
+addopts = "--ignore=v0 --ignore=outputs -m 'not slow'"
+markers = [
+    "slow: long validation runs, excluded by default; select them with -m slow",
+]
 
 [tool.pyright]
 venvPath = "."
