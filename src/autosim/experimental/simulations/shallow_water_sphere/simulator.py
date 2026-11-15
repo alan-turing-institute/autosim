@@ -15,18 +15,23 @@ from .dynamics import (
     coriolis_parameter,
     make_grid,
 )
+from .forcing import ForcingSettings
 from .initial_conditions import (
     GALEWSKY_RANGES,
     GALEWSKY_UNPERTURBED_RANGES,
     MOUNTAIN_RANGES,
+    RANDOM_BALANCED_RANGES,
     ROSSBY_HAURWITZ_RANGES,
     WILLIAMSON2_RANGES,
+    balanced_geopotential,
     galewsky_initial_condition,
     mountain_initial_condition,
+    random_balanced_initial_condition,
     rossby_haurwitz_initial_condition,
     williamson2_initial_condition,
+    zonal_jet,
 )
-from .integration import integrate_trajectories
+from .integration import ENERGY_BUDGET_NAMES, integrate_trajectories
 
 INITIAL_CONDITIONS = (
     "galewsky",
@@ -34,7 +39,10 @@ INITIAL_CONDITIONS = (
     "williamson2",
     "rossby_haurwitz",
     "mountain",
+    "random_balanced",
 )
+FORCING_TYPES = ("none", "vortical", "momentum", "mass_pulses")
+BACKSCATTER_MODES = ("global", "local")
 
 # Default sampling ranges of each family; their keys are the required parameters.
 DEFAULT_PARAMETER_RANGES: dict[str, dict[str, tuple[float, float]]] = {
@@ -43,10 +51,28 @@ DEFAULT_PARAMETER_RANGES: dict[str, dict[str, tuple[float, float]]] = {
     "williamson2": WILLIAMSON2_RANGES,
     "rossby_haurwitz": ROSSBY_HAURWITZ_RANGES,
     "mountain": MOUNTAIN_RANGES,
+    "random_balanced": RANDOM_BALANCED_RANGES,
 }
+
+# Constructor arguments that can also be keys of parameters_range: they are then
+# sampled for each simulation and returned in constant_scalars.
+SAMPLED_SCALARS = (
+    "relaxation_time",
+    "relaxation_jet_speed",
+    "drag_time",
+    "forcing_energy_rate",
+    "forcing_correlation_time",
+    "forcing_spectral_slope",
+    "forcing_divergent_fraction",
+    "forcing_backscatter_fraction",
+    "pulse_rate",
+    "pulse_amplitude",
+    "pulse_width",
+)
 
 # Independent random streams of one simulation
 INITIAL_NOISE_STREAM = 0
+FORCING_STREAM = 1
 
 
 def sample_generators(
@@ -102,6 +128,26 @@ class SphericalShallowWater(SpatioTemporalSimulator):
     - ``"mountain"``: zonal flow over an isolated mountain (W92 case 5). Parameters
       ``flow_speed``, ``mountain_height``, ``mountain_radius``, ``mountain_lon``,
       ``mountain_lat``.
+    - ``"random_balanced"``: random flow without divergence and its balanced height,
+      the spherical counterpart of the planar ``balanced_random_pv``. Parameters
+      ``amp`` (root-mean-square speed), ``initial_wavenumber``, ``initial_bandwidth``.
+
+    The arguments listed in ``SAMPLED_SCALARS`` (drag and relaxation times, forcing
+    rate, decorrelation time, slope, fractions, pulse statistics) can also be keys of
+    ``parameters_range``. They are then sampled for each simulation, and the
+    constructor value is not used.
+
+    Three physical processes can be added to the conservative dynamics (module
+    ``integration`` gives their order in a step, module ``forcing`` the definitions):
+
+    - Newtonian relaxation of the height towards the balanced height of a zonal jet,
+      and linear drag on the vorticity and the divergence. With both, the flow
+      reaches a statistically steady state with a jet and eddies.
+    - Stochastic forcing, ``forcing_type``: ``"vortical"`` (streamfunction pattern,
+      Berner et al. 2009), ``"momentum"`` (the same with a divergent part) or
+      ``"mass_pulses"`` (Gaussian height bumps at Poisson times). The energy rate of
+      the first two can include a backscatter of the diagnosed dissipation, global
+      or local.
 
     Args:
         lmax: Spectral band limit L.
@@ -138,9 +184,51 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             problem has a rotated f.
         sht_iterations: Jacobi iterations refining the analysis on grids without an
             exact quadrature (HEALPix), see ``SphereShallowWaterDynamics``.
+        relaxation_time: Time of the relaxation of the height towards its
+            equilibrium [hours]. None is no relaxation.
+        relaxation_jet_speed: Maximum speed [m/s] of the zonal jet that defines the
+            equilibrium height (its balanced height, profile of Galewsky et al.).
+        relaxation_jet_latitude: Latitude of that jet [rad].
+        drag_time: Time of the linear drag on vorticity and divergence [hours]. None
+            is no drag.
+        forcing_type: "none", "vortical", "momentum" or "mass_pulses".
+        forcing_energy_rate: Kinetic energy per unit mass injected per unit time by
+            "vortical" and "momentum" forcing [m^2/s^3]: the growth rate of the
+            global mean of |u|^2 / 2 under a free random walk of the increments.
+        forcing_correlation_time: Decorrelation time of the forcing pattern [hours].
+            Zero is white noise.
+        forcing_spectral_slope: Exponent p of the noise amplitude g_l = b l^p. The
+            kinetic-energy spectrum of the forcing follows l^(2p+3).
+        forcing_degree_min: Lowest forced degree.
+        forcing_degree_max: Highest forced degree. None is L - 1.
+        forcing_divergent_fraction: Fraction of the energy rate of "momentum"
+            forcing given to the divergent part.
+        forcing_backscatter_fraction: Fraction of the diagnosed kinetic-energy
+            dissipation of the hyperdiffusion added to the energy rate. Zero keeps
+            the fixed rate.
+        forcing_backscatter_mode: "global" adds the global mean of the dissipation
+            to the rate. "local" multiplies the pattern on the grid by the square
+            root of the local rate (Berner et al. 2009, eq. 13), which makes the
+            forcing depend on the flow.
+        backscatter_include_drag: Whether the loss to the drag counts as
+            dissipation in the backscatter.
+        pulse_rate: Mean number of mass pulses per hour over the sphere.
+        pulse_amplitude: Height of a mass pulse [m].
+        pulse_width: Angular width of a mass pulse [rad].
+        pulse_remove_mean: Remove the global mean of each pulse, so that the mass
+            of the fluid is unchanged.
+        return_additional_input_fields: Return, as ``additional_input_fields``, the
+            increments of h, u_phi and u_theta added by the forcing between each
+            saved frame and the next (zero at the last frame).
+        return_energy_budget: Return, as ``energy_budget``, the energy at each saved
+            frame and the energy change of each process until the next frame, with
+            the columns ``energy_budget_names``.
+        return_forcing_state: Return, as ``forcing_state``, the wind tendency of the
+            forcing pattern at each saved frame, for a unit energy rate. The pattern
+            has memory that the saved fields do not show.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0912, PLR0915
         self,
         lmax: int = 256,
         grid: str = "legendre-gauss",
@@ -166,11 +254,59 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         rotation_axis: tuple[float, float] | None = None,
         return_constant_fields: bool = False,
         sht_iterations: int = 0,
+        relaxation_time: float | None = None,
+        relaxation_jet_speed: float = 80.0,
+        relaxation_jet_latitude: float = math.pi / 4,
+        drag_time: float | None = None,
+        forcing_type: str = "none",
+        forcing_energy_rate: float = 0.0,
+        forcing_correlation_time: float = 0.0,
+        forcing_spectral_slope: float = -1.27,
+        forcing_degree_min: int = 1,
+        forcing_degree_max: int | None = None,
+        forcing_divergent_fraction: float = 0.5,
+        forcing_backscatter_fraction: float = 0.0,
+        forcing_backscatter_mode: str = "global",
+        backscatter_include_drag: bool = False,
+        pulse_rate: float = 0.0,
+        pulse_amplitude: float = 0.0,
+        pulse_width: float = 0.1,
+        pulse_remove_mean: bool = True,
+        return_additional_input_fields: bool = False,
+        return_energy_budget: bool = False,
+        return_forcing_state: bool = False,
     ) -> None:
         """Store the configuration and build the spectral operators once."""
         sphere_grid = make_grid(grid, nlat, nlon, nside)  # needs torch-harmonics
         if initial_condition not in INITIAL_CONDITIONS:
             msg = f"initial_condition must be one of {INITIAL_CONDITIONS}"
+            raise ValueError(msg)
+        if forcing_type not in FORCING_TYPES:
+            msg = f"forcing_type must be one of {FORCING_TYPES}"
+            raise ValueError(msg)
+        if forcing_backscatter_mode not in BACKSCATTER_MODES:
+            msg = f"forcing_backscatter_mode must be one of {BACKSCATTER_MODES}"
+            raise ValueError(msg)
+        kinetic_forcing = forcing_type in ("vortical", "momentum")
+        if forcing_backscatter_fraction < 0:
+            msg = "forcing_backscatter_fraction must be non-negative"
+            raise ValueError(msg)
+        if forcing_backscatter_fraction > 0 and not kinetic_forcing:
+            msg = "backscatter requires forcing_type 'vortical' or 'momentum'"
+            raise ValueError(msg)
+        if return_forcing_state and not kinetic_forcing:
+            msg = "return_forcing_state requires forcing_type 'vortical' or 'momentum'"
+            raise ValueError(msg)
+        if forcing_energy_rate < 0 or forcing_correlation_time < 0:
+            msg = "forcing_energy_rate and forcing_correlation_time must be >= 0"
+            raise ValueError(msg)
+        if not 0 <= forcing_divergent_fraction <= 1:
+            msg = "forcing_divergent_fraction must be between 0 and 1"
+            raise ValueError(msg)
+        if forcing_degree_max is None:
+            forcing_degree_max = lmax - 1
+        if not 1 <= forcing_degree_min <= forcing_degree_max <= lmax - 1:
+            msg = "forcing degrees must satisfy 1 <= min <= max <= lmax - 1"
             raise ValueError(msg)
         if initial_condition == "williamson2" and rotation_axis is not None:
             msg = "initial_condition='williamson2' sets the rotation axis from its tilt"
@@ -182,6 +318,17 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         if missing:
             msg = (
                 f"parameters_range must contain {missing} for "
+                f"initial_condition='{initial_condition}'"
+            )
+            raise ValueError(msg)
+        unknown = [
+            name
+            for name in parameters_range
+            if name not in required_parameters and name not in SAMPLED_SCALARS
+        ]
+        if unknown:
+            msg = (
+                f"parameters_range has unknown keys {unknown} for "
                 f"initial_condition='{initial_condition}'"
             )
             raise ValueError(msg)
@@ -202,6 +349,30 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         self.initial_condition = initial_condition
         self.rotation_axis = rotation_axis
         self.return_constant_fields = return_constant_fields
+        self.relaxation_time = relaxation_time
+        self.relaxation_jet_speed = relaxation_jet_speed
+        self.relaxation_jet_latitude = relaxation_jet_latitude
+        self.drag_time = drag_time
+        self.forcing_type = forcing_type
+        self.forcing_energy_rate = forcing_energy_rate
+        self.forcing_correlation_time = forcing_correlation_time
+        self.forcing_spectral_slope = forcing_spectral_slope
+        self.forcing_degree_min = forcing_degree_min
+        self.forcing_degree_max = forcing_degree_max
+        self.forcing_divergent_fraction = forcing_divergent_fraction
+        self.forcing_backscatter_fraction = forcing_backscatter_fraction
+        self.forcing_backscatter_mode = forcing_backscatter_mode
+        self.backscatter_include_drag = backscatter_include_drag
+        self.pulse_rate = pulse_rate
+        self.pulse_amplitude = pulse_amplitude
+        self.pulse_width = pulse_width
+        self.pulse_remove_mean = pulse_remove_mean
+        self.return_additional_input_fields = return_additional_input_fields
+        self.return_energy_budget = return_energy_budget
+        self.return_forcing_state = return_forcing_state
+        self.additional_input_names = ["forcing_h", "forcing_u_phi", "forcing_u_theta"]
+        self.energy_budget_names = list(ENERGY_BUDGET_NAMES)
+        self.forcing_state_names = ["forcing_state_u_phi", "forcing_state_u_theta"]
 
         # Courant step, adjusted so that snapshots land exactly on dt_save
         wave_speed = math.sqrt(gravity * mean_depth)
@@ -236,6 +407,106 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         ]
         if return_constant_fields:
             self.row_layout.append(("constant_fields", (*self.grid.shape, 2)))
+        if return_additional_input_fields:
+            shape = (self.n_frames, *self.grid.shape, 3)
+            self.row_layout.append(("additional_input_fields", shape))
+        if return_energy_budget:
+            shape = (self.n_frames, len(self.energy_budget_names))
+            self.row_layout.append(("energy_budget", shape))
+        if return_forcing_state:
+            shape = (self.n_frames, *self.grid.shape, 2)
+            self.row_layout.append(("forcing_state", shape))
+
+    def sampled_or_fixed(self, rows: TensorLike, name: str) -> TensorLike:
+        """Value of a scalar of ``SAMPLED_SCALARS`` for each simulation of a batch.
+
+        The value is the column of ``rows`` when ``name`` is a key of
+        ``parameters_range``, and the constructor argument otherwise.
+
+        Args:
+            rows: Parameter rows (B, n_parameters).
+            name: Name of the scalar.
+
+        Returns:
+            Values (B,), float64.
+        """
+        if name in self.param_names:
+            return rows[:, self.get_parameter_idx(name)].to(torch.float64)
+        value = float(getattr(self, name))
+        return torch.full((rows.shape[0],), value, dtype=torch.float64)
+
+    def forcing_settings(self, rows: TensorLike) -> ForcingSettings | None:
+        """Settings of the stochastic forcing of one batch, None without forcing.
+
+        Times are converted from hours to seconds and the pulse rate from pulses per
+        hour to pulses per second.
+
+        Args:
+            rows: Parameter rows (B, n_parameters).
+
+        Returns:
+            The settings, with one value per simulation for the sampled scalars.
+        """
+        if self.forcing_type == "none":
+            return None
+        divergent_fraction = self.sampled_or_fixed(rows, "forcing_divergent_fraction")
+        if self.forcing_type == "vortical":
+            divergent_fraction = torch.zeros_like(divergent_fraction)
+        return ForcingSettings(
+            forcing_type=self.forcing_type,
+            energy_rate=self.sampled_or_fixed(rows, "forcing_energy_rate"),
+            correlation_time=3600
+            * self.sampled_or_fixed(rows, "forcing_correlation_time"),
+            spectral_slope=self.sampled_or_fixed(rows, "forcing_spectral_slope"),
+            degree_min=self.forcing_degree_min,
+            degree_max=self.forcing_degree_max,
+            divergent_fraction=divergent_fraction,
+            backscatter_fraction=self.sampled_or_fixed(
+                rows, "forcing_backscatter_fraction"
+            ),
+            backscatter_mode=self.forcing_backscatter_mode,
+            backscatter_include_drag=self.backscatter_include_drag,
+            pulse_rate=self.sampled_or_fixed(rows, "pulse_rate") / 3600,
+            pulse_amplitude=self.sampled_or_fixed(rows, "pulse_amplitude"),
+            pulse_width=self.sampled_or_fixed(rows, "pulse_width"),
+            pulse_remove_mean=self.pulse_remove_mean,
+        )
+
+    def damping_settings(
+        self, rows: TensorLike, coriolis: TensorLike | None
+    ) -> tuple[TensorLike | None, TensorLike | None, TensorLike | None]:
+        """Drag time, relaxation time and equilibrium geopotential of one batch.
+
+        The equilibrium is the balanced geopotential of a zonal jet of speed
+        ``relaxation_jet_speed`` at ``relaxation_jet_latitude``.
+
+        Args:
+            rows: Parameter rows (B, n_parameters).
+            coriolis: Coriolis parameter (B, *grid.shape); None is the polar one.
+
+        Returns:
+            The drag time [s] (B,), the relaxation time [s] (B,) and the coefficients
+            of the equilibrium geopotential (B, L, L). Each is None when its process
+            is absent.
+        """
+        batch = rows.shape[0]
+        drag_time = None
+        if self.drag_time is not None or "drag_time" in self.param_names:
+            drag_time = 3600 * self.sampled_or_fixed(rows, "drag_time")
+
+        relaxation_time = None
+        equilibrium_geopotential = None
+        if self.relaxation_time is not None or "relaxation_time" in self.param_names:
+            relaxation_time = 3600 * self.sampled_or_fixed(rows, "relaxation_time")
+            jet_speed = self.sampled_or_fixed(rows, "relaxation_jet_speed")
+            jet_latitude = torch.full(
+                (batch,), self.relaxation_jet_latitude, dtype=torch.float64
+            )
+            vorticity, divergence = zonal_jet(self.dynamics, jet_speed, jet_latitude)
+            equilibrium_geopotential = balanced_geopotential(
+                self.dynamics, vorticity, divergence, coriolis
+            )
+        return drag_time, relaxation_time, equilibrium_geopotential
 
     def initial_problem(
         self, rows: TensorLike, noise_generators: list[torch.Generator]
@@ -304,6 +575,17 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 wavenumber=rows[:, self.get_parameter_idx("wavenumber")],
                 wave_amplitude=rows[:, self.get_parameter_idx("wave_amplitude")],
                 mean_depth=rows[:, self.get_parameter_idx("mean_depth")],
+            )
+        elif self.initial_condition == "random_balanced":
+            state = random_balanced_initial_condition(
+                self.dynamics,
+                amp=rows[:, self.get_parameter_idx("amp")],
+                initial_wavenumber=rows[
+                    :, self.get_parameter_idx("initial_wavenumber")
+                ],
+                initial_bandwidth=rows[:, self.get_parameter_idx("initial_bandwidth")],
+                generators=noise_generators,
+                coriolis=coriolis,
             )
         else:  # "mountain"
             state, surface_geopotential = mountain_initial_condition(
@@ -385,6 +667,13 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             state, coriolis, surface_geopotential = self.initial_problem(
                 rows, noise_generators
             )
+            drag_time, relaxation_time, equilibrium = self.damping_settings(
+                rows, coriolis
+            )
+            forcing = self.forcing_settings(rows)
+            forcing_generators = sample_generators(
+                entropy, row_numbers, FORCING_STREAM, self.device
+            )
             output = integrate_trajectories(
                 self.dynamics,
                 state,
@@ -393,6 +682,14 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 skip_nt=self.skip_nt,
                 coriolis=coriolis,
                 surface_geopotential=surface_geopotential,
+                drag_time=drag_time,
+                relaxation_time=relaxation_time,
+                equilibrium_geopotential=equilibrium,
+                forcing=forcing,
+                forcing_generators=forcing_generators,
+                return_additional_input_fields=self.return_additional_input_fields,
+                return_energy_budget=self.return_energy_budget,
+                return_forcing_state=self.return_forcing_state,
             )
             if self.return_constant_fields:
                 fields = self.constant_fields_on_grid(
@@ -402,7 +699,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
 
             flat_outputs = []
             for key, _ in self.row_layout:
-                flat_outputs.append(output[key].flatten(start_dim=1))
+                flat_outputs.append(output[key].float().flatten(start_dim=1))
             flat_rows = torch.cat(flat_outputs, dim=1)
             finite = torch.isfinite(flat_rows).all(dim=1)
             results.append(flat_rows[finite])
@@ -432,7 +729,10 @@ class SphericalShallowWater(SpatioTemporalSimulator):
 
         Returns:
             ``{"data": (n, time, *grid.shape, 3), "constant_scalars": (n,
-            n_parameters), "constant_fields": (n, *grid.shape, 2) or None}``.
+            n_parameters), "constant_fields": (n, *grid.shape, 2) or None}``, and
+            when requested ``"additional_input_fields"`` (n, time, *grid.shape, 3),
+            ``"energy_budget"`` (n, time, 7) and ``"forcing_state"`` (n, time,
+            *grid.shape, 2).
         """
         y, x = self._forward_batch_with_optional_retries(
             n=n, random_seed=random_seed, ensure_exact_n=ensure_exact_n

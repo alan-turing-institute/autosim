@@ -17,7 +17,9 @@ import torch
 
 from autosim.types import TensorLike
 
+from .diagnostics import degree_power
 from .dynamics import SphereShallowWaterDynamics
+from .forcing import complex_noise
 
 GALEWSKY_RANGES: dict[str, tuple[float, float]] = {
     "jet_speed": (60.0, 100.0),  # u_max [m/s], paper: 80
@@ -53,6 +55,14 @@ MOUNTAIN_RANGES: dict[str, tuple[float, float]] = {
     "mountain_radius": (math.pi / 12, math.pi / 6),  # R [rad], W92: pi/9
     "mountain_lon": (0.0, 2 * math.pi),  # lambda_c [rad], W92: -pi/2, i.e. 3 pi/2
     "mountain_lat": (-math.pi / 3, math.pi / 3),  # theta_c [rad], W92: pi/6
+}
+
+
+# Random balanced flow, the names of the planar "balanced_random_pv" family.
+RANDOM_BALANCED_RANGES: dict[str, tuple[float, float]] = {
+    "amp": (10.0, 30.0),  # root-mean-square wind speed [m/s]
+    "initial_wavenumber": (4.0, 10.0),  # central degree of the streamfunction
+    "initial_bandwidth": (1.0, 3.0),  # width of its spectrum, in degrees
 }
 
 
@@ -435,3 +445,93 @@ def mountain_initial_condition(
     )
     state[:, 0] = state[:, 0] - surface_geopotential  # Phi = g * fluid depth
     return state, surface_geopotential
+
+
+def zonal_jet(
+    dynamics: SphereShallowWaterDynamics,
+    jet_speed: TensorLike,
+    jet_latitude: TensorLike,
+) -> tuple[TensorLike, TensorLike]:
+    r"""Zonal jet with the profile of Galewsky et al. (2004), at any latitude.
+
+    Their eq. (2), :math:`u = (u_\text{max}/e_n)\exp[1/((\varphi-\varphi_0)
+    (\varphi-\varphi_1))]` between :math:`\varphi_0` and :math:`\varphi_1` and zero
+    elsewhere, with :math:`e_n = \exp[-4/(\varphi_1-\varphi_0)^2]`. The jet is
+    centred at ``jet_latitude`` and keeps their half width
+    :math:`(\varphi_1-\varphi_0)/2 = 3\pi/28`; their jet is at :math:`\pi/4`.
+
+    Args:
+        dynamics: Fixed operators.
+        jet_speed: Maximum speed u_max [m/s], shape (B,).
+        jet_latitude: Latitude of the maximum [rad], shape (B,).
+
+    Returns:
+        Vorticity and divergence coefficients of the jet, each (B, L, L).
+    """
+    latitude = dynamics.latitude.unsqueeze(0)
+    parameter_shape = (jet_speed.shape[0],) + (1,) * len(dynamics.grid.shape)
+    u_max = jet_speed.to(latitude.device, torch.float64).reshape(parameter_shape)
+    centre = jet_latitude.to(latitude.device, torch.float64).reshape(parameter_shape)
+    half_width = 3 * torch.pi / 28
+    phi0 = centre - half_width
+    phi1 = centre + half_width
+    en = math.exp(-4 / (2 * half_width) ** 2)
+
+    inside = (latitude > phi0) & (latitude < phi1)
+    product = torch.where(inside, (latitude - phi0) * (latitude - phi1), -1.0)
+    eastward = torch.where(inside, u_max / en * torch.exp(1.0 / product), 0.0)
+    wind = torch.stack([eastward, torch.zeros_like(eastward)], dim=1)
+    return dynamics.vorticity_divergence(wind)
+
+
+def random_balanced_initial_condition(
+    dynamics: SphereShallowWaterDynamics,
+    amp: TensorLike,
+    initial_wavenumber: TensorLike,
+    initial_bandwidth: TensorLike,
+    generators: list[torch.Generator],
+    coriolis: TensorLike | None = None,
+) -> TensorLike:
+    r"""Random flow without divergence, with the height in nonlinear balance.
+
+    The streamfunction has random coefficients with a Gaussian spectrum,
+    :math:`\hat\psi_l^m = w_l\,\epsilon_l^m` with
+    :math:`w_l = \exp[-(l - l_0)^2 / (2\sigma^2)]`, scaled so that the root-mean-square
+    wind speed is ``amp``. The height follows from ``balanced_geopotential``, so the
+    flow starts without gravity waves. This is the spherical counterpart of the
+    planar ``balanced_random_pv`` family.
+
+    Args:
+        dynamics: Fixed operators.
+        amp: Root-mean-square wind speed [m/s], shape (B,).
+        initial_wavenumber: Central degree l_0 of the streamfunction, shape (B,).
+        initial_bandwidth: Width sigma of its spectrum, in degrees, shape (B,).
+        generators: One random generator per simulation.
+        coriolis: Coriolis parameter (B, *grid.shape); None is the polar one.
+
+    Returns:
+        Spectral state (B, 3, L, L).
+    """
+    device = dynamics.laplacian.device
+    lmax = dynamics.lmax
+    batch = amp.shape[0]
+    speed = amp.to(device, torch.float64).reshape(batch, 1, 1)
+    centre = initial_wavenumber.to(device, torch.float64).reshape(batch, 1, 1)
+    width = initial_bandwidth.to(device, torch.float64).reshape(batch, 1, 1)
+
+    degree = torch.arange(lmax, dtype=torch.float64, device=device).reshape(1, lmax, 1)
+    weight = torch.exp(-0.5 * ((degree - centre) / width) ** 2)
+    weight = weight * (degree >= 1)  # no global mean
+    noise = complex_noise(generators, 1, lmax)[:, 0]
+    vorticity = dynamics.laplacian * (weight * noise)
+
+    # Global mean of |u|^2: sum over degrees of a^2 / (4 pi l (l + 1)) * power
+    factor = torch.zeros(lmax, dtype=torch.float64, device=device)
+    factor[1:] = -dynamics.inverse_laplacian[1:, 0] / (4 * math.pi)
+    mean_square_speed = (factor * degree_power(vorticity)).sum(dim=-1)
+    vorticity = vorticity * speed / torch.sqrt(mean_square_speed).reshape(batch, 1, 1)
+
+    divergence = torch.zeros_like(vorticity)
+    geopotential = balanced_geopotential(dynamics, vorticity, divergence, coriolis)
+    state = torch.stack([geopotential, vorticity, divergence], dim=1)
+    return torch.tril(state)  # keep m <= l

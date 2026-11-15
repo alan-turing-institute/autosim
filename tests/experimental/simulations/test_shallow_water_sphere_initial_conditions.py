@@ -59,6 +59,12 @@ PUBLISHED_RANGES = {
         "mountain_lon": (1.5 * math.pi, 1.5 * math.pi),
         "mountain_lat": (math.pi / 6, math.pi / 6),
     },
+    # no published case: a fixed member of the family
+    "random_balanced": {
+        "amp": (20.0, 20.0),
+        "initial_wavenumber": (6.0, 6.0),
+        "initial_bandwidth": (2.0, 2.0),
+    },
 }
 PUBLISHED_MEAN_DEPTH = {
     "galewsky": 1.0e4,
@@ -66,6 +72,7 @@ PUBLISHED_MEAN_DEPTH = {
     "williamson2": W2_MEAN_DEPTH,
     "rossby_haurwitz": 8000.0,
     "mountain": 5960.0,
+    "random_balanced": 1.0e4,
 }
 
 

@@ -262,12 +262,15 @@ def adams_bashforth_step(
     previous_tendencies: list[TensorLike],
     coriolis: TensorLike | None = None,
     surface_geopotential: TensorLike | None = None,
+    step_damping: TensorLike | None = None,
+    equilibrium: TensorLike | None = None,
 ) -> tuple[TensorLike, list[TensorLike]]:
-    """One Adams-Bashforth 3 step with the hyperdiffusion as an integrating factor.
+    """One Adams-Bashforth 3 step with the linear damping as an integrating factor.
 
     s_{n+1} = E s_n + dt (23/12 E N_n - 16/12 E^2 N_{n-1} + 5/12 E^3 N_{n-2}),
     with E = exp(Lambda dt) the damping of one step. The first two steps use Euler
-    and AB2 the same way.
+    and AB2 the same way. When the damping relaxes the state towards an equilibrium
+    s_eq, it acts on the departure from it: E s_n becomes s_eq + E (s_n - s_eq).
 
     Args:
         dynamics: Fixed operators and time step.
@@ -276,12 +279,17 @@ def adams_bashforth_step(
             most two).
         coriolis: Coriolis parameter (B, *grid.shape); None is the polar one.
         surface_geopotential: Coefficients of g h_s, (B, L, L); None is a flat bottom.
+        step_damping: Damping E of one step for each simulation, (B, 3, L, L), see
+            ``step_damping_factors``. None is the hyperdiffusion alone,
+            ``dynamics.step_damping``.
+        equilibrium: State towards which the damping relaxes, (B, 3, L, L). None is
+            a damping towards zero.
 
     Returns:
         The new state and the updated list of previous tendencies.
     """
     dt = dynamics.dt
-    E = dynamics.step_damping  # (3, L, L)
+    E = dynamics.step_damping if step_damping is None else step_damping
     tendency = shallow_water_tendencies(dynamics, state, coriolis, surface_geopotential)
 
     if len(previous_tendencies) == 0:
@@ -296,8 +304,82 @@ def adams_bashforth_step(
         ) / 12
 
     new_state = E * state + dt * increment
+    if equilibrium is not None:
+        new_state = new_state + (1 - E) * equilibrium
     new_previous_tendencies = [tendency, *previous_tendencies[:1]]
     return new_state, new_previous_tendencies
+
+
+def step_damping_factors(
+    dynamics: SphereShallowWaterDynamics,
+    drag_time: TensorLike,
+    relaxation_time: TensorLike,
+) -> TensorLike:
+    r"""Damping of one step with linear drag and Newtonian relaxation.
+
+    The vorticity and the divergence are damped by the hyperdiffusion and by a linear
+    drag, :math:`\partial_t \zeta = -\zeta / \tau_\text{drag}` (the same for
+    :math:`\delta`). The geopotential relaxes towards an equilibrium,
+    :math:`\partial_t \Phi = -(\Phi - \Phi_\text{eq}) / \tau_\text{relax}`. Over one
+    step these are the factors :math:`\exp(-\Delta t / \tau)`, exact for any
+    :math:`\Delta t`.
+
+    Args:
+        dynamics: Fixed operators and time step.
+        drag_time: Drag time [s], shape (B,); infinity is no drag.
+        relaxation_time: Relaxation time [s], shape (B,); infinity is no relaxation.
+
+    Returns:
+        Factors E of (geopotential, vorticity, divergence), shape (B, 3, L, L).
+    """
+    device = dynamics.step_damping.device
+    drag = torch.exp(-dynamics.dt / drag_time.to(device, torch.float64))
+    relaxation = torch.exp(-dynamics.dt / relaxation_time.to(device, torch.float64))
+    batch = drag.shape[0]
+    E = dynamics.step_damping.unsqueeze(0).repeat(batch, 1, 1, 1)
+    E[:, 0] = E[:, 0] * relaxation.reshape(batch, 1, 1)
+    E[:, 1] = E[:, 1] * drag.reshape(batch, 1, 1)
+    E[:, 2] = E[:, 2] * drag.reshape(batch, 1, 1)
+    return E
+
+
+def total_energy(
+    dynamics: SphereShallowWaterDynamics,
+    state: TensorLike,
+    surface_geopotential: TensorLike | None = None,
+) -> TensorLike:
+    r"""Energy of the layer per unit area, global mean.
+
+    .. math::
+
+        E = \frac{1}{4\pi}\int \Big( \tfrac12 h^* |\mathbf{u}|^2
+            + \tfrac12 g\,(h - H)^2 \Big)\, d\Omega,
+
+    with :math:`h^* = \Phi / g` the fluid depth, :math:`h = h^* + h_s` the free surface
+    and :math:`H` the mean depth: the kinetic energy weighted by the depth, plus the
+    potential energy of the displaced free surface. This is the energy of the planar
+    simulator. It differs from the invariant of ``diagnostics.invariants`` by terms
+    that are constant when the mass is conserved.
+
+    Args:
+        dynamics: Fixed operators.
+        state: Spectral state (B, 3, L, L).
+        surface_geopotential: Coefficients of g h_s, (B, L, L); None is a flat bottom.
+
+    Returns:
+        Energy [m^3/s^2], shape (B,).
+    """
+    depth = dynamics.to_grid(state[:, 0]) / dynamics.gravity
+    wind = dynamics.wind(state[:, 1], state[:, 2])
+    speed_squared = wind[:, 0] ** 2 + wind[:, 1] ** 2
+    free_surface = depth
+    if surface_geopotential is not None:
+        free_surface = depth + dynamics.to_grid(surface_geopotential) / dynamics.gravity
+    displacement = free_surface - dynamics.mean_depth
+    energy = 0.5 * depth * speed_squared + 0.5 * dynamics.gravity * displacement**2
+
+    grid_dims = tuple(range(-dynamics.quad_weights.ndim, 0))
+    return (energy * dynamics.quad_weights).sum(dim=grid_dims) / (4 * torch.pi)
 
 
 def spectral_to_fields(
@@ -326,6 +408,26 @@ def spectral_to_fields(
     wind = dynamics.wind(state[:, 1], state[:, 2])
     h = geopotential_grid / dynamics.gravity - dynamics.mean_depth
     return torch.stack([h, wind[:, 0], -wind[:, 1]], dim=-1)
+
+
+def increment_to_fields(
+    dynamics: SphereShallowWaterDynamics, increment: TensorLike
+) -> TensorLike:
+    """Increment of the spectral state -> increments of h, u_phi, u_theta.
+
+    The same conversion as ``spectral_to_fields`` for a difference of two states: no
+    mean depth is removed.
+
+    Args:
+        dynamics: Fixed operators.
+        increment: Difference of two spectral states, (B, 3, L, L).
+
+    Returns:
+        Increments of the fields, (B, *grid.shape, 3).
+    """
+    height = dynamics.to_grid(increment[:, 0]) / dynamics.gravity
+    wind = dynamics.wind(increment[:, 1], increment[:, 2])
+    return torch.stack([height, wind[:, 0], -wind[:, 1]], dim=-1)
 
 
 def fields_to_spectral(
