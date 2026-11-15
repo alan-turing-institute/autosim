@@ -32,6 +32,7 @@ Modules:
 - ``forcing``: stochastic kinetic-energy forcing, backscatter, mass pulses;
 - ``integration``: the time loop of a batch and its energy budget;
 - ``diagnostics``: spectra, invariants, W92 error norms, non-zonal energy;
+- ``rotation``: rotation of states and saved frames by an element of SO(3);
 - ``simulator``: ``SphericalShallowWater``, the autosim interface.
 
 References: Galewsky, Scott and Polvani (2004, Tellus A 56, 429-440); Williamson,
@@ -94,6 +95,12 @@ from .initial_conditions import (
     zonal_jet,
 )
 from .integration import ENERGY_BUDGET_NAMES, integrate_trajectories
+from .rotation import (
+    rotate_coefficients,
+    rotate_fields,
+    rotate_point,
+    wigner_d_matrix,
+)
 from .simulator import (
     FORCING_TYPES,
     INITIAL_CONDITIONS,
@@ -143,6 +150,9 @@ __all__ = [
     "non_zonal_energy",
     "random_balanced_initial_condition",
     "rossby_haurwitz_initial_condition",
+    "rotate_coefficients",
+    "rotate_fields",
+    "rotate_point",
     "sample_generators",
     "sample_pulse_events",
     "shallow_water_tendencies",
@@ -151,6 +161,7 @@ __all__ = [
     "step_damping_factors",
     "total_energy",
     "unit_rate_amplitudes",
+    "wigner_d_matrix",
     "williamson2_initial_condition",
     "wind_error_norms",
     "zonal_jet",
