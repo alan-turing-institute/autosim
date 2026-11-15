@@ -1,0 +1,54 @@
+# D5 (forced): the forced-dissipative jet of d4_vortical solved at a fine resolution
+# and saved at the coarse one. Purpose: probabilistic skill when the uncertainty comes
+# from both the forcing and the scales that the coarse grid drops. The baseline is the
+# coarse solver with the same forcing settings and its own random stream.
+# Requires the "spherical" extra and a GPU; leave dataset.num_workers unset.
+_target_: autosim.experimental.simulations.SphericalShallowWater
+log_level: progress_bar
+initial_condition: random_balanced
+# Fine run: T170 (lmax = 171) on the 256 x 512 Gauss-Legendre grid, free of aliasing.
+grid: legendre-gauss
+lmax: 171
+nlat: 256
+nlon: 512
+# Saved fields: truncated to lmax = 86 on the 128 x 256 grid, the size of D1 to D4.
+output_lmax: 86
+output_nlat: 128
+output_nlon: 256
+# Also save the run of the solver at lmax = 86 from the truncated first saved frame.
+return_baseline: true
+# Time in hours. The first 60 days are the spin-up: the eddy energy is steady after 40
+# to 50 days (measured at lmax = 86). The next 15 days are saved every 3 h, 121 frames.
+# Measured cost on one L4 GPU: 140 min for a batch of 8.
+T: 1800.0
+dt_save: 3.0
+skip_nt: 480
+courant: 0.4
+mean_depth: 10000.0
+batch_size: 8
+device: cuda
+return_constant_fields: true
+# Climate. The height relaxes in 1 day towards the balanced height of an 80 m/s jet at
+# 45 degrees north, and a drag of 100 days damps the wind. The jet is unstable, so the
+# relaxation keeps regenerating eddies. Measured without forcing: jet of 54 m/s, eddy
+# kinetic energy 5.0 +- 0.3 m^2/s^2, drag loss 2.4e-5 m^2/s^3.
+relaxation_time: 24.0
+relaxation_jet_speed: 80.0
+relaxation_jet_latitude: 0.7853981633974483
+drag_time: 2400.0
+# Forcing of d4_vortical: energy rate [m^2/s^3], decorrelation time [h] and slope p of
+# the noise amplitude l^p. The forced degrees stop at 85 in the fine run, so that the
+# fine run and the baseline are forced in the same band.
+forcing_type: vortical
+forcing_degree_max: 85
+forcing_energy_rate: 1.0e-5
+forcing_correlation_time: 6.0
+forcing_spectral_slope: -1.27
+# The pattern is redrawn at the first saved frame, so the saved fields alone determine
+# the forecast distribution.
+branch_forcing_state: redraw
+# The initial flow only seeds the spin-up.
+parameters_range:
+  amp: [10.0, 30.0]
+  initial_wavenumber: [4.0, 10.0]
+  initial_bandwidth: [1.0, 3.0]

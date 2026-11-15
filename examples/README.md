@@ -31,6 +31,8 @@ These examples use simulators that are still under `autosim.experimental`.
 
 - [Shallow-Water 2D](experimental/01_01_shallow_water_equation.ipynb): A geophysical fluid model with deterministic, vortical, geostrophically balanced, and wind-stress-like momentum forcing, including optional white or temporally correlated Ornstein-Uhlenbeck noise.
 - [Long-Horizon Stochastic Shallow Water](experimental/01_03_shallow_water_long_horizon.ipynb): A paired forced-versus-control experiment on the periodic plane, with restart, energy-budget, and long-rollout diagnostics.
+- [Shallow Water on the Sphere](experimental/01_04_spherical_shallow_water.ipynb): The barotropically unstable jet of Galewsky et al. (2004) on the rotating sphere, solved with spherical harmonics.
+- [Spherical Shallow Water Benchmark](experimental/01_05_spherical_shallow_water_benchmark.ipynb): Every initial-condition family and stochastic forcing of the spherical simulator at a small size, with spectra, invariants, the energy budget, a reference ensemble, the coarse-grained truth and the rotation operator.
 
 ### Classical fluid dynamics families
 

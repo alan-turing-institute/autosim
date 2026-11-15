@@ -1,0 +1,32 @@
+# D1: barotropically unstable jet of Galewsky et al. (2004), no forcing.
+# Purpose: deterministic skill on sharp vorticity gradients.
+# Requires the "spherical" extra and a GPU; leave dataset.num_workers unset.
+_target_: autosim.experimental.simulations.SphericalShallowWater
+log_level: progress_bar
+initial_condition: galewsky
+# Development size: T85 (lmax = 86) on the 128 x 256 Gauss-Legendre grid, the smallest
+# grid on which the quadratic products are free of aliasing (2 nlat >= 3 lmax - 2).
+grid: legendre-gauss
+lmax: 86
+nlat: 128
+nlon: 256
+# Time in hours, as in shallow_water_sphere.yaml: 3 h between frames, the first 183 h
+# (jet breakdown) dropped, 60 turbulent frames kept.
+T: 360.0
+dt_save: 3.0
+skip_nt: 61
+courant: 0.4
+mean_depth: 10000.0
+# Height noise that makes two simulations with the same parameters diverge.
+noise_amplitude: 10.0
+noise_lmax: 120
+batch_size: 8
+device: cuda
+# Coriolis parameter and (flat) orography as inputs of the emulator.
+return_constant_fields: true
+# Ranges around the published case (80 m/s, 120 m, longitude free, latitude pi/4).
+parameters_range:
+  jet_speed: [60.0, 100.0]
+  height_perturbation_m: [60.0, 180.0]
+  perturbation_lon: [0.0, 6.283185307179586]
+  perturbation_lat: [0.6283185307179586, 1.0471975511965976]

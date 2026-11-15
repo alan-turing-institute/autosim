@@ -1,0 +1,30 @@
+# D3: zonal flow over an isolated mountain (Williamson et al. 1992, case 5), no forcing.
+# Purpose: a fixed orography as an input field of the emulator.
+# Requires the "spherical" extra and a GPU; leave dataset.num_workers unset.
+_target_: autosim.experimental.simulations.SphericalShallowWater
+log_level: progress_bar
+initial_condition: mountain
+grid: legendre-gauss
+lmax: 86
+nlat: 128
+nlon: 256
+# 15 days as in W92, which reports days 5, 10 and 15. No spin-up: the adjustment of
+# the flow to the mountain is part of the case.
+T: 360.0
+dt_save: 3.0
+skip_nt: 0
+courant: 0.4
+# h_0 of the journal version of W92 as quoted in the literature (the ORNL report
+# prints 5400 m), with u_0 = 20 m/s.
+mean_depth: 5960.0
+batch_size: 8
+device: cuda
+# The orography h_s and the Coriolis parameter are returned in constant_fields.
+return_constant_fields: true
+# W92: u_0 = 20 m/s, h_s0 = 2000 m, R = pi/9, summit at longitude 3 pi/2, latitude pi/6.
+parameters_range:
+  flow_speed: [10.0, 30.0]
+  mountain_height: [1000.0, 3000.0]
+  mountain_radius: [0.2617993877991494, 0.5235987755982988]
+  mountain_lon: [0.0, 6.283185307179586]
+  mountain_lat: [-1.0471975511965976, 1.0471975511965976]

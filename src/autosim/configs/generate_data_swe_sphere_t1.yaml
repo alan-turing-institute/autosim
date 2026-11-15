@@ -1,0 +1,45 @@
+# T1 of the spherical shallow water benchmark: Williamson et al. (1992) case 2 at its
+# four tilts, alpha = 0, 0.05, pi/2 - 0.05 and pi/2.
+#   autosim --config-name generate_data_swe_sphere_t1
+# One simulator is built for each tilt, and the splits are concatenated in this order,
+# so the counts must be multiples of 4.
+defaults:
+  - simulator: experimental/shallow_water_sphere_t1_williamson2
+  - _self_
+
+dataset:
+  output_dir: outputs/${now:%Y-%m-%d}/swe_sphere_t1_${shortuuid:7}
+  n_train: 4
+  n_valid: 4
+  n_test: 4
+  ensure_exact_n: true
+  num_workers: null
+
+seed: 0
+overwrite: false
+
+stratify:
+  enabled: true
+  key: simulator.parameters_range.tilt
+  values:
+    - [0.0, 0.0]
+    - [0.05, 0.05]
+    - [1.5207963267948965, 1.5207963267948965]
+    - [1.5707963267948966, 1.5707963267948966]
+
+visualize:
+  enabled: false
+  split: test
+  batch_indices: null
+  max_examples: 4
+  fps: 5
+  file_ext: mp4
+  overwrite: true
+  preserve_aspect: true
+
+normalization:
+  shared_core_field_groups: []
+
+hydra:
+  run:
+    dir: ${dataset.output_dir}

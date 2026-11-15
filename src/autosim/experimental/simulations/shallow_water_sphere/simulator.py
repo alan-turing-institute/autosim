@@ -187,7 +187,11 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             h_0 of W92 cases 2 and 5, and the level from which the output ``h`` is
             measured. It also gives the gravity-wave speed of the time step.
         noise_amplitude: Root-mean-square of the seeding height noise of
-            ``"galewsky"`` [m].
+            ``"galewsky"`` [m]. Two simulations with the same parameters differ
+            only by this noise. The default of 10 m is the smallest of the tested
+            values that separates them by the end of the 183 h spin-up: at lmax = 86
+            the distance between their eddy winds (1 when decorrelated) is then 0.80
+            with 10 m, 0.37 with 1 m and 0.00 with 1 mm.
         noise_lmax: The noise has degrees below this value.
         batch_size: Simulations run in parallel on the device.
         device: Torch device.
@@ -294,7 +298,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         omega: float = 7.292e-5,
         gravity: float = 9.80616,
         mean_depth: float = 1.0e4,
-        noise_amplitude: float = 1e-3,
+        noise_amplitude: float = 10.0,
         noise_lmax: int = 120,
         batch_size: int = 8,
         device: str = "cuda",
