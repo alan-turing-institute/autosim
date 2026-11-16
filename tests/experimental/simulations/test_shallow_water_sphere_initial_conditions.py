@@ -20,7 +20,6 @@ from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E40
     fields_to_spectral,
     height_error_norms,
     mountain_initial_condition,
-    non_zonal_energy,
     rossby_haurwitz_initial_condition,
     shallow_water_tendencies,
     spectral_to_fields,
@@ -45,7 +44,6 @@ PUBLISHED_RANGES = {
         "perturbation_lon": (0.0, 0.0),
         "perturbation_lat": (math.pi / 4, math.pi / 4),
     },
-    "galewsky_unperturbed": {"jet_speed": (80.0, 80.0)},
     "williamson2": {"flow_speed": (W2_FLOW_SPEED, W2_FLOW_SPEED), "tilt": (0.05, 0.05)},
     "rossby_haurwitz": {
         "wavenumber": (4.0, 4.0),
@@ -71,7 +69,6 @@ GENERATED_FAMILIES = list(PUBLISHED_RANGES)
 
 PUBLISHED_MEAN_DEPTH = {
     "galewsky": 1.0e4,
-    "galewsky_unperturbed": 1.0e4,
     "williamson2": W2_MEAN_DEPTH,
     "rossby_haurwitz": 8000.0,
     "mountain": 5960.0,
@@ -444,47 +441,6 @@ def test_rossby_haurwitz_converges_to_a_high_resolution_run_at_day_7():
     assert errors[1] < errors[0] / 2
     assert errors[2] < errors[1] / 2
     assert errors[2] < 1e-3
-
-
-def test_unperturbed_jet_stays_zonal():
-    """Galewsky et al. (2004), section 3, over one day: no non-zonal energy at all."""
-    sim = _small_simulator(
-        initial_condition="galewsky_unperturbed",
-        parameters_range=PUBLISHED_RANGES["galewsky_unperturbed"],
-        T=24.0,
-        dt_save=12.0,
-        batch_size=1,
-    )
-    data = sim.forward_samples_spatiotemporal(n=1, random_seed=0)["data"]
-    for frame in range(data.shape[1]):
-        state = fields_to_spectral(sim.dynamics, data[:, frame])
-        assert non_zonal_energy(state, RADIUS, GRAVITY, 1.0e4) == 0.0
-
-
-@pytest.mark.slow
-def test_unperturbed_jet_stays_zonal_for_120_hours():
-    """Galewsky et al. (2004), section 3: the balanced jet stays zonal for 120 h.
-
-    They report fields identical to the initial ones to machine precision. Here the
-    non-zonal energy is exactly zero (the transforms create no non-zonal coefficient
-    from a zonal field), and at lmax = 86 the hyperdiffusion changes the zonal
-    fields by less than 1 (m for h, m/s for the wind) out of a jet of 80 m/s.
-    """
-    sim = _small_simulator(
-        initial_condition="galewsky_unperturbed",
-        parameters_range=PUBLISHED_RANGES["galewsky_unperturbed"],
-        lmax=86,
-        nlat=128,
-        nlon=256,
-        T=120.0,
-        dt_save=24.0,
-        batch_size=1,
-    )
-    data = sim.forward_samples_spatiotemporal(n=1, random_seed=0)["data"]
-    for frame in range(data.shape[1]):
-        state = fields_to_spectral(sim.dynamics, data[:, frame])
-        assert non_zonal_energy(state, RADIUS, GRAVITY, 1.0e4) == 0.0
-    assert (data[0, -1] - data[0, 0]).abs().max() < 1.0
 
 
 # ---------------------------------------------------------------------------

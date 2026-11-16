@@ -13,7 +13,6 @@ its parameters. Equal bounds at the published values give the published case.
 
 =========================  ===================================================
 ``galewsky``               unstable jet with a height bump (Galewsky et al. 2004)
-``galewsky_unperturbed``   the same jet alone: balance test
 ``williamson2``            steady flow about a tilted axis (W92 case 2)
 ``rossby_haurwitz``        Rossby-Haurwitz wave (W92 case 6)
 ``mountain``               zonal flow over an isolated mountain (W92 case 5)

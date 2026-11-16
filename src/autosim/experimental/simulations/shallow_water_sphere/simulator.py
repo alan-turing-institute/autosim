@@ -20,7 +20,6 @@ from .dynamics import (
 from .forcing import ForcingSettings
 from .initial_conditions import (
     GALEWSKY_RANGES,
-    GALEWSKY_UNPERTURBED_RANGES,
     MOUNTAIN_RANGES,
     RANDOM_BALANCED_RANGES,
     ROSSBY_HAURWITZ_RANGES,
@@ -37,7 +36,6 @@ from .integration import ENERGY_BUDGET_NAMES, integrate_trajectories
 
 INITIAL_CONDITIONS = (
     "galewsky",
-    "galewsky_unperturbed",
     "williamson2",
     "rossby_haurwitz",
     "mountain",
@@ -52,7 +50,6 @@ BRANCH_FORCING_STATES = ("redraw", "carry")
 # Default sampling ranges of each family; their keys are the required parameters.
 DEFAULT_PARAMETER_RANGES: dict[str, dict[str, tuple[float, float]]] = {
     "galewsky": GALEWSKY_RANGES,
-    "galewsky_unperturbed": GALEWSKY_UNPERTURBED_RANGES,
     "williamson2": WILLIAMSON2_RANGES,
     "rossby_haurwitz": ROSSBY_HAURWITZ_RANGES,
     "mountain": MOUNTAIN_RANGES,
@@ -126,8 +123,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
     - ``"galewsky"``: barotropically unstable jet with a height bump and a small
       height noise (Galewsky et al. 2004). Parameters ``jet_speed``,
       ``height_perturbation_m``, ``perturbation_lon``, ``perturbation_lat``.
-    - ``"galewsky_unperturbed"``: the same jet alone, which stays zonal. Parameter
-      ``jet_speed``.
     - ``"williamson2"``: steady zonal flow about an axis tilted by ``tilt``, with the
       Coriolis parameter of the same axis (W92 case 2). Parameters ``flow_speed``,
       ``tilt``.
@@ -766,18 +761,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 perturbation_lon=rows[:, self.get_parameter_idx("perturbation_lon")],
                 perturbation_lat=rows[:, self.get_parameter_idx("perturbation_lat")],
                 noise_amplitude=self.noise_amplitude,
-                noise_lmax=self.noise_lmax,
-                device=self.device,
-                generators=noise_generators,
-            )
-        elif self.initial_condition == "galewsky_unperturbed":
-            state = galewsky_initial_condition(
-                self.dynamics,
-                jet_speed=rows[:, self.get_parameter_idx("jet_speed")],
-                height_perturbation=torch.zeros(batch),
-                perturbation_lon=torch.zeros(batch),
-                perturbation_lat=torch.full((batch,), math.pi / 4),
-                noise_amplitude=0.0,
                 noise_lmax=self.noise_lmax,
                 device=self.device,
                 generators=noise_generators,

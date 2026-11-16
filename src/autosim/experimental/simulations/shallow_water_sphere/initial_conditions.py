@@ -28,11 +28,6 @@ GALEWSKY_RANGES: dict[str, tuple[float, float]] = {
     "perturbation_lat": (math.pi / 5, math.pi / 3),  # bump latitude [rad], paper: pi/4
 }
 
-# The jet of Galewsky et al. (2004) without the bump and the noise: their section 3.
-GALEWSKY_UNPERTURBED_RANGES: dict[str, tuple[float, float]] = {
-    "jet_speed": (60.0, 100.0),  # u_max [m/s], paper: 80
-}
-
 # W92 case 2, steady zonal flow about an axis tilted by alpha.
 WILLIAMSON2_RANGES: dict[str, tuple[float, float]] = {
     "flow_speed": (20.0, 40.0),  # u_0 [m/s], W92: 2 pi a / 12 days = 38.61

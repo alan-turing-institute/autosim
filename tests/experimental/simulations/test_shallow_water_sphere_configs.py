@@ -31,7 +31,6 @@ DATASET_CONFIGS = [
     "shallow_water_sphere_d5_galewsky_coarse",
     "shallow_water_sphere_d5_forced_coarse",
     "shallow_water_sphere_t1_williamson2",
-    "shallow_water_sphere_t2_galewsky_unperturbed",
 ]
 
 
