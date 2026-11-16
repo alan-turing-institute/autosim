@@ -56,6 +56,10 @@ from autosim.types import TensorLike
 from .diagnostics import degree_power
 from .dynamics import SphereShallowWaterDynamics
 
+# Values of forcing_type: no forcing, a streamfunction pattern, or a streamfunction
+# and a velocity-potential pattern
+FORCING_TYPES = ("none", "vortical", "momentum")
+
 
 @dataclass
 class ForcingSettings:

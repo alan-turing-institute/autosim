@@ -746,6 +746,20 @@ def test_invalid_forcing_settings_raise():
         _small_simulator(parameters_range={**FIXED_GALEWSKY, "viscosity": (0.0, 1.0)})
 
 
+def test_integrate_trajectories_rejects_an_unknown_forcing_type():
+    """The time loop checks the type as the simulator does: no silently unforced run."""
+    with pytest.raises(ValueError, match="forcing_type must be one of"):
+        integrate_trajectories(
+            _dynamics(),
+            _rest_state(2),
+            1,
+            1,
+            0,
+            forcing=_settings(2, forcing_type="mass_pulses"),
+            forcing_generators=_generators(2),
+        )
+
+
 # ---------------------------------------------------------------------------
 # W92 case 4: a known answer for the splitting of the forcing
 # ---------------------------------------------------------------------------

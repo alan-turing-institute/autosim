@@ -311,20 +311,21 @@ def test_coarse_grained_data_is_the_truncation_of_the_run():
 
 def test_baseline_starts_from_the_truncated_state():
     sim = _small_simulator(
-        T=24.0, skip_nt=2, return_baseline=True, return_constant_fields=True, **COARSE
+        T=48.0, skip_nt=2, return_baseline=True, return_constant_fields=True, **COARSE
     )
     payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
     data = payload["data"]
     baseline = payload["baseline"]
-    assert baseline.shape == data.shape == (2, 7, 16, 32, 3)
+    assert baseline.shape == data.shape == (2, 15, 16, 32, 3)
     assert payload["constant_fields"].shape == (2, 16, 32, 2)
     torch.testing.assert_close(baseline[:, 0], data[:, 0], rtol=1e-5, atol=1e-4)
     # the low-resolution solver departs from the coarse-grained truth with time. The
-    # Galewsky jet is sharp at lmax = 11, so the baseline departs within the first
-    # 3 h: the error grows from frame 1 on, by less than a factor 2 over this run.
+    # Galewsky jet is sharp at lmax = 11, so the baseline departs within the first 3 h.
+    # From 3 h to 42 h after the branch the error then grows by a factor 1.73
+    # (measured: 1.38 by 18 h, 1.98 by 66 h).
     error = (baseline - data).abs().mean(dim=(0, 2, 3, 4))
     assert error[0] < 1e-3
-    assert error[-1] > error[1] > 0
+    assert error[-1] > 1.5 * error[1] > 0
     assert torch.isfinite(baseline).all()
 
 

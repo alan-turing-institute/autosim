@@ -17,7 +17,7 @@ from .dynamics import (
     fields_to_spectral,
     make_grid,
 )
-from .forcing import ForcingSettings
+from .forcing import FORCING_TYPES, ForcingSettings
 from .initial_conditions import (
     GALEWSKY_RANGES,
     MOUNTAIN_RANGES,
@@ -40,7 +40,6 @@ INITIAL_CONDITIONS = (
     "restart",
     "from_fields",
 )
-FORCING_TYPES = ("none", "vortical", "momentum")
 BACKSCATTER_MODES = ("global", "local")
 BRANCH_FORCING_STATES = ("redraw", "carry")
 
@@ -324,7 +323,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         if forcing_backscatter_mode not in BACKSCATTER_MODES:
             msg = f"forcing_backscatter_mode must be one of {BACKSCATTER_MODES}"
             raise ValueError(msg)
-        kinetic_forcing = forcing_type in ("vortical", "momentum")
+        kinetic_forcing = forcing_type != "none"
         if forcing_backscatter_fraction < 0:
             msg = "forcing_backscatter_fraction must be non-negative"
             raise ValueError(msg)

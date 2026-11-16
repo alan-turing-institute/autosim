@@ -9,9 +9,9 @@ grid: legendre-gauss
 lmax: 86
 nlat: 128
 nlon: 256
-# Time in hours. The first 60 days are the spin-up: from the Galewsky jet, the eddy
-# energy is steady after about 25 days (measured at lmax = 86 with the vortical forcing).
-# The next 15 days are saved every 3 h, 121 frames.
+# Time in hours. The first 60 days are the spin-up. With the vortical forcing of
+# d4_vortical the eddy energy is steady after about 25 days from the Galewsky jet; this
+# forcing was not measured. The next 15 days are saved every 3 h, 121 frames.
 T: 1800.0
 dt_save: 3.0
 skip_nt: 480
@@ -22,17 +22,18 @@ device: cuda
 return_constant_fields: true
 # Climate. The height relaxes in 1 day towards the balanced height of an 80 m/s jet at
 # 45 degrees north, and a drag of 100 days damps the wind. The jet is unstable, so the
-# relaxation keeps regenerating eddies. Measured without forcing: jet of 54 m/s, eddy
-# kinetic energy 5.0 +- 0.3 m^2/s^2, drag loss 2.4e-5 m^2/s^3.
+# relaxation keeps regenerating eddies. Measured without forcing, from the random start
+# used before the Galewsky jet: jet of 54 m/s, eddy kinetic energy 5.0 +- 0.3 m^2/s^2,
+# drag loss 2.4e-5 m^2/s^3.
 relaxation_time: 24.0
 relaxation_jet_speed: 80.0
 relaxation_jet_latitude: 0.7853981633974483
 drag_time: 2400.0
 # Forcing: energy rate [m^2/s^3], decorrelation time [h] and slope p of the noise
 # amplitude l^p, as in d4_vortical. Half of the energy rate goes to the divergent part.
-# Measured spread of u_phi between members from one state, relative to the variability
-# of the climate (1.41 for independent members): 0.23 after 1 day, 0.52 after 5 days,
-# 0.77 after 10 days.
+# Spread of u_phi between members from one state, relative to the variability of the
+# climate (1.41 for independent members), measured from the random start:
+# 0.23 after 1 day, 0.52 after 5 days, 0.77 after 10 days.
 forcing_type: momentum
 forcing_energy_rate: 1.0e-5
 forcing_correlation_time: 6.0

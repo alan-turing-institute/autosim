@@ -35,6 +35,7 @@ from .dynamics import (
     total_energy,
 )
 from .forcing import (
+    FORCING_TYPES,
     ForcingSettings,
     advance_pattern,
     autoregressive_parameter,
@@ -298,7 +299,10 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
     # --- Forcing: patterns of the kinetic-energy forcing
     if forcing is None:
         forcing = no_forcing(batch)
-    kinetic_forcing = forcing.forcing_type in ("vortical", "momentum")
+    if forcing.forcing_type not in FORCING_TYPES:
+        msg = f"forcing_type must be one of {FORCING_TYPES}"
+        raise ValueError(msg)
+    kinetic_forcing = forcing.forcing_type != "none"
     if forcing.forcing_type != "none" and forcing_generators is None:
         msg = "forcing requires forcing_generators"
         raise ValueError(msg)
