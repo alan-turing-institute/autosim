@@ -62,7 +62,7 @@ class ForcingSettings:
     """Settings of the stochastic forcing of one batch of B simulations.
 
     Attributes:
-        forcing_type: "none", "vortical", "momentum" or "mass_pulses".
+        forcing_type: "none", "vortical" or "momentum".
         energy_rate: Base energy rate of the kinetic-energy forcing [m^2/s^3], (B,).
         correlation_time: Decorrelation time of the pattern [s], (B,); 0 is white.
         spectral_slope: Exponent p of the noise amplitude g_l = b l^p, (B,).
@@ -74,10 +74,6 @@ class ForcingSettings:
             energy rate, (B,).
         backscatter_mode: "global" or "local".
         backscatter_include_drag: Whether the drag loss counts as dissipation.
-        pulse_rate: Mean number of mass pulses per second over the sphere, (B,).
-        pulse_amplitude: Height of a mass pulse [m], (B,).
-        pulse_width: Angular width of a mass pulse [rad], (B,).
-        pulse_remove_mean: Whether the global mean of each pulse is removed.
     """
 
     forcing_type: str
@@ -90,10 +86,6 @@ class ForcingSettings:
     backscatter_fraction: TensorLike
     backscatter_mode: str
     backscatter_include_drag: bool
-    pulse_rate: TensorLike
-    pulse_amplitude: TensorLike
-    pulse_width: TensorLike
-    pulse_remove_mean: bool
 
 
 def no_forcing(batch: int) -> ForcingSettings:
@@ -110,10 +102,6 @@ def no_forcing(batch: int) -> ForcingSettings:
         backscatter_fraction=zeros,
         backscatter_mode="global",
         backscatter_include_drag=False,
-        pulse_rate=zeros,
-        pulse_amplitude=zeros,
-        pulse_width=zeros,
-        pulse_remove_mean=True,
     )
 
 
@@ -397,98 +385,3 @@ def kinetic_forcing_increment(
     if pattern.shape[1] == 2:
         increment[:, 2] = dynamics.laplacian * scaled[:, 1]
     return increment
-
-
-def sample_pulse_events(
-    generators: list[torch.Generator],
-    pulse_rate: TensorLike,
-    n_steps: int,
-    dt: float,
-) -> dict[int, list[tuple[int, float, float]]]:
-    """Times and positions of the mass pulses of a whole run.
-
-    The pulses of a simulation form a Poisson process in time: their number over the
-    run is Poisson with mean rate x duration, and their times are uniform. Their
-    positions are uniform on the sphere.
-
-    Args:
-        generators: One random generator per simulation.
-        pulse_rate: Mean number of pulses per second, shape (B,).
-        n_steps: Number of solver steps of the run.
-        dt: Solver time step [s].
-
-    Returns:
-        A dictionary from the index of a solver step to the pulses released at the
-        end of that step, each as (simulation, longitude, latitude).
-    """
-    events: dict[int, list[tuple[int, float, float]]] = {}
-    for index in range(len(generators)):
-        generator = generators[index]
-        device = generator.device
-        expected = pulse_rate[index].to(device, torch.float64) * n_steps * dt
-        count = int(torch.poisson(expected.reshape(1), generator=generator).item())
-        uniform = torch.rand(
-            count, 3, generator=generator, device=device, dtype=torch.float64
-        )
-        steps = torch.floor(uniform[:, 0] * n_steps).long().clamp(max=n_steps - 1)
-        longitudes = 2 * math.pi * uniform[:, 1]
-        latitudes = torch.asin(2 * uniform[:, 2] - 1)
-        for event in range(count):
-            step = int(steps[event].item())
-            pulse = (index, longitudes[event].item(), latitudes[event].item())
-            events.setdefault(step, []).append(pulse)
-    return events
-
-
-def mass_pulse_increment(
-    dynamics: SphereShallowWaterDynamics,
-    pulses: list[tuple[int, float, float]],
-    batch: int,
-    pulse_amplitude: TensorLike,
-    pulse_width: TensorLike,
-    remove_mean: bool,
-) -> TensorLike:
-    r"""Increment of the state from the mass pulses released at one step.
-
-    A pulse centred at a point adds the height
-    :math:`A\,\exp(-\gamma^2 / (2\sigma^2))`, with :math:`\gamma` the angle to the
-    centre, A the amplitude and :math:`\sigma` the width. Removing the global mean of
-    the pulse keeps the mass of the fluid unchanged.
-
-    Args:
-        dynamics: Fixed operators.
-        pulses: Pulses of this step, each as (simulation, longitude, latitude).
-        batch: Number of simulations B.
-        pulse_amplitude: Amplitude A [m], shape (B,).
-        pulse_width: Width sigma [rad], shape (B,).
-        remove_mean: Whether the global mean of the increment is removed.
-
-    Returns:
-        Increment of the spectral state, (B, 3, L, L); only the geopotential changes.
-    """
-    latitude = dynamics.latitude
-    longitude = dynamics.longitude
-    height = torch.zeros(
-        batch, *dynamics.grid.shape, dtype=torch.float64, device=latitude.device
-    )
-    for index, pulse_lon, pulse_lat in pulses:
-        cosine = math.sin(pulse_lat) * torch.sin(latitude) + math.cos(
-            pulse_lat
-        ) * torch.cos(latitude) * torch.cos(longitude - pulse_lon)
-        angle = torch.acos(cosine.clamp(min=-1.0, max=1.0))
-        amplitude = float(pulse_amplitude[index])
-        width = float(pulse_width[index])
-        height[index] += amplitude * torch.exp(-(angle**2) / (2 * width**2))
-
-    increment = torch.zeros(
-        batch,
-        3,
-        dynamics.lmax,
-        dynamics.lmax,
-        dtype=torch.complex128,
-        device=latitude.device,
-    )
-    increment[:, 0] = dynamics.gravity * dynamics.to_coefficients(height)
-    if remove_mean:
-        increment[:, 0, 0, 0] = 0.0
-    return torch.tril(increment)

@@ -36,11 +36,11 @@ Adams-Bashforth scheme (module ``integration``).
 :math:`\psi'(t+\Delta t) = (1-\alpha)\,\psi'(t) + g_l\sqrt{\alpha}\,\epsilon(t)` with
 :math:`g_l = b\,l^p` and :math:`\alpha = \Delta t/\tau`, and
 :math:`F_\zeta\,\Delta t = \nabla^2\psi'`. ``"momentum"`` adds a velocity-potential
-pattern, :math:`F_\delta\,\Delta t = \nabla^2\chi'`. ``"mass_pulses"`` adds Gaussian
-bumps to :math:`\Phi` at Poisson times. The amplitude :math:`b` follows from the
-energy rate :math:`\varepsilon` (kinetic energy per unit mass and time gained by a
-free random walk of the increments): :math:`b^2 = 8\pi a^2 \alpha\,\varepsilon\,
-\Delta t / \Gamma`, :math:`\Gamma = \sum_l l(l+1)(2l+1)\,l^{2p}`. A backscatter adds
+pattern, :math:`F_\delta\,\Delta t = \nabla^2\chi'`. The amplitude :math:`b` follows
+from the energy rate :math:`\varepsilon` (kinetic energy per unit mass and time
+gained by a free random walk of the increments):
+:math:`b^2 = 8\pi a^2 \alpha\,\varepsilon\,\Delta t / \Gamma`,
+:math:`\Gamma = \sum_l l(l+1)(2l+1)\,l^{2p}`. A backscatter adds
 a fraction of the kinetic energy lost to the hyperdiffusion (and to the drag, with
 ``backscatter_include_drag``) to :math:`\varepsilon`, as its global mean or as a
 field on the grid (Berner et al., eq. 13).
@@ -74,9 +74,8 @@ Modules:
 
 - ``dynamics``: operators, tendencies, time step, energy, conversion to and from
   saved fields;
-- ``initial_conditions``: one function per family (Galewsky jet, W92 cases 2, 5, 6,
-  random balanced flow);
-- ``forcing``: stochastic kinetic-energy forcing, backscatter, mass pulses;
+- ``initial_conditions``: one function per family (Galewsky jet, W92 cases 2, 5, 6);
+- ``forcing``: stochastic kinetic-energy forcing and backscatter;
 - ``integration``: the time loop of a batch and its energy budget;
 - ``diagnostics``: spectra, invariants, W92 error norms, non-zonal energy;
 - ``rotation``: rotation of states and saved frames by an element of SO(3);
@@ -120,22 +119,18 @@ from .forcing import (
     global_dissipation_rate,
     kinetic_forcing_increment,
     local_dissipation_rate,
-    mass_pulse_increment,
-    sample_pulse_events,
     stationary_pattern,
     unit_rate_amplitudes,
 )
 from .initial_conditions import (
     GALEWSKY_RANGES,
     MOUNTAIN_RANGES,
-    RANDOM_BALANCED_RANGES,
     ROSSBY_HAURWITZ_RANGES,
     WILLIAMSON2_RANGES,
     balanced_geopotential,
     galewsky_initial_condition,
     mountain_initial_condition,
     mountain_orography,
-    random_balanced_initial_condition,
     rossby_haurwitz_initial_condition,
     williamson2_initial_condition,
     zonal_jet,
@@ -161,7 +156,6 @@ __all__ = [
     "GALEWSKY_RANGES",
     "INITIAL_CONDITIONS",
     "MOUNTAIN_RANGES",
-    "RANDOM_BALANCED_RANGES",
     "ROSSBY_HAURWITZ_RANGES",
     "SAMPLED_SCALARS",
     "WILLIAMSON2_RANGES",
@@ -189,17 +183,14 @@ __all__ = [
     "kinetic_forcing_increment",
     "local_dissipation_rate",
     "make_grid",
-    "mass_pulse_increment",
     "mountain_initial_condition",
     "mountain_orography",
     "non_zonal_energy",
-    "random_balanced_initial_condition",
     "rossby_haurwitz_initial_condition",
     "rotate_coefficients",
     "rotate_fields",
     "rotate_point",
     "sample_generators",
-    "sample_pulse_events",
     "shallow_water_tendencies",
     "spectral_to_fields",
     "stationary_pattern",

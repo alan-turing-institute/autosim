@@ -57,12 +57,6 @@ PUBLISHED_RANGES = {
         "mountain_lon": (1.5 * math.pi, 1.5 * math.pi),
         "mountain_lat": (math.pi / 6, math.pi / 6),
     },
-    # no published case: a fixed member of the family
-    "random_balanced": {
-        "amp": (20.0, 20.0),
-        "initial_wavenumber": (6.0, 6.0),
-        "initial_bandwidth": (2.0, 2.0),
-    },
 }
 # Families that build their own initial state ("restart" and "from_fields" take one)
 GENERATED_FAMILIES = list(PUBLISHED_RANGES)
@@ -72,7 +66,6 @@ PUBLISHED_MEAN_DEPTH = {
     "williamson2": W2_MEAN_DEPTH,
     "rossby_haurwitz": 8000.0,
     "mountain": 5960.0,
-    "random_balanced": 1.0e4,
 }
 
 

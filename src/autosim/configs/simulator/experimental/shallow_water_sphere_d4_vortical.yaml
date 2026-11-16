@@ -4,13 +4,14 @@
 # Requires the "spherical" extra and a GPU; leave dataset.num_workers unset.
 _target_: autosim.experimental.simulations.SphericalShallowWater
 log_level: progress_bar
-initial_condition: random_balanced
+initial_condition: galewsky
 grid: legendre-gauss
 lmax: 86
 nlat: 128
 nlon: 256
-# Time in hours. The first 60 days are the spin-up: the eddy energy is steady after 40
-# to 50 days (measured at this size). The next 15 days are saved every 3 h, 121 frames.
+# Time in hours. The first 60 days are the spin-up: from the Galewsky jet, the eddy
+# energy is steady after about 25 days (measured at lmax = 86 with the vortical forcing).
+# The next 15 days are saved every 3 h, 121 frames.
 T: 1800.0
 dt_save: 3.0
 skip_nt: 480
@@ -42,8 +43,9 @@ branch_forcing_state: redraw
 # Extra members from the first saved frame. 0 for training data; a reference ensemble
 # is a run with simulator.reference_members=16 and small dataset counts.
 reference_members: 0
-# The initial flow only seeds the spin-up.
+# The Galewsky jet only seeds the spin-up: the ranges of d1_galewsky.
 parameters_range:
-  amp: [10.0, 30.0]
-  initial_wavenumber: [4.0, 10.0]
-  initial_bandwidth: [1.0, 3.0]
+  jet_speed: [60.0, 100.0]
+  height_perturbation_m: [60.0, 180.0]
+  perturbation_lon: [0.0, 6.283185307179586]
+  perturbation_lat: [0.6283185307179586, 1.0471975511965976]

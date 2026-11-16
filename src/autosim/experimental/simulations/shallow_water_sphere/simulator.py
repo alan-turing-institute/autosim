@@ -21,13 +21,11 @@ from .forcing import ForcingSettings
 from .initial_conditions import (
     GALEWSKY_RANGES,
     MOUNTAIN_RANGES,
-    RANDOM_BALANCED_RANGES,
     ROSSBY_HAURWITZ_RANGES,
     WILLIAMSON2_RANGES,
     balanced_geopotential,
     galewsky_initial_condition,
     mountain_initial_condition,
-    random_balanced_initial_condition,
     rossby_haurwitz_initial_condition,
     williamson2_initial_condition,
     zonal_jet,
@@ -39,11 +37,10 @@ INITIAL_CONDITIONS = (
     "williamson2",
     "rossby_haurwitz",
     "mountain",
-    "random_balanced",
     "restart",
     "from_fields",
 )
-FORCING_TYPES = ("none", "vortical", "momentum", "mass_pulses")
+FORCING_TYPES = ("none", "vortical", "momentum")
 BACKSCATTER_MODES = ("global", "local")
 BRANCH_FORCING_STATES = ("redraw", "carry")
 
@@ -53,7 +50,6 @@ DEFAULT_PARAMETER_RANGES: dict[str, dict[str, tuple[float, float]]] = {
     "williamson2": WILLIAMSON2_RANGES,
     "rossby_haurwitz": ROSSBY_HAURWITZ_RANGES,
     "mountain": MOUNTAIN_RANGES,
-    "random_balanced": RANDOM_BALANCED_RANGES,
     "restart": {},  # the state is supplied: no sampled parameter
     "from_fields": {},
 }
@@ -69,9 +65,6 @@ SAMPLED_SCALARS = (
     "forcing_spectral_slope",
     "forcing_divergent_fraction",
     "forcing_backscatter_fraction",
-    "pulse_rate",
-    "pulse_amplitude",
-    "pulse_width",
 )
 
 # Independent random streams of one simulation
@@ -132,9 +125,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
     - ``"mountain"``: zonal flow over an isolated mountain (W92 case 5). Parameters
       ``flow_speed``, ``mountain_height``, ``mountain_radius``, ``mountain_lon``,
       ``mountain_lat``.
-    - ``"random_balanced"``: random flow without divergence and its balanced height,
-      the spherical counterpart of the planar ``balanced_random_pv``. Parameters
-      ``amp`` (root-mean-square speed), ``initial_wavenumber``, ``initial_bandwidth``.
 
     - ``"restart"``: the state ``initial_state``, saved fields ``[h, u_phi,
       u_theta]`` of this or another run. No parameter. All the simulations of a call
@@ -145,7 +135,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
       the interface of W92 case 7 for analysed fields.
 
     The arguments listed in ``SAMPLED_SCALARS`` (drag and relaxation times, forcing
-    rate, decorrelation time, slope, fractions, pulse statistics) can also be keys of
+    rate, decorrelation time, slope, fractions) can also be keys of
     ``parameters_range``. They are then sampled for each simulation, and the
     constructor value is not used.
 
@@ -156,10 +146,9 @@ class SphericalShallowWater(SpatioTemporalSimulator):
       and linear drag on the vorticity and the divergence. With both, the flow
       reaches a statistically steady state with a jet and eddies.
     - Stochastic forcing, ``forcing_type``: ``"vortical"`` (streamfunction pattern,
-      Berner et al. 2009), ``"momentum"`` (the same with a divergent part) or
-      ``"mass_pulses"`` (Gaussian height bumps at Poisson times). The energy rate of
-      the first two can include a backscatter of the diagnosed dissipation, global
-      or local.
+      Berner et al. 2009) or ``"momentum"`` (the same with a divergent part). The
+      energy rate can include a backscatter of the diagnosed dissipation, global or
+      local.
 
     Args:
         lmax: Spectral band limit L.
@@ -207,7 +196,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         relaxation_jet_latitude: Latitude of that jet [rad].
         drag_time: Time of the linear drag on vorticity and divergence [hours]. None
             is no drag.
-        forcing_type: "none", "vortical", "momentum" or "mass_pulses".
+        forcing_type: "none", "vortical" or "momentum".
         forcing_energy_rate: Kinetic energy per unit mass injected per unit time by
             "vortical" and "momentum" forcing [m^2/s^3]: the growth rate of the
             global mean of |u|^2 / 2 under a free random walk of the increments.
@@ -228,11 +217,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             forcing depend on the flow.
         backscatter_include_drag: Whether the loss to the drag counts as
             dissipation in the backscatter.
-        pulse_rate: Mean number of mass pulses per hour over the sphere.
-        pulse_amplitude: Height of a mass pulse [m].
-        pulse_width: Angular width of a mass pulse [rad].
-        pulse_remove_mean: Remove the global mean of each pulse, so that the mass
-            of the fluid is unchanged.
         return_additional_input_fields: Return, as ``additional_input_fields``, the
             increments of h, u_phi and u_theta added by the forcing between each
             saved frame and the next (zero at the last frame).
@@ -315,10 +299,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         forcing_backscatter_fraction: float = 0.0,
         forcing_backscatter_mode: str = "global",
         backscatter_include_drag: bool = False,
-        pulse_rate: float = 0.0,
-        pulse_amplitude: float = 0.0,
-        pulse_width: float = 0.1,
-        pulse_remove_mean: bool = True,
         return_additional_input_fields: bool = False,
         return_energy_budget: bool = False,
         return_forcing_state: bool = False,
@@ -471,10 +451,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         self.forcing_backscatter_fraction = forcing_backscatter_fraction
         self.forcing_backscatter_mode = forcing_backscatter_mode
         self.backscatter_include_drag = backscatter_include_drag
-        self.pulse_rate = pulse_rate
-        self.pulse_amplitude = pulse_amplitude
-        self.pulse_width = pulse_width
-        self.pulse_remove_mean = pulse_remove_mean
         self.return_additional_input_fields = return_additional_input_fields
         self.return_energy_budget = return_energy_budget
         self.return_forcing_state = return_forcing_state
@@ -581,8 +557,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
     def forcing_settings(self, rows: TensorLike) -> ForcingSettings | None:
         """Settings of the stochastic forcing of one batch, None without forcing.
 
-        Times are converted from hours to seconds and the pulse rate from pulses per
-        hour to pulses per second.
+        Times are converted from hours to seconds.
 
         Args:
             rows: Parameter rows (B, n_parameters).
@@ -609,11 +584,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         backscatter_fraction = self.sampled_or_fixed(
             rows, "forcing_backscatter_fraction", self.forcing_backscatter_fraction
         )
-        pulses_per_hour = self.sampled_or_fixed(rows, "pulse_rate", self.pulse_rate)
-        pulse_amplitude = self.sampled_or_fixed(
-            rows, "pulse_amplitude", self.pulse_amplitude
-        )
-        pulse_width = self.sampled_or_fixed(rows, "pulse_width", self.pulse_width)
         return ForcingSettings(
             forcing_type=self.forcing_type,
             energy_rate=energy_rate,
@@ -625,10 +595,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             backscatter_fraction=backscatter_fraction,
             backscatter_mode=self.forcing_backscatter_mode,
             backscatter_include_drag=self.backscatter_include_drag,
-            pulse_rate=pulses_per_hour / 3600,
-            pulse_amplitude=pulse_amplitude,
-            pulse_width=pulse_width,
-            pulse_remove_mean=self.pulse_remove_mean,
         )
 
     def damping_settings(
@@ -788,17 +754,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         elif self.initial_condition in ("restart", "from_fields"):
             state, coriolis, surface_geopotential = self.supplied_problem(
                 batch, coriolis
-            )
-        elif self.initial_condition == "random_balanced":
-            state = random_balanced_initial_condition(
-                self.dynamics,
-                amp=rows[:, self.get_parameter_idx("amp")],
-                initial_wavenumber=rows[
-                    :, self.get_parameter_idx("initial_wavenumber")
-                ],
-                initial_bandwidth=rows[:, self.get_parameter_idx("initial_bandwidth")],
-                generators=noise_generators,
-                coriolis=coriolis,
             )
         else:  # "mountain"
             state, surface_geopotential = mountain_initial_condition(

@@ -16,7 +16,6 @@ its parameters. Equal bounds at the published values give the published case.
 ``williamson2``            steady flow about a tilted axis (W92 case 2)
 ``rossby_haurwitz``        Rossby-Haurwitz wave (W92 case 6)
 ``mountain``               zonal flow over an isolated mountain (W92 case 5)
-``random_balanced``        random flow with its balanced height
 ``restart``                a supplied state: branching and ensembles
 ``from_fields``            supplied fields after a balance step (W92 case 7)
 =========================  ===================================================
@@ -34,8 +33,8 @@ jet and eddies.
 Stochastic forcing
 ------------------
 
-``forcing_type`` is ``"none"``, ``"vortical"``, ``"momentum"`` or ``"mass_pulses"``.
-The first two follow Berner et al. (2009): a pattern in spherical harmonics whose
+``forcing_type`` is ``"none"``, ``"vortical"`` or ``"momentum"``. Both follow
+Berner et al. (2009): a pattern in spherical harmonics whose
 coefficients are AR(1) processes, with ``forcing_energy_rate`` the kinetic energy
 injected per unit mass and time. ``forcing_backscatter_fraction`` adds a fraction of
 the diagnosed dissipation to that rate, as its global mean or, with

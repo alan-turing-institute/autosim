@@ -5,7 +5,7 @@
 # Requires the "spherical" extra and a GPU; leave dataset.num_workers unset.
 _target_: autosim.experimental.simulations.SphericalShallowWater
 log_level: progress_bar
-initial_condition: random_balanced
+initial_condition: galewsky
 # Fine run: T170 (lmax = 171) on the 256 x 512 Gauss-Legendre grid, free of aliasing.
 grid: legendre-gauss
 lmax: 171
@@ -17,8 +17,9 @@ output_nlat: 128
 output_nlon: 256
 # Also save the run of the solver at lmax = 86 from the truncated first saved frame.
 return_baseline: true
-# Time in hours. The first 60 days are the spin-up: the eddy energy is steady after 40
-# to 50 days (measured at lmax = 86). The next 15 days are saved every 3 h, 121 frames.
+# Time in hours. The first 60 days are the spin-up: from the Galewsky jet, the eddy
+# energy is steady after about 25 days (measured at lmax = 86 with the vortical forcing).
+# The next 15 days are saved every 3 h, 121 frames.
 # Measured cost on one L4 GPU: 140 min for a batch of 8.
 T: 1800.0
 dt_save: 3.0
@@ -47,8 +48,9 @@ forcing_spectral_slope: -1.27
 # The pattern is redrawn at the first saved frame, so the saved fields alone determine
 # the forecast distribution.
 branch_forcing_state: redraw
-# The initial flow only seeds the spin-up.
+# The Galewsky jet only seeds the spin-up: the ranges of d1_galewsky.
 parameters_range:
-  amp: [10.0, 30.0]
-  initial_wavenumber: [4.0, 10.0]
-  initial_bandwidth: [1.0, 3.0]
+  jet_speed: [60.0, 100.0]
+  height_perturbation_m: [60.0, 180.0]
+  perturbation_lon: [0.0, 6.283185307179586]
+  perturbation_lat: [0.6283185307179586, 1.0471975511965976]

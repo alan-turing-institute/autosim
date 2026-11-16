@@ -27,8 +27,6 @@ from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E40
     kinetic_energy_spectrum,
     kinetic_forcing_increment,
     local_dissipation_rate,
-    mass_pulse_increment,
-    sample_pulse_events,
     stationary_pattern,
     step_damping_factors,
     total_energy,
@@ -42,6 +40,20 @@ GRAVITY = 9.80616
 MEAN_DEPTH = 1.0e4
 LMAX = 22
 DT = 300.0
+# The published Galewsky jet: equal bounds fix every parameter
+FIXED_GALEWSKY = {
+    "jet_speed": (80.0, 80.0),
+    "height_perturbation_m": (120.0, 120.0),
+    "perturbation_lon": (0.0, 0.0),
+    "perturbation_lat": (math.pi / 4, math.pi / 4),
+}
+# A jet of zero speed without bump: with noise_amplitude=0, a fluid at rest
+AT_REST = {
+    "jet_speed": (0.0, 0.0),
+    "height_perturbation_m": (0.0, 0.0),
+    "perturbation_lon": (0.0, 0.0),
+    "perturbation_lat": (math.pi / 4, math.pi / 4),
+}
 
 
 def _dynamics(lmax=LMAX, nlat=32, nlon=64, dt=DT):
@@ -78,10 +90,6 @@ def _settings(batch, **changes):
         "backscatter_fraction": zeros,
         "backscatter_mode": "global",
         "backscatter_include_drag": False,
-        "pulse_rate": zeros,
-        "pulse_amplitude": zeros,
-        "pulse_width": zeros + 0.2,
-        "pulse_remove_mean": True,
     }
     values.update(changes)
     return ForcingSettings(**values)
@@ -99,7 +107,7 @@ def _small_simulator(**overrides) -> SphericalShallowWater:
         "batch_size": 2,
         "device": DEVICE,
         "log_level": "warning",
-        "initial_condition": "random_balanced",
+        "initial_condition": "galewsky",
     }
     return SphericalShallowWater(**(options | overrides))
 
@@ -351,54 +359,6 @@ def test_local_dissipation_rate_has_the_global_rate_as_its_mean():
 
 
 # ---------------------------------------------------------------------------
-# Mass pulses
-# ---------------------------------------------------------------------------
-
-
-def test_pulse_events_are_a_poisson_process():
-    n_steps = 1000
-    rate = torch.full((200,), 5 / (n_steps * DT))  # 5 pulses per run on average
-    events = sample_pulse_events(_generators(200), rate, n_steps, DT)
-    pulses = [pulse for step in events for pulse in events[step]]
-    counts = torch.zeros(200)
-    for index, _, _ in pulses:
-        counts[index] += 1
-    assert counts.mean().item() == pytest.approx(5.0, abs=0.5)
-    assert counts.var().item() == pytest.approx(
-        5.0, abs=1.5
-    )  # Poisson: variance = mean
-    assert min(events) >= 0
-    assert max(events) < n_steps
-    longitudes = torch.tensor([pulse[1] for pulse in pulses])
-    latitudes = torch.tensor([pulse[2] for pulse in pulses])
-    assert longitudes.min() >= 0
-    assert longitudes.max() < 2 * math.pi
-    # uniform on the sphere: sin(latitude) is uniform on [-1, 1]
-    assert torch.sin(latitudes).mean().abs() < 0.1
-    assert torch.sin(latitudes).var().item() == pytest.approx(1 / 3, abs=0.05)
-
-
-def test_mass_pulse_is_a_bump_at_its_centre():
-    dynamics = _dynamics(lmax=43, nlat=64, nlon=128)
-    amplitude = torch.tensor([50.0, 20.0])
-    width = torch.tensor([0.3, 0.3])
-    pulses = [(0, 1.0, 0.4), (1, 4.0, -0.9)]
-    increment = mass_pulse_increment(dynamics, pulses, 2, amplitude, width, False)
-    assert increment[:, 1:].abs().max() == 0.0
-    height = dynamics.to_grid(increment[:, 0]) / GRAVITY
-    assert height[0].max().item() == pytest.approx(50.0, rel=0.02)
-    assert height[1].max().item() == pytest.approx(20.0, rel=0.02)
-    ilat, ilon = divmod(int(height[0].argmax()), 128)
-    assert abs(dynamics.latitude[ilat, ilon].item() - 0.4) < 0.06
-    assert abs(dynamics.longitude[ilat, ilon].item() - 1.0) < 0.06
-    assert increment[0, 0, 0, 0].real > 0  # the pulse adds mass
-
-    without_mean = mass_pulse_increment(dynamics, pulses, 2, amplitude, width, True)
-    assert without_mean[:, 0, 0, 0].abs().max() == 0.0
-    torch.testing.assert_close(without_mean[:, 0, 1:], increment[:, 0, 1:])
-
-
-# ---------------------------------------------------------------------------
 # Drag and relaxation
 # ---------------------------------------------------------------------------
 
@@ -440,13 +400,7 @@ def test_relaxation_moves_the_height_towards_its_equilibrium():
 
 def test_drag_damps_the_kinetic_energy():
     dynamics = _dynamics()
-    sim = _small_simulator(
-        parameters_range={
-            "amp": (10.0, 10.0),
-            "initial_wavenumber": (4.0, 4.0),
-            "initial_bandwidth": (1.0, 1.0),
-        }
-    )
+    sim = _small_simulator(parameters_range=FIXED_GALEWSKY)
     rows = sim.sample_inputs(2, random_seed=0)
     state, _, _ = sim.initial_problem(rows, _generators(2))
     free = integrate_trajectories(sim.dynamics, state, 1, 36, 0)["final_state"]
@@ -468,8 +422,15 @@ def test_drag_damps_the_kinetic_energy():
 
 
 def test_relaxation_and_drag_through_the_simulator_conserve_the_mass():
+    # A jet of 60 m/s without bump and noise: the mean height is zero, as for the
+    # equilibrium (a jet of 80 m/s), and the relaxation acts on the difference
     sim = _small_simulator(
-        relaxation_time=48.0, drag_time=96.0, return_energy_budget=True, T=12.0
+        relaxation_time=48.0,
+        drag_time=96.0,
+        return_energy_budget=True,
+        T=12.0,
+        parameters_range={**AT_REST, "jet_speed": (60.0, 60.0)},
+        noise_amplitude=0.0,
     )
     payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
     assert torch.isfinite(payload["data"]).all()
@@ -500,11 +461,7 @@ def test_seed_reproduces_the_forcing_and_another_seed_changes_it():
         forcing_type="vortical",
         forcing_energy_rate=1e-4,
         forcing_correlation_time=1.0,
-        parameters_range={
-            "amp": (10.0, 10.0),
-            "initial_wavenumber": (4.0, 4.0),
-            "initial_bandwidth": (1.0, 1.0),
-        },
+        parameters_range=FIXED_GALEWSKY,
         return_additional_input_fields=True,
     )
     first = sim.forward_samples_spatiotemporal(n=2, random_seed=3)
@@ -549,11 +506,8 @@ def test_forcing_of_a_simulation_does_not_depend_on_the_batch_size():
 def test_forcing_is_returned_as_transition_aligned_additional_input():
     """With one solver step per frame and a fluid at rest, frame i + 1 - frame i."""
     sim = _small_simulator(
-        parameters_range={
-            "amp": (0.0, 0.0),
-            "initial_wavenumber": (4.0, 4.0),
-            "initial_bandwidth": (1.0, 1.0),
-        },
+        parameters_range=AT_REST,
+        noise_amplitude=0.0,
         forcing_type="vortical",
         forcing_energy_rate=1e-4,
         dt_save=0.05,
@@ -652,11 +606,7 @@ def test_energy_budget_through_the_simulator():
         "forcing_type": "vortical",
         "forcing_energy_rate": 1e-4,
         "T": 9.0,
-        "parameters_range": {
-            "amp": (10.0, 10.0),
-            "initial_wavenumber": (4.0, 4.0),
-            "initial_bandwidth": (1.0, 1.0),
-        },
+        "parameters_range": FIXED_GALEWSKY,
     }
     sim = _small_simulator(return_energy_budget=True, **options)
     payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
@@ -701,11 +651,7 @@ BACKSCATTER_OPTIONS = {
     "return_energy_budget": True,
     "return_additional_input_fields": True,
     "T": 3.0,
-    "parameters_range": {
-        "amp": (20.0, 20.0),
-        "initial_wavenumber": (8.0, 8.0),
-        "initial_bandwidth": (3.0, 3.0),
-    },
+    "parameters_range": FIXED_GALEWSKY,
 }
 
 
@@ -750,42 +696,11 @@ def test_local_backscatter_rate_is_at_least_the_global_one():
     assert (rates["local"] < 4 * rates["global"]).all()
 
 
-def test_mass_pulses_through_the_simulator():
-    options = {
-        "forcing_type": "mass_pulses",
-        "pulse_rate": 2.0,
-        "pulse_amplitude": 30.0,
-        "pulse_width": 0.3,
-        "return_additional_input_fields": True,
-        "parameters_range": {
-            "amp": (0.0, 0.0),
-            "initial_wavenumber": (4.0, 4.0),
-            "initial_bandwidth": (1.0, 1.0),
-        },
-    }
-    sim = _small_simulator(**options)
-    payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
-    forcing = payload["additional_input_fields"]
-    assert forcing[..., 0].abs().max() > 1.0  # height pulses
-    assert forcing[..., 1:].abs().max() == 0.0  # no wind forcing
-    height = payload["data"][..., 0].double().to(DEVICE)
-    mean = global_integral(height, sim.dynamics.quad_weights) / (4 * math.pi)
-    assert mean.abs().max() < 1e-3  # the mean of each pulse is removed
-
-    with_mass = _small_simulator(pulse_remove_mean=False, **options)
-    payload = with_mass.forward_samples_spatiotemporal(n=2, random_seed=0)
-    height = payload["data"][..., 0].double().to(DEVICE)
-    mean = global_integral(height, with_mass.dynamics.quad_weights) / (4 * math.pi)
-    assert mean[:, -1].min() > 1e-2  # the pulses add mass
-
-
 def test_sampled_forcing_scalars_are_returned_in_constant_scalars():
     sim = _small_simulator(
         forcing_type="vortical",
         parameters_range={
-            "amp": (10.0, 10.0),
-            "initial_wavenumber": (4.0, 4.0),
-            "initial_bandwidth": (1.0, 1.0),
+            **FIXED_GALEWSKY,
             "forcing_energy_rate": (1e-5, 1e-4),
             "drag_time": (48.0, 96.0),
         },
@@ -794,7 +709,7 @@ def test_sampled_forcing_scalars_are_returned_in_constant_scalars():
     )
     payload = sim.forward_samples_spatiotemporal(n=4, random_seed=0)
     scalars = payload["constant_scalars"]
-    assert scalars.shape == (4, 5)
+    assert scalars.shape == (4, 6)
     rate = scalars[:, sim.get_parameter_idx("forcing_energy_rate")]
     assert rate.min() >= 1e-5
     assert rate.max() <= 1e-4
@@ -818,9 +733,9 @@ def test_invalid_forcing_settings_raise():
     with pytest.raises(ValueError, match="non-negative"):
         _small_simulator(forcing_type="vortical", forcing_backscatter_fraction=-0.1)
     with pytest.raises(ValueError, match="backscatter requires"):
-        _small_simulator(forcing_type="mass_pulses", forcing_backscatter_fraction=0.5)
+        _small_simulator(forcing_type="none", forcing_backscatter_fraction=0.5)
     with pytest.raises(ValueError, match="return_forcing_state requires"):
-        _small_simulator(forcing_type="mass_pulses", return_forcing_state=True)
+        _small_simulator(forcing_type="none", return_forcing_state=True)
     with pytest.raises(ValueError, match="must be >= 0"):
         _small_simulator(forcing_type="vortical", forcing_energy_rate=-1.0)
     with pytest.raises(ValueError, match="between 0 and 1"):
@@ -828,14 +743,7 @@ def test_invalid_forcing_settings_raise():
     with pytest.raises(ValueError, match="forcing degrees"):
         _small_simulator(forcing_type="vortical", forcing_degree_max=LMAX)
     with pytest.raises(ValueError, match="unknown keys"):
-        _small_simulator(
-            parameters_range={
-                "amp": (10.0, 10.0),
-                "initial_wavenumber": (4.0, 4.0),
-                "initial_bandwidth": (1.0, 1.0),
-                "viscosity": (0.0, 1.0),
-            }
-        )
+        _small_simulator(parameters_range={**FIXED_GALEWSKY, "viscosity": (0.0, 1.0)})
 
 
 # ---------------------------------------------------------------------------

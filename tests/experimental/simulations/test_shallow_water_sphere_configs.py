@@ -27,7 +27,6 @@ DATASET_CONFIGS = [
     "shallow_water_sphere_d4_vortical",
     "shallow_water_sphere_d4_momentum",
     "shallow_water_sphere_d4_backscatter",
-    "shallow_water_sphere_d4_mass_pulses",
     "shallow_water_sphere_d5_galewsky_coarse",
     "shallow_water_sphere_d5_forced_coarse",
     "shallow_water_sphere_t1_williamson2",

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import pytest
 import torch
 
@@ -18,10 +20,12 @@ from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E40
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 LMAX = 22
-FIXED_RANDOM_BALANCED = {
-    "amp": (15.0, 15.0),
-    "initial_wavenumber": (5.0, 5.0),
-    "initial_bandwidth": (2.0, 2.0),
+# The published Galewsky jet: equal bounds fix every parameter
+FIXED_GALEWSKY = {
+    "jet_speed": (80.0, 80.0),
+    "height_perturbation_m": (120.0, 120.0),
+    "perturbation_lon": (0.0, 0.0),
+    "perturbation_lat": (math.pi / 4, math.pi / 4),
 }
 FORCING = {
     "forcing_type": "vortical",
@@ -42,8 +46,8 @@ def _small_simulator(**overrides) -> SphericalShallowWater:
         "batch_size": 4,
         "device": DEVICE,
         "log_level": "warning",
-        "initial_condition": "random_balanced",
-        "parameters_range": FIXED_RANDOM_BALANCED,
+        "initial_condition": "galewsky",
+        "parameters_range": FIXED_GALEWSKY,
     }
     return SphericalShallowWater(**(options | overrides))
 
@@ -315,10 +319,12 @@ def test_baseline_starts_from_the_truncated_state():
     assert baseline.shape == data.shape == (2, 7, 16, 32, 3)
     assert payload["constant_fields"].shape == (2, 16, 32, 2)
     torch.testing.assert_close(baseline[:, 0], data[:, 0], rtol=1e-5, atol=1e-4)
-    # the low-resolution solver departs from the coarse-grained truth with time
+    # the low-resolution solver departs from the coarse-grained truth with time. The
+    # Galewsky jet is sharp at lmax = 11, so the baseline departs within the first
+    # 3 h: the error grows from frame 1 on, by less than a factor 2 over this run.
     error = (baseline - data).abs().mean(dim=(0, 2, 3, 4))
     assert error[0] < 1e-3
-    assert error[-1] > 2 * error[1] > 0
+    assert error[-1] > error[1] > 0
     assert torch.isfinite(baseline).all()
 
 

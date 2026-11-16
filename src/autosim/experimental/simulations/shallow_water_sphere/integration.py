@@ -43,9 +43,7 @@ from .forcing import (
     global_dissipation_rate,
     kinetic_forcing_increment,
     local_dissipation_rate,
-    mass_pulse_increment,
     no_forcing,
-    sample_pulse_events,
     stationary_pattern,
     unit_rate_amplitudes,
 )
@@ -297,7 +295,7 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
             equilibrium = torch.zeros_like(state)
             equilibrium[:, 0] = equilibrium_geopotential
 
-    # --- Forcing: patterns of the kinetic-energy forcing, or events of mass pulses
+    # --- Forcing: patterns of the kinetic-energy forcing
     if forcing is None:
         forcing = no_forcing(batch)
     kinetic_forcing = forcing.forcing_type in ("vortical", "momentum")
@@ -346,12 +344,6 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
             pattern = initial_pattern.to(device)
         backscatter = bool((forcing.backscatter_fraction > 0).any())
 
-    pulse_events: dict[int, list[tuple[int, float, float]]] = {}
-    if forcing.forcing_type == "mass_pulses":
-        pulse_events = sample_pulse_events(
-            forcing_generators, forcing.pulse_rate, n_saves * steps_per_save, dt
-        )
-
     # --- Time loop
     tendencies_history: list[TensorLike] = []
     if previous_tendencies is not None:
@@ -380,7 +372,6 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
         energy = total_energy(dynamics, state, surface_geopotential)
 
     undamped_state = state  # set at each step when the budget or backscatter need it
-    step_index = 0
     for save in range(1, n_saves + 1):
         increments_since_save = torch.zeros_like(state)
         changes_since_save = torch.zeros(batch, 5, dtype=torch.float64, device=device)
@@ -423,15 +414,6 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
                     rate_since_save += global_integral(
                         energy_rate, dynamics.quad_weights
                     ) / (4 * torch.pi)
-            if step_index in pulse_events:
-                increment = mass_pulse_increment(
-                    dynamics,
-                    pulse_events[step_index],
-                    batch,
-                    forcing.pulse_amplitude,
-                    forcing.pulse_width,
-                    forcing.pulse_remove_mean,
-                )
 
             forced_state = None
             state = damped_state
@@ -453,7 +435,6 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
                     surface_geopotential,
                 )
                 changes_since_save += changes
-            step_index += 1
 
         # Branch point at the first saved frame
         if save == skip_nt:
