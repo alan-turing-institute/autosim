@@ -746,15 +746,12 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         fft_density = torch.fft.fftn(frame_centered)
         power_spectrum = torch.abs(fft_density) ** 2
 
-        # Shift zero-frequency to the center
-        power_spectrum = torch.fft.fftshift(power_spectrum)
-
-        # Create normalized radial frequency grid [-1, 1] for x and y
+        # Match the unshifted FFT bins, normalized by Nyquist (0.5 cycles/pixel).
         N, M = power_spectrum.shape
-        y = torch.linspace(-1, 1, N, device=frame.device)
-        x = torch.linspace(-1, 1, M, device=frame.device)
-        Y, X = torch.meshgrid(y, x, indexing="ij")
-        R = torch.sqrt(X**2 + Y**2)
+        fy = torch.fft.fftfreq(N, device=frame.device, dtype=frame.dtype) * 2
+        fx = torch.fft.fftfreq(M, device=frame.device, dtype=frame.dtype) * 2
+        KY, KX = torch.meshgrid(fy, fx, indexing="ij")
+        R = torch.sqrt(KX**2 + KY**2)
 
         total_energy = power_spectrum.sum()
         if total_energy <= 1e-12:

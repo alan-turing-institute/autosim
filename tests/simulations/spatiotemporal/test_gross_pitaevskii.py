@@ -119,6 +119,42 @@ def test_fringe_score_distinguishes_fringing_from_smooth():
     assert fringed_score > clean_score
 
 
+@pytest.mark.parametrize(
+    ("shape", "modes", "expected"),
+    [
+        ((64, 64), (25, 0), 0.0),
+        ((64, 64), (26, 0), 1.0),
+        ((64, 64), (18, 18), 0.0),
+        ((64, 64), (19, 19), 1.0),
+        ((33, 33), (13, 0), 0.0),
+        ((33, 33), (14, 0), 1.0),
+        ((64, 32), (25, 0), 0.0),
+        ((64, 32), (0, 13), 1.0),
+    ],
+)
+def test_fringe_score_classifies_fourier_modes(shape, modes, expected):
+    rows = torch.arange(shape[0], dtype=torch.float64) / shape[0]
+    cols = torch.arange(shape[1], dtype=torch.float64) / shape[1]
+    phase = 2 * math.pi * (modes[0] * rows[:, None] + modes[1] * cols[None, :])
+    density = 1.0 + 0.1 * torch.cos(phase)
+
+    score = GrossPitaevskiiEquation2D._fringe_score_density(density)
+
+    assert score == pytest.approx(expected, abs=1e-6)
+
+
+def test_fringe_score_measures_spectral_energy_fraction():
+    rows = torch.arange(64, dtype=torch.float64) / 64
+    low_mode = 0.1 * torch.cos(2 * math.pi * 3 * rows)
+    high_mode = 0.2 * torch.cos(2 * math.pi * 28 * rows)
+    density = (1.0 + low_mode + high_mode)[:, None].expand(64, 64)
+
+    score = GrossPitaevskiiEquation2D._fringe_score_density(density)
+
+    # Orthogonal cosine modes have energies proportional to amplitude squared.
+    assert score == pytest.approx(0.8, abs=1e-6)
+
+
 def test_artifact_validation_rejects_high_fringe_score_trajectory(
     monkeypatch: pytest.MonkeyPatch,
 ):
