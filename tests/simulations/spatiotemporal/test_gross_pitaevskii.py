@@ -250,6 +250,60 @@ def test_final_state_stops_at_requested_time():
     )
 
 
+@pytest.mark.parametrize(
+    ("total_time", "dt", "snapshot_dt", "n_frames"),
+    [
+        (0.9, 0.1, 0.3, 4),
+        (0.45, 0.05, 0.15, 4),
+        (2.1, 0.1, 0.7, 4),
+        (0.900001, 0.1, 0.3, 5),
+    ],
+)
+def test_final_snapshot_count_handles_roundoff(total_time, dt, snapshot_dt, n_frames):
+    config = {"g": 0.0}
+    history = gpe_module.simulate_gpe_2d(
+        config,
+        n=16,
+        L=10.0,
+        T=total_time,
+        dt=dt,
+        snapshot_dt=snapshot_dt,
+        return_timeseries=True,
+        random_seed=0,
+    )
+    assert history.shape[0] == n_frames
+    final = gpe_module.simulate_gpe_2d(
+        config,
+        n=16,
+        L=10.0,
+        T=total_time,
+        dt=dt,
+        random_seed=0,
+    )
+    torch.testing.assert_close(history[-1], final)
+
+
+@pytest.mark.parametrize("trap_omega", [None, -0.3])
+def test_exact_trap_rotation_preserves_reusable_config(trap_omega):
+    config = {"g": 0.0, "wx": 1.0, "wy": 2.0, "Omega": 0.8, "exact_trap_rotation": True}
+    if trap_omega is not None:
+        config["trap_Omega"] = trap_omega
+    original = config.copy()
+    gpe_module.simulate_gpe_2d(config, n=32, T=0.1, dt=0.01, random_seed=0)
+    assert config == original
+
+    config["exact_trap_rotation"] = False
+    actual = gpe_module.simulate_gpe_2d(config, n=32, T=0.1, dt=0.01, random_seed=0)
+    expected = gpe_module.simulate_gpe_2d(
+        {**original, "exact_trap_rotation": False},
+        n=32,
+        T=0.1,
+        dt=0.01,
+        random_seed=0,
+    )
+    torch.testing.assert_close(actual, expected)
+
+
 @pytest.fixture
 def prepared_state():
     config = {"g": 0.0, "width": 1.5, "imaginary_time": True, "initial_noise": 0.0}
@@ -358,3 +412,50 @@ def test_laser_only_config_bypasses_wavefunction_rotation(monkeypatch):
     assert data.shape == (1, 3, 32, 32, 3)
     norms = data[..., 0].sum(dim=(-1, -2)) * (sim.L / sim.n) ** 2
     torch.testing.assert_close(norms, torch.ones_like(norms))
+
+
+@pytest.mark.parametrize(
+    ("return_timeseries", "total_time", "snapshot_dt", "skip_nt", "n_time"),
+    [
+        (False, 0.025, 0.015, 0, 1),
+        (True, 0.025, 0.015, 0, 2),
+        (True, 0.025, 0.015, 1, 1),
+        (True, 0.9, 0.3, 0, 3),
+        (True, 0.900001, 0.3, 0, 4),
+    ],
+)
+def test_all_rejected_samples_return_empty_spatiotemporal_data(
+    monkeypatch, return_timeseries, total_time, snapshot_dt, skip_nt, n_time
+):
+    sim = GrossPitaevskiiEquation2D(
+        n=16,
+        L=10.0,
+        T=total_time,
+        dt=0.01,
+        snapshot_dt=snapshot_dt,
+        skip_nt=skip_nt,
+        return_timeseries=return_timeseries,
+        artifact_validation_enabled=True,
+        log_level="error",
+    )
+    monkeypatch.setattr(sim, "_max_fringe_score", lambda _sol: float("inf"))
+    result = sim.forward_samples_spatiotemporal(2, random_seed=0)
+    assert result["data"].shape == (0, n_time, 16, 16, 3)
+    assert result["constant_scalars"].shape == (0, sim.in_dim)
+    assert result["constant_fields"] is None
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(0.0, False), (0.1, False), (0.49, False), (0.51, True), (0.9, True), (1.0, True)],
+)
+def test_sampled_disorder_flag_uses_boolean_conversion(value, expected):
+    sim = GrossPitaevskiiEquation2D(
+        parameters_range={"disorder_time_dependent": (0.0, 1.0)},
+        n=16,
+        T=0.01,
+        dt=0.01,
+        log_level="error",
+    )
+    config = sim._extract_run_parameters(torch.tensor([[value]]))
+    assert config["disorder_time_dependent"] is expected

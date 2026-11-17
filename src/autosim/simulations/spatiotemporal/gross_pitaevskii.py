@@ -482,7 +482,7 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
 
         real_time_Omega = Omega
         if exact_trap_rotation:
-            config["trap_Omega"] = Omega
+            config = {**config, "trap_Omega": Omega}
             real_time_Omega = 0.0
 
         imaginary_time = bool(config.get("imaginary_time", False))
@@ -511,6 +511,10 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
         snapshot_index = 1
         while t < T:
             target_t = min(T, snapshot_index * snapshot_dt) if return_timeseries else T
+            # A nominal final snapshot such as 3 * 0.3 can round below T=0.9.
+            # Snap it to T instead of evolving and filtering an extra tiny step.
+            if math.isclose(target_t, T, rel_tol=1e-10):
+                target_t = T
             remaining = target_t - t
             step_dt = min(dt, remaining)
             # Avoid replacing a full step with a roundoff-sized correction at
@@ -559,7 +563,8 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
 
     Positive ``Omega`` rotates the real-time density counterclockwise.
     Imaginary-time preparation retains the convention :math:`H-\Omega L_z`
-    to favour positive angular momentum. With ``exact_trap_rotation=True``,
+    to favour positive angular momentum, so a prepared rotating state need not
+    be stationary under the real-time Hamiltonian. With ``exact_trap_rotation=True``,
     real-time evolution instead rotates the potential without an explicit
     angular-momentum term.
 
@@ -608,6 +613,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "exact_trap_rotation": lambda v: bool(round(v)),
         "imaginary_time": lambda v: bool(round(v)),
         "imaginary_time_steps": lambda v: round(v),
+        "disorder_time_dependent": lambda v: bool(round(v)),
     }
 
     @staticmethod
@@ -844,6 +850,18 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
 
         channels = 3  # density, real, imag
         features_per_step = self.n * self.n * channels
+
+        if y.shape[0] == 0:
+            # The base batch runner returns (0, out_dim) when every sample fails.
+            # Restore the trajectory width before applying the usual reshape/skip.
+            n_snapshots = 1
+            if self.return_timeseries:
+                snapshot_dt = self.dt if self.snapshot_dt is None else self.snapshot_dt
+                intervals = math.floor(self.T / snapshot_dt)
+                n_snapshots = 1 + intervals
+                if not math.isclose(intervals * snapshot_dt, self.T, rel_tol=1e-10):
+                    n_snapshots += 1
+            y = y.new_empty((0, n_snapshots * features_per_step))
 
         if self.return_timeseries:
             total_features = y.shape[1]
