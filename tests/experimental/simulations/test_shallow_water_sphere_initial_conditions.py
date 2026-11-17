@@ -20,10 +20,11 @@ from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E40
     fields_to_spectral,
     height_error_norms,
     mountain_initial_condition,
-    rossby_haurwitz_initial_condition,
+    rotate_coefficients,
     shallow_water_tendencies,
     spectral_to_fields,
-    williamson2_initial_condition,
+    tilted_pole_coriolis,
+    williamson3_initial_condition,
 )
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -31,10 +32,20 @@ RADIUS = 6.37122e6
 OMEGA = 7.292e-5
 GRAVITY = 9.80616
 
-# Published values of W92 case 2
-W2_FLOW_SPEED = 2 * math.pi * RADIUS / (12 * 86400)
-W2_MEAN_DEPTH = 2.94e4 / GRAVITY
-W2_TILTS = [0.0, 0.05, math.pi / 2 - 0.05, math.pi / 2]
+# Published values of W92 case 3; the tilts are those of the T1 dataset, with pi/3 of
+# W92's convergence study
+W3_FLOW_SPEED = 2 * math.pi * RADIUS / (12 * 86400)
+W3_MEAN_DEPTH = 2.94e4 / GRAVITY
+W3_TILTS = [0.0, 0.05, math.pi / 3, math.pi / 2 - 0.05, math.pi / 2]
+# Gaussian mountain of DCMIP-2008: half-width 1500 km
+MOUNTAIN_WIDTH = 1.5e6 / RADIUS
+
+# Tolerances of the W92 case 3 tests, each about ten times the measured value given in
+# the docstring of its test
+CAP_TOLERANCE = 5e-8
+STEADY_TOLERANCE = 1e-10
+ROTATION_TOLERANCE = 5e-10
+CONVERGENCE_FACTOR = 50.0
 
 # Parameters of each family at the published values (equal bounds)
 PUBLISHED_RANGES = {
@@ -44,27 +55,32 @@ PUBLISHED_RANGES = {
         "perturbation_lon": (0.0, 0.0),
         "perturbation_lat": (math.pi / 4, math.pi / 4),
     },
-    "williamson2": {"flow_speed": (W2_FLOW_SPEED, W2_FLOW_SPEED), "tilt": (0.05, 0.05)},
-    "rossby_haurwitz": {
-        "wavenumber": (4.0, 4.0),
-        "wave_amplitude": (7.848e-6, 7.848e-6),
-        "mean_depth": (8000.0, 8000.0),
+    "williamson3": {
+        "flow_speed": (W3_FLOW_SPEED, W3_FLOW_SPEED),
+        "tilt": (math.pi / 3, math.pi / 3),
+    },
+    "shamir_paldor": {
+        "wave_type": (1.0, 1.0),
+        "zonal_wavenumber": (10.0, 10.0),
+        "mode_number": (5.0, 5.0),
+        "wave_amplitude": (5.0, 5.0),
     },
     "mountain": {
         "flow_speed": (20.0, 20.0),
         "mountain_height": (2000.0, 2000.0),
-        "mountain_radius": (math.pi / 9, math.pi / 9),
+        "mountain_width": (MOUNTAIN_WIDTH, MOUNTAIN_WIDTH),
         "mountain_lon": (1.5 * math.pi, 1.5 * math.pi),
         "mountain_lat": (math.pi / 6, math.pi / 6),
     },
 }
-# Families that build their own initial state ("restart" and "from_fields" take one)
+# Families built from parameters alone; "era5" reads a store over the network and is
+# tested in test_shallow_water_sphere_era5.py
 GENERATED_FAMILIES = list(PUBLISHED_RANGES)
 
 PUBLISHED_MEAN_DEPTH = {
     "galewsky": 1.0e4,
-    "williamson2": W2_MEAN_DEPTH,
-    "rossby_haurwitz": 8000.0,
+    "williamson3": W3_MEAN_DEPTH,
+    "shamir_paldor": 5.0e4 / GRAVITY,
     "mountain": 5960.0,
 }
 
@@ -105,14 +121,17 @@ def _advance(dynamics, state, steps, coriolis=None, surface_geopotential=None):
     return state
 
 
-def _williamson2(dynamics, tilt):
-    """State and Coriolis parameter of W92 case 2 for one tilt, in float64."""
-    flow_speed = torch.tensor([W2_FLOW_SPEED], dtype=torch.float64)
+def _williamson3(dynamics, tilt):
+    """State and Coriolis parameter of W92 case 3 for one tilt, in float64."""
+    flow_speed = torch.tensor([W3_FLOW_SPEED], dtype=torch.float64)
     alpha = torch.tensor([tilt], dtype=torch.float64)
-    state = williamson2_initial_condition(dynamics, flow_speed, alpha)
-    axis_lon = torch.tensor([math.pi], dtype=torch.float64)
-    coriolis = coriolis_parameter(dynamics, axis_lon, math.pi / 2 - alpha)
-    return state, coriolis
+    state = williamson3_initial_condition(dynamics, flow_speed, alpha)
+    return state, tilted_pole_coriolis(dynamics, alpha)
+
+
+def _height(dynamics, state):
+    """Height of the free surface [m] on the grid of a W92 case 3 state."""
+    return spectral_to_fields(dynamics, state)[..., 0] + W3_MEAN_DEPTH
 
 
 # ---------------------------------------------------------------------------
@@ -143,9 +162,7 @@ def test_family_runs_with_default_and_published_parameters(family):
 
 
 def test_every_generated_family_is_tested():
-    assert set(GENERATED_FAMILIES) | {"restart", "from_fields"} == set(
-        INITIAL_CONDITIONS
-    )
+    assert set(GENERATED_FAMILIES) | {"era5"} == set(INITIAL_CONDITIONS)
 
 
 def test_default_family_is_galewsky():
@@ -167,14 +184,15 @@ def test_invalid_initial_condition_raises():
 def test_missing_family_parameter_raises():
     with pytest.raises(ValueError, match="tilt"):
         _small_simulator(
-            initial_condition="williamson2",
+            initial_condition="williamson3",
             parameters_range={"flow_speed": (20.0, 40.0)},
         )
 
 
-def test_williamson2_rejects_a_separate_rotation_axis():
+@pytest.mark.parametrize("family", ["williamson3", "era5"])
+def test_family_with_its_own_axis_rejects_a_rotation_axis(family):
     with pytest.raises(ValueError, match="rotation axis"):
-        _small_simulator(initial_condition="williamson2", rotation_axis=(0.0, 1.0))
+        _small_simulator(initial_condition=family, rotation_axis=(0.0, 1.0))
 
 
 def test_noise_of_a_simulation_does_not_depend_on_the_batch_size():
@@ -198,17 +216,6 @@ def test_noise_has_real_zonal_coefficients():
     generators = [torch.Generator(device=DEVICE).manual_seed(seed) for seed in (1, 2)]
     state, _, _ = sim.initial_problem(rows, generators)
     assert state[:, :, :, 0].imag.abs().max() == 0.0
-
-
-def test_rossby_haurwitz_wavenumber_is_rounded_and_returned():
-    sim = _small_simulator(
-        initial_condition="rossby_haurwitz", mean_depth=8000.0, T=0.0
-    )
-    payload = sim.forward_samples_spatiotemporal(n=6, random_seed=1)
-    wavenumber = payload["constant_scalars"][:, sim.get_parameter_idx("wavenumber")]
-    torch.testing.assert_close(wavenumber, wavenumber.round())
-    assert wavenumber.min() >= 3
-    assert wavenumber.max() <= 6
 
 
 # ---------------------------------------------------------------------------
@@ -255,10 +262,12 @@ def test_constant_fields_hold_coriolis_and_orography():
     assert fields.shape == (2, 48, 96, 2)
     coriolis = sim.dynamics.coriolis.float().cpu()
     torch.testing.assert_close(fields[0, ..., 0], coriolis)
-    # The cone of 2000 m is truncated at degree 31: lower summit, small ringing
+    # The Gaussian of 2000 m has little power above degree 31: almost no ringing, and
+    # the summit is seen by the grid point next to it (measured: maximum 1974 m,
+    # minimum -5e-4 m)
     orography = fields[0, ..., 1]
-    assert 1600.0 < orography.max() < 2000.0
-    assert orography.min() > -100.0
+    assert 1900.0 < orography.max() <= 2000.0
+    assert orography.min() > -5e-3
     # the summit is at longitude 3 pi / 2 and latitude pi / 6
     ilat, ilon = divmod(int(orography.argmax()), 96)
     assert abs(sim.dynamics.latitude[ilat, ilon].item() - math.pi / 6) < 0.08
@@ -290,7 +299,7 @@ def test_fluid_at_rest_over_a_mountain_stays_at_rest():
     dynamics, _ = _dynamics(32, 48, 96, 5960.0)
     parameters = [
         torch.tensor([value], dtype=torch.float64)
-        for value in (20.0, 1.5 * math.pi, math.pi / 6, 2000.0, math.pi / 9)
+        for value in (20.0, 1.5 * math.pi, math.pi / 6, 2000.0, MOUNTAIN_WIDTH)
     ]
     _, surface_geopotential = mountain_initial_condition(dynamics, *parameters)
     # flat free surface: the fluid depth is the mean depth minus the mountain
@@ -305,7 +314,7 @@ def test_mass_is_conserved_over_a_mountain():
     dynamics, _ = _dynamics(32, 48, 96, 5960.0)
     parameters = [
         torch.tensor([value], dtype=torch.float64)
-        for value in (20.0, 1.5 * math.pi, math.pi / 6, 2000.0, math.pi / 9)
+        for value in (20.0, 1.5 * math.pi, math.pi / 6, 2000.0, MOUNTAIN_WIDTH)
     ]
     state, surface_geopotential = mountain_initial_condition(dynamics, *parameters)
     mass = state[0, 0, 0, 0].clone()
@@ -317,7 +326,7 @@ def test_fields_to_spectral_inverts_spectral_to_fields():
     dynamics, _ = _dynamics(32, 48, 96, 5960.0)
     parameters = [
         torch.tensor([value], dtype=torch.float64)
-        for value in (20.0, 1.5 * math.pi, math.pi / 6, 2000.0, math.pi / 9)
+        for value in (20.0, 1.5 * math.pi, math.pi / 6, 2000.0, MOUNTAIN_WIDTH)
     ]
     state, surface_geopotential = mountain_initial_condition(dynamics, *parameters)
     fields = spectral_to_fields(dynamics, state, surface_geopotential)
@@ -330,110 +339,97 @@ def test_fields_to_spectral_inverts_spectral_to_fields():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("tilt", W2_TILTS)
-def test_williamson2_is_steady_for_every_tilt(tilt):
-    """W92 case 2 at lmax = 43: the height stays within 1e-10 for one day.
+@pytest.mark.parametrize("tilt", W3_TILTS)
+def test_williamson3_has_the_published_jet_and_height(tilt):
+    """W92 case 3: no divergence, a maximum speed u_0, and h = h_0 south of the jet.
 
-    The only error is the hyperdiffusion acting on the degree-1 wind, 2e-11 per day
-    at this truncation (see the convergence test).
+    The represented height has mean h_0 over the cap theta' < -pi/6, where the wind
+    of W92 is zero; it departs from h_0 there only by the ringing of the truncated jet
+    (measured: at most 4.8e-9 of h_0 at lmax = 43).
     """
-    dynamics, steps_per_hour = _dynamics(43, 64, 128, W2_MEAN_DEPTH)
-    state, coriolis = _williamson2(dynamics, tilt)
-    height = spectral_to_fields(dynamics, state)[..., 0] + W2_MEAN_DEPTH
-    state = _advance(dynamics, state, 24 * steps_per_hour, coriolis)
-    height_later = spectral_to_fields(dynamics, state)[..., 0] + W2_MEAN_DEPTH
-    _, l2, linf = height_error_norms(height_later, height, dynamics.quad_weights)
-    assert l2 < 1e-10
-    assert linf < 1e-10
+    dynamics, _ = _dynamics(43, 64, 128, W3_MEAN_DEPTH)
+    state, _ = _williamson3(dynamics, tilt)
+    # the sampled tilted jet aliases into a divergence of 2.7e-12 of the vorticity
+    assert state[:, 2].abs().max() < 1e-10 * state[:, 1].abs().max()
+    speed = dynamics.wind(state[:, 1], state[:, 2]).norm(dim=1)
+    assert speed.max().item() == pytest.approx(W3_FLOW_SPEED, rel=1e-2)
+
+    latitude = dynamics.latitude
+    longitude = dynamics.longitude
+    tilted_sine = torch.sin(latitude) * math.cos(tilt) - torch.cos(
+        latitude
+    ) * torch.cos(longitude) * math.sin(tilt)
+    cap = tilted_sine < math.sin(-math.pi / 6)
+    height = _height(dynamics, state)[0]
+    weights = dynamics.quad_weights * cap
+    cap_mean = (height * weights).sum() / weights.sum()
+    assert cap_mean.item() == pytest.approx(W3_MEAN_DEPTH, rel=1e-12)
+    assert (height[cap] - W3_MEAN_DEPTH).abs().max() < CAP_TOLERANCE * W3_MEAN_DEPTH
+
+
+@pytest.mark.parametrize("tilt", W3_TILTS)
+def test_williamson3_is_steady_for_every_tilt(tilt):
+    """W92 case 3 at lmax = 43 without hyperdiffusion: steady for one day.
+
+    The height is in discrete balance with the represented jet, and the jet is zonal
+    about the axis of the Coriolis parameter. The change after one day is at the level
+    of round-off and of the aliasing of the sampled jet (measured over the five tilts:
+    at most 3e-14 for the height and 5e-12 for the vorticity).
+    """
+    dynamics, steps_per_hour = _dynamics(43, 64, 128, W3_MEAN_DEPTH)
+    dynamics.step_damping = torch.ones_like(dynamics.step_damping)
+    state, coriolis = _williamson3(dynamics, tilt)
+    later = _advance(dynamics, state, 24 * steps_per_hour, coriolis)
+    for index in range(2):
+        change = (later[:, index] - state[:, index]).abs().max()
+        assert change < STEADY_TOLERANCE * state[:, index].abs().max()
+
+
+@pytest.mark.parametrize("tilt", [0.05, 0.7, math.pi / 2])
+def test_tilted_williamson3_is_the_rotated_untilted_one(tilt):
+    """W92 case 3 at tilt alpha is the case at tilt 0 turned by beta = -alpha.
+
+    The two are built independently: the tilted jet from W92's rotated coordinates,
+    the other by rotating the coefficients. They agree to the aliasing of the sampled
+    jet (measured: at most 1.2e-11 for the height and 3.5e-11 for the vorticity). The
+    Coriolis parameter of the tilted axis is the rotated polar one to round-off
+    (measured: 4e-14).
+    """
+    dynamics, _ = _dynamics(43, 64, 128, W3_MEAN_DEPTH)
+    untilted, _ = _williamson3(dynamics, 0.0)
+    tilted, coriolis = _williamson3(dynamics, tilt)
+    rotated = rotate_coefficients(untilted, 0.0, -tilt, 0.0)
+    for index in range(2):
+        error = (rotated[:, index] - tilted[:, index]).abs().max()
+        assert error < ROTATION_TOLERANCE * tilted[:, index].abs().max()
+
+    polar = dynamics.to_coefficients(dynamics.coriolis.unsqueeze(0))
+    expected = dynamics.to_coefficients(coriolis)
+    error = (rotate_coefficients(polar, 0.0, -tilt, 0.0) - expected).abs().max()
+    assert error < 1e-12 * expected.abs().max()
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("tilt", [0.0, math.pi / 2])
-def test_williamson2_error_decreases_at_the_rate_of_the_hyperdiffusion(tilt):
-    """Convergence study of W92 case 2: l2(h) at 5 days over three resolutions.
+def test_williamson3_error_decreases_with_the_resolution():
+    """Convergence study of W92 case 3 at alpha = pi/3: l2(h) at 5 days.
 
-    The truncated basis represents this low-degree state exactly, so the spatial
-    discretisation has no error. The remaining error is the hyperdiffusion on the
-    wind, which has degree 1: over a time t its relative damping is
-    (t / 2 h) (2 / ((L - 1) L))^4. The error therefore decreases as ((L - 1) L)^-4,
-    about lmax^-8, until it reaches round-off (below 1e-11 at lmax = 86).
+    Without damping the state is steady (previous tests), so the error is the damping
+    of the jet by the hyperdiffusion, which acts on higher degrees as the resolution
+    increases. Measured l2(h): 5.3e-4, 3.2e-6 and 1.2e-8 at lmax = 22, 43 and 86, a
+    factor of at least 160 per doubling.
     """
-    errors = []
-    for lmax, nlat, nlon in [(11, 16, 32), (22, 32, 64), (43, 64, 128), (86, 128, 256)]:
-        dynamics, steps_per_hour = _dynamics(lmax, nlat, nlon, W2_MEAN_DEPTH)
-        state, coriolis = _williamson2(dynamics, tilt)
-        height = spectral_to_fields(dynamics, state)[..., 0] + W2_MEAN_DEPTH
-        state = _advance(dynamics, state, 5 * 24 * steps_per_hour, coriolis)
-        height_later = spectral_to_fields(dynamics, state)[..., 0] + W2_MEAN_DEPTH
-        _, l2, _ = height_error_norms(height_later, height, dynamics.quad_weights)
-        errors.append(l2.item())
-
-    # three resolutions above round-off: measured ratio against the predicted one
-    for coarse, fine, lmax_coarse, lmax_fine in [(0, 1, 11, 22), (1, 2, 22, 43)]:
-        predicted_ratio = (
-            ((lmax_fine - 1) * lmax_fine) / ((lmax_coarse - 1) * lmax_coarse)
-        ) ** 4
-        measured_ratio = errors[coarse] / errors[fine]
-        assert measured_ratio == pytest.approx(predicted_ratio, rel=0.1)
-    assert errors[0] < 1e-6
-    assert errors[3] < 1e-11
-
-
-def test_rossby_haurwitz_published_case_is_balanced():
-    """W92 case 6: zero initial divergence tendency, orders 0, R and 2R only."""
-    dynamics, _ = _dynamics(43, 64, 128, 8000.0)
-    state = rossby_haurwitz_initial_condition(
-        dynamics,
-        wavenumber=torch.tensor([4.0]),
-        wave_amplitude=torch.tensor([7.848e-6], dtype=torch.float64),
-        mean_depth=torch.tensor([8000.0]),
-    )
-    tendency = shallow_water_tendencies(dynamics, state)
-    scale = (dynamics.laplacian * state[0, 0]).abs().max()
-    assert tendency[0, 2].abs().max() < 1e-8 * scale
-    assert state[0, 2].abs().max() < 1e-15  # the wind has no divergence
-
-    geopotential_power = state[0, 0].abs().amax(dim=0)  # per order m
-    for order in range(43):
-        if order not in (0, 4, 8):
-            assert geopotential_power[order] < 1e-9 * geopotential_power[4]
-    wind = dynamics.wind(state[:, 1], state[:, 2])
-    assert 95.0 < wind.abs().max() < 105.0  # about 100 m/s
-
-
-@pytest.mark.slow
-def test_rossby_haurwitz_converges_to_a_high_resolution_run_at_day_7():
-    """Self-convergence of W92 case 6 at day 7 (W92 reports days 0, 7 and 14).
-
-    The reference is a run at lmax = 171, truncated to each lower band limit. The
-    measured l2(h) errors are 5.9e-3, 1.3e-3 and 3.6e-4 at lmax = 22, 43 and 86: a
-    factor of about 4 for each doubling of the resolution.
-    """
-    parameters = {
-        "wavenumber": torch.tensor([4.0]),
-        "wave_amplitude": torch.tensor([7.848e-6], dtype=torch.float64),
-        "mean_depth": torch.tensor([8000.0]),
-    }
-    reference_dynamics, steps_per_hour = _dynamics(171, 256, 512, 8000.0)
-    reference = rossby_haurwitz_initial_condition(reference_dynamics, **parameters)
-    reference = _advance(reference_dynamics, reference, 7 * 24 * steps_per_hour)
-
     errors = []
     for lmax, nlat, nlon in [(22, 32, 64), (43, 64, 128), (86, 128, 256)]:
-        dynamics, steps_per_hour = _dynamics(lmax, nlat, nlon, 8000.0)
-        state = rossby_haurwitz_initial_condition(dynamics, **parameters)
-        state = _advance(dynamics, state, 7 * 24 * steps_per_hour)
-        height = spectral_to_fields(dynamics, state)[..., 0] + 8000.0
-        truncated_reference = reference[:, :, :lmax, :lmax]
-        height_reference = (
-            spectral_to_fields(dynamics, truncated_reference)[..., 0] + 8000.0
+        dynamics, steps_per_hour = _dynamics(lmax, nlat, nlon, W3_MEAN_DEPTH)
+        state, coriolis = _williamson3(dynamics, math.pi / 3)
+        height = _height(dynamics, state)
+        state = _advance(dynamics, state, 5 * 24 * steps_per_hour, coriolis)
+        _, l2, _ = height_error_norms(
+            _height(dynamics, state), height, dynamics.quad_weights
         )
-        _, l2, _ = height_error_norms(height, height_reference, dynamics.quad_weights)
         errors.append(l2.item())
-    assert errors[0] < 1e-2
-    assert errors[1] < errors[0] / 2
-    assert errors[2] < errors[1] / 2
-    assert errors[2] < 1e-3
+    assert errors[1] < errors[0] / CONVERGENCE_FACTOR
+    assert errors[2] < errors[1] / CONVERGENCE_FACTOR
 
 
 # ---------------------------------------------------------------------------
@@ -464,33 +460,45 @@ def test_family_runs_on_every_grid(family, grid_name):
     assert torch.isfinite(payload["data"]).all()
 
 
-@pytest.mark.parametrize(
-    ("grid_name", "sht_iterations", "tolerance"),
-    [
-        # Exact quadrature: the error is the float32 rounding of the saved frames,
-        # about 1e-8 of the height.
-        ("legendre-gauss", 0, 1e-7),
-        ("equiangular", 0, 1e-7),
-        # HEALPix has no exact quadrature. The analysis of torch-harmonics is
-        # approximate there (measured error 1.5e-4), and 3 Jacobi iterations bring
-        # it back to the error of the exact grids.
-        ("healpix", 0, 1e-3),
-        ("healpix", 3, 1e-7),
-    ],
-)
-def test_williamson2_error_on_every_grid(grid_name, sht_iterations, tolerance):
-    """W92 case 2 (tilt 0.05) through the simulator: l2(h) after 6 h, per grid."""
+def _williamson3_after_six_hours(grid_name, sht_iterations):
+    """Spectral state of W92 case 3 (tilt 0.05) after 6 h through the simulator."""
     sim = _small_simulator(
         lmax=24,
-        initial_condition="williamson2",
-        parameters_range=PUBLISHED_RANGES["williamson2"],
-        mean_depth=W2_MEAN_DEPTH,
+        initial_condition="williamson3",
+        parameters_range={
+            "flow_speed": (W3_FLOW_SPEED, W3_FLOW_SPEED),
+            "tilt": (0.05, 0.05),
+        },
+        mean_depth=W3_MEAN_DEPTH,
         sht_iterations=sht_iterations,
         batch_size=1,
         **GRIDS[grid_name],
     )
     data = sim.forward_samples_spatiotemporal(n=1, random_seed=0)["data"]
-    height = data[:, 0, ..., 0].double().to(DEVICE) + W2_MEAN_DEPTH
-    height_later = data[:, -1, ..., 0].double().to(DEVICE) + W2_MEAN_DEPTH
-    _, l2, _ = height_error_norms(height_later, height, sim.dynamics.quad_weights)
-    assert l2 < tolerance
+    return fields_to_spectral(sim.dynamics, data[:, -1])
+
+
+@pytest.mark.parametrize(
+    ("grid_name", "sht_iterations", "tolerance"),
+    [
+        # Exact quadrature: the difference is the float32 rounding of the saved
+        # frames (measured: 2e-8).
+        ("equiangular", 0, 2e-7),
+        # HEALPix has no exact quadrature. The analysis of torch-harmonics is
+        # approximate there (measured: 9e-4 on the vorticity), and 3 Jacobi
+        # iterations bring it to 2.3e-6.
+        ("healpix", 0, 1e-2),
+        ("healpix", 3, 3e-5),
+    ],
+)
+def test_williamson3_agrees_on_every_grid(grid_name, sht_iterations, tolerance):
+    """W92 case 3 after 6 h on each grid equals the run on the Gauss-Legendre grid.
+
+    The spectral state does not depend on the grid where the products are formed, as
+    long as they are exact, so the coefficients of the saved frames are compared.
+    """
+    reference = _williamson3_after_six_hours("legendre-gauss", 0)
+    state = _williamson3_after_six_hours(grid_name, sht_iterations)
+    for index in range(2):
+        error = (state[:, index] - reference[:, index]).abs().max()
+        assert error < tolerance * reference[:, index].abs().max()

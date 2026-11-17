@@ -1,0 +1,30 @@
+# Dataset 1: steady jet with compact support about a tilted axis (Williamson et al.
+# 1992, case 3), no forcing: the sanity check of the benchmark. The height is in
+# discrete balance with the jet, so every frame should equal the first one up to the
+# damping of the hyperdiffusion, and the tilted jet is the untilted one rotated.
+# Requires the "spherical" extra and a GPU; leave dataset.num_workers unset.
+_target_: autosim.experimental.simulations.SphericalShallowWater
+log_level: progress_bar
+initial_condition: williamson3
+# Benchmark size: L = 256 on the 384 x 768 Gauss-Legendre grid, free of aliasing
+# (2 nlat >= 3 lmax - 2).
+grid: legendre-gauss
+lmax: 256
+nlat: 384
+nlon: 768
+# Time in hours: 10 days, saved every 6 h. W92 runs case 3 for 5 days; 10 days show a
+# slow drift of an emulator.
+T: 240.0
+dt_save: 6.0
+skip_nt: 0
+courant: 0.4
+# g h_0 = 2.94e4 m^2/s^2 (W92), with g = 9.80616 m/s^2: the depth south of the jet.
+mean_depth: 2998.115470275786
+batch_size: 8
+device: cuda
+# The Coriolis parameter of the tilted axis is returned in constant_fields.
+return_constant_fields: true
+# Jet speed u_0 (W92: 2 pi a / 12 days = 38.6 m/s) and tilt alpha (W92: 0 and pi/3).
+parameters_range:
+  flow_speed: [20.0, 40.0]
+  tilt: [0.0, 1.5707963267948966]

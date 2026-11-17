@@ -4,13 +4,16 @@ One solver step applies, in this order:
 
 1. the Adams-Bashforth 3 step of the conservative dynamics, with the linear damping
    (hyperdiffusion, drag, relaxation) as an integrating factor;
-2. the forcing increment, added to the state by operator splitting.
+2. the forcing increments, added to the state by operator splitting, in the order:
+   kinetic-energy forcing, SPPT (the physics increment of step 1 times a random
+   pattern), The Well's periodic height forcing.
 
-The forcing increment is added after the damping of its own step, so it is damped
-from the next step on, with the rest of the state. It never enters the history of the
-Adams-Bashforth scheme: inside the history the weights 23/12, -16/12 and 5/12 would
-turn a random increment into a different random process. The tendencies of the
-history are those of the states that the simulation went through, forcing included.
+The forcing increments are added after the damping of their own step, so they are
+damped from the next step on, with the rest of the state. They never enter the
+history of the Adams-Bashforth scheme: inside the history the weights 23/12, -16/12
+and 5/12 would turn a random increment into a different random process. The
+tendencies of the history are those of the states that the simulation went through,
+forcing included.
 
 **Energy budget.** The energy of ``dynamics.total_energy`` is evaluated between these
 operations, so every term is the exact energy difference across one operation and
@@ -37,6 +40,8 @@ from .dynamics import (
 from .forcing import (
     FORCING_TYPES,
     ForcingSettings,
+    PeriodicForcingSettings,
+    SpptSettings,
     advance_pattern,
     autoregressive_parameter,
     complex_noise,
@@ -45,6 +50,11 @@ from .forcing import (
     kinetic_forcing_increment,
     local_dissipation_rate,
     no_forcing,
+    periodic_forcing_increment,
+    physics_increment,
+    sppt_increment,
+    sppt_noise_amplitudes,
+    sppt_pattern_on_grid,
     stationary_pattern,
     unit_rate_amplitudes,
 )
@@ -57,9 +67,13 @@ ENERGY_BUDGET_NAMES = (
     "hyperviscous_energy_change",  # hyperdiffusion
     "drag_energy_change",  # linear drag
     "relaxation_energy_change",  # Newtonian relaxation of the height
-    "forcing_energy_change",  # work of the forcing increments
+    "forcing_energy_change",  # work of the kinetic forcing increments
+    "sppt_energy_change",  # work of the SPPT increments
+    "periodic_energy_change",  # work of The Well's periodic height forcing
     "effective_forcing_energy_rate",  # mean rate of the kinetic forcing [m^2/s^3]
 )
+# Energy changes of the processes: the columns between the energy and the rate
+N_ENERGY_CHANGES = len(ENERGY_BUDGET_NAMES) - 2
 
 
 def backscatter_energy_rate(
@@ -112,7 +126,7 @@ def energy_changes_of_step(
     energy_before: TensorLike,
     undamped_state: TensorLike,
     damped_state: TensorLike,
-    forced_state: TensorLike | None,
+    increments: list[TensorLike | None],
     hyperdiffusion: TensorLike,
     drag: TensorLike | None,
     has_relaxation: bool,
@@ -121,23 +135,26 @@ def energy_changes_of_step(
     """Energy change of each operation of one solver step.
 
     The energy is evaluated after the conservative step (undamped state), after the
-    hyperdiffusion, after the drag, after the relaxation (damped state) and after the
-    forcing increment. Each change is the difference across one operation.
+    hyperdiffusion, after the drag, after the relaxation (damped state) and after each
+    forcing increment, added in turn. Each change is the difference across one
+    operation.
 
     Args:
         dynamics: Fixed operators.
         energy_before: Energy at the start of the step, (B,).
         undamped_state: State after the conservative step, (B, 3, L, L).
         damped_state: State after the whole damping, (B, 3, L, L).
-        forced_state: State after the forcing increment, or None without increment.
+        increments: Forcing increments in the order of ``ENERGY_BUDGET_NAMES``
+            (kinetic, SPPT, periodic), each (B, 3, L, L) or None when absent.
         hyperdiffusion: Factor of the hyperdiffusion for one step, (L, L).
         drag: Factor of the drag for one step, (B,), or None without drag.
         has_relaxation: Whether the damping relaxes the geopotential.
         surface_geopotential: Coefficients of g h_s, (B, L, L), or None.
 
     Returns:
-        The five changes (deterministic, hyperviscous, drag, relaxation, forcing),
-        shape (B, 5), and the energy at the end of the step, (B,).
+        The changes (deterministic, hyperviscous, drag, relaxation, then one per
+        increment), shape (B, ``N_ENERGY_CHANGES``), and the energy at the end of the
+        step, (B,).
     """
     batch = undamped_state.shape[0]
     energy_undamped = total_energy(dynamics, undamped_state, surface_geopotential)
@@ -158,21 +175,23 @@ def energy_changes_of_step(
     if has_relaxation:
         energy_damped = total_energy(dynamics, damped_state, surface_geopotential)
 
-    energy_forced = energy_damped
-    if forced_state is not None:
-        energy_forced = total_energy(dynamics, forced_state, surface_geopotential)
-
-    changes = torch.stack(
-        [
-            energy_undamped - energy_before,
-            energy_hyperdiffusion - energy_undamped,
-            energy_drag - energy_hyperdiffusion,
-            energy_damped - energy_drag,
-            energy_forced - energy_damped,
-        ],
-        dim=1,
-    )
-    return changes, energy_forced
+    changes = [
+        energy_undamped - energy_before,
+        energy_hyperdiffusion - energy_undamped,
+        energy_drag - energy_hyperdiffusion,
+        energy_damped - energy_drag,
+    ]
+    state = damped_state
+    energy = energy_damped
+    for increment in increments:
+        if increment is None:
+            changes.append(torch.zeros_like(energy))
+            continue
+        state = state + increment
+        energy_after = total_energy(dynamics, state, surface_geopotential)
+        changes.append(energy_after - energy)
+        energy = energy_after
+    return torch.stack(changes, dim=1), energy
 
 
 def integrate_trajectories(  # noqa: PLR0912, PLR0915
@@ -188,12 +207,14 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
     equilibrium_geopotential: TensorLike | None = None,
     forcing: ForcingSettings | None = None,
     forcing_generators: list[torch.Generator] | None = None,
+    sppt: SpptSettings | None = None,
+    sppt_generators: list[torch.Generator] | None = None,
+    periodic: PeriodicForcingSettings | None = None,
+    start_time: float = 0.0,
     return_additional_input_fields: bool = False,
     return_energy_budget: bool = False,
     return_forcing_state: bool = False,
     previous_tendencies: list[TensorLike] | None = None,
-    initial_pattern: TensorLike | None = None,
-    redraw_pattern_at_first_save: bool = False,
     output_dynamics: SphereShallowWaterDynamics | None = None,
 ) -> dict:
     """Advance B simulations and save h, u_phi, u_theta at regular times.
@@ -202,8 +223,11 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
     times. The first ``skip_nt`` of these snapshots are dropped.
 
     The first saved frame is the branch point of reference ensembles: its spectral
-    state, the history of the time stepping and the forcing pattern are returned, so
-    that other members can continue from it exactly as this run does.
+    state and the history of the time stepping are returned, so that other members
+    can continue from it exactly as this run does. The random patterns (kinetic
+    forcing and SPPT) are drawn anew from their stationary distribution at that
+    frame, so the forecast from it depends on the saved fields alone, and the members
+    and this run are forecasts of the same kind.
 
     Args:
         dynamics: Fixed operators and time step.
@@ -219,20 +243,20 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
             is no relaxation.
         equilibrium_geopotential: Coefficients of the geopotential towards which the
             state relaxes, (B, L, L). Required with ``relaxation_time``.
-        forcing: Settings of the stochastic forcing; None is no forcing.
-        forcing_generators: One random generator per simulation, for the forcing.
+        forcing: Settings of the kinetic-energy forcing; None is no forcing.
+        forcing_generators: One random generator per simulation, for the kinetic
+            forcing.
+        sppt: Settings of SPPT; None is no SPPT. Requires drag or relaxation.
+        sppt_generators: One random generator per simulation, for SPPT.
+        periodic: Settings of The Well's periodic forcing; None is no such forcing.
+        start_time: Time of the initial state [s], the phase of the periodic forcing.
         return_additional_input_fields: Return the forcing increments summed over
             each saved interval.
         return_energy_budget: Return the energy budget of each saved interval.
-        return_forcing_state: Return the forcing pattern at each saved time.
+        return_forcing_state: Return the kinetic forcing pattern at each saved time.
         previous_tendencies: Tendencies of the steps before the initial state, most
             recent first, to continue a run without restarting the Adams-Bashforth
             scheme. None starts it with an Euler step.
-        initial_pattern: Forcing pattern at the initial time, (B, P, L, L). None
-            draws it from its stationary distribution.
-        redraw_pattern_at_first_save: Draw a new forcing pattern from its stationary
-            distribution at the first saved frame. The forecast from that frame then
-            does not depend on the earlier forcing.
         output_dynamics: Operators of the grid of the saved fields. With a lower band
             limit than ``dynamics`` the state is truncated before it is saved
             (coarse-graining). None saves on the grid of ``dynamics``.
@@ -244,19 +268,17 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
         - ``"data"``: the saved fields (B, n_frames, *grid.shape, 3), float32 on the
           CPU;
         - ``"final_state"``: the spectral state at the last time, (B, 3, L, L);
-        - ``"branch_state"``, ``"branch_tendencies"``, ``"branch_pattern"``: the
-          spectral state (B, 3, L, L), the list of previous tendencies and the
-          forcing pattern (B, P, L, L) at the first saved frame, the pattern before
-          it is redrawn;
+        - ``"branch_state"``, ``"branch_tendencies"``: the spectral state
+          (B, 3, L, L) and the list of previous tendencies at the first saved frame;
         - ``"additional_input_fields"`` (on request): at frame i, the increments of
-          h, u_phi, u_theta added by the forcing between frames i and i + 1, zero at
-          the last frame, (B, n_frames, *grid.shape, 3), float32 on the CPU;
+          h, u_phi, u_theta added by all the forcings between frames i and i + 1,
+          zero at the last frame, (B, n_frames, *grid.shape, 3), float32 on the CPU;
         - ``"energy_budget"`` (on request): at frame i, the energy at frame i and the
           terms of ``ENERGY_BUDGET_NAMES`` between frames i and i + 1, zero at the
-          last frame, (B, n_frames, 7), float64 on the CPU;
-        - ``"forcing_state"`` (on request): the wind tendency of the forcing pattern
-          for a unit energy rate at each frame, eastward and colatitude components,
-          (B, n_frames, *grid.shape, 2), float32 on the CPU.
+          last frame, (B, n_frames, len(ENERGY_BUDGET_NAMES)), float64 on the CPU;
+        - ``"forcing_state"`` (on request): the wind tendency of the kinetic forcing
+          pattern for a unit energy rate at each frame, eastward and colatitude
+          components, (B, n_frames, *grid.shape, 2), float32 on the CPU.
     """
     batch = state.shape[0]
     device = state.device
@@ -341,12 +363,34 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
                 ],
                 dim=1,
             )  # (B, 2, L)
-        if initial_pattern is None:
-            noise = complex_noise(forcing_generators, amplitudes.shape[1], lmax)
-            pattern = stationary_pattern(noise, amplitudes, alpha)
-        else:
-            pattern = initial_pattern.to(device)
+        noise = complex_noise(forcing_generators, amplitudes.shape[1], lmax)
+        pattern = stationary_pattern(noise, amplitudes, alpha)
         backscatter = bool((forcing.backscatter_fraction > 0).any())
+
+    # --- SPPT: K random fields, one AR(1) process per field
+    if sppt is not None and sppt_generators is None:
+        msg = "sppt requires sppt_generators"
+        raise ValueError(msg)
+    if sppt_generators is None:
+        sppt_generators = []
+    n_sppt = 0
+    sppt_alpha = torch.ones(batch, 0, dtype=torch.float64, device=device)
+    sppt_amplitudes = torch.zeros(batch, 0, lmax, dtype=torch.float64, device=device)
+    sppt_pattern = torch.zeros(
+        batch, 0, lmax, lmax, dtype=torch.complex128, device=device
+    )
+    if sppt is not None:
+        if damping_argument is None:
+            msg = "sppt requires drag or relaxation, the physics that it perturbs"
+            raise ValueError(msg)
+        n_sppt = len(sppt.amplitudes)
+        times = torch.tensor(sppt.correlation_times, dtype=torch.float64)
+        field_alpha = autoregressive_parameter(times, dt).to(device)  # (K,)
+        sppt_amplitudes = sppt_noise_amplitudes(dynamics, sppt, field_alpha)
+        sppt_amplitudes = sppt_amplitudes.expand(batch, n_sppt, lmax)
+        sppt_alpha = field_alpha.expand(batch, n_sppt)
+        noise = complex_noise(sppt_generators, n_sppt, lmax)
+        sppt_pattern = stationary_pattern(noise, sppt_amplitudes, sppt_alpha)
 
     # --- Time loop
     tendencies_history: list[TensorLike] = []
@@ -356,7 +400,6 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
     # Branch point: the first saved frame (time 0 when no snapshot is dropped)
     branch_state = state
     branch_tendencies = list(tendencies_history)
-    branch_pattern = pattern
 
     frames = []
     increment_frames = []
@@ -375,14 +418,22 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
     if return_energy_budget:
         energy = total_energy(dynamics, state, surface_geopotential)
 
-    undamped_state = state  # set at each step when the budget or backscatter need it
+    # The state before the damping, when the budget, the backscatter or SPPT need it
+    needs_undamped = return_energy_budget or backscatter or sppt is not None
+    undamped_state = state
+    step = 0
     for save in range(1, n_saves + 1):
         increments_since_save = torch.zeros_like(state)
-        changes_since_save = torch.zeros(batch, 5, dtype=torch.float64, device=device)
+        changes_since_save = torch.zeros(
+            batch, N_ENERGY_CHANGES, dtype=torch.float64, device=device
+        )
         rate_since_save = torch.zeros(batch, dtype=torch.float64, device=device)
         energy_at_save = energy
 
         for _ in range(steps_per_save):
+            time = start_time + step * dt
+            step += 1
+
             # 1. Conservative dynamics and linear damping
             damped_state, tendencies_history = adams_bashforth_step(
                 dynamics,
@@ -394,22 +445,24 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
                 equilibrium,
             )
             # State before the damping, from damped = s_eq + E (undamped - s_eq)
-            if return_energy_budget or backscatter:
+            if needs_undamped:
                 if equilibrium is None:
                     undamped_state = damped_state / step_damping
                 else:
                     departure = (damped_state - equilibrium) / step_damping
                     undamped_state = equilibrium + departure
 
-            # 2. Forcing increment, added by operator splitting
-            increment = None
+            # 2. Forcing increments, added by operator splitting
+            kinetic_increment = None
             if kinetic_forcing:
                 energy_rate = base_rate
                 if backscatter:
                     energy_rate = backscatter_energy_rate(
                         dynamics, forcing, undamped_state, hyperdiffusion, drag, taper
                     )
-                increment = kinetic_forcing_increment(dynamics, pattern, energy_rate)
+                kinetic_increment = kinetic_forcing_increment(
+                    dynamics, pattern, energy_rate
+                )
                 noise = complex_noise(forcing_generators, amplitudes.shape[1], lmax)
                 pattern = advance_pattern(pattern, noise, amplitudes, alpha)
                 if energy_rate.ndim == 1:
@@ -419,12 +472,34 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
                         energy_rate, dynamics.quad_weights
                     ) / (4 * torch.pi)
 
-            forced_state = None
+            sppt_step_increment = None
+            if sppt is not None:
+                physics = physics_increment(
+                    undamped_state, damped_state, hyperdiffusion
+                )
+                pattern_grid = sppt_pattern_on_grid(dynamics, sppt_pattern, sppt.clip)
+                sppt_step_increment = sppt_increment(dynamics, pattern_grid, physics)
+                noise = complex_noise(sppt_generators, n_sppt, lmax)
+                sppt_pattern = advance_pattern(
+                    sppt_pattern, noise, sppt_amplitudes, sppt_alpha
+                )
+
+            periodic_step_increment = None
+            if periodic is not None:
+                periodic_step_increment = periodic_forcing_increment(
+                    dynamics, periodic, time, batch
+                )
+
+            step_increments = [
+                kinetic_increment,
+                sppt_step_increment,
+                periodic_step_increment,
+            ]
             state = damped_state
-            if increment is not None:
-                forced_state = damped_state + increment
-                state = forced_state
-                increments_since_save += increment
+            for increment in step_increments:
+                if increment is not None:
+                    state = state + increment
+                    increments_since_save += increment
 
             if return_energy_budget:
                 changes, energy = energy_changes_of_step(
@@ -432,7 +507,7 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
                     energy,
                     undamped_state,
                     damped_state,
-                    forced_state,
+                    step_increments,
                     hyperdiffusion,
                     drag,
                     has_relaxation,
@@ -440,14 +515,16 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
                 )
                 changes_since_save += changes
 
-        # Branch point at the first saved frame
+        # Branch point at the first saved frame: the patterns are drawn anew
         if save == skip_nt:
             branch_state = state
             branch_tendencies = list(tendencies_history)
-            branch_pattern = pattern
-            if kinetic_forcing and redraw_pattern_at_first_save:
+            if kinetic_forcing:
                 noise = complex_noise(forcing_generators, amplitudes.shape[1], lmax)
                 pattern = stationary_pattern(noise, amplitudes, alpha)
+            if sppt is not None:
+                noise = complex_noise(sppt_generators, n_sppt, lmax)
+                sppt_pattern = stationary_pattern(noise, sppt_amplitudes, sppt_alpha)
 
         # Outputs of the interval that ends here, attached to the frame at its start
         if save - 1 >= skip_nt:
@@ -480,13 +557,12 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
         "final_state": state,
         "branch_state": branch_state,
         "branch_tendencies": branch_tendencies,
-        "branch_pattern": branch_pattern,
     }
     if return_additional_input_fields:
         increment_frames.append(torch.zeros_like(frames[-1]))  # last frame
         output["additional_input_fields"] = torch.stack(increment_frames, dim=1)
     if return_energy_budget:
-        last_row = torch.zeros(batch, 7, dtype=torch.float64)
+        last_row = torch.zeros(batch, len(ENERGY_BUDGET_NAMES), dtype=torch.float64)
         last_row[:, 0] = energy.cpu()
         budget_frames.append(last_row)
         output["energy_budget"] = torch.stack(budget_frames, dim=1)

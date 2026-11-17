@@ -1,4 +1,11 @@
-r"""Stochastic forcing of the shallow water equations on the sphere.
+r"""Forcing of the shallow water equations on the sphere.
+
+Three forcings, which can be combined:
+
+- kinetic-energy forcing and backscatter (``forcing_type``), below;
+- stochastically perturbed physics tendencies (SPPT, ``SpptSettings``): the increment
+  of the drag and the relaxation multiplied by a random pattern;
+- The Well's daily and yearly height forcing (``PeriodicForcingSettings``).
 
 Kinetic-energy backscatter forcing follows Berner, Shutts, Leutbecher and Palmer
 (2009, J. Atmos. Sci. 66, 603-626, "B09" below). A streamfunction pattern
@@ -221,12 +228,13 @@ def stationary_pattern(
     Args:
         noise: Unit-variance coefficients (B, P, L, L).
         amplitudes: Noise amplitudes g_l, shape (B, P, L).
-        alpha: Parameter of the AR(1) process, shape (B,).
+        alpha: Parameter of the AR(1) process, shape (B,) or, one per pattern, (B, P).
 
     Returns:
         Pattern coefficients (B, P, L, L).
     """
-    alpha = alpha.to(noise.device, torch.float64).reshape(-1, 1, 1, 1)
+    alpha = alpha.to(noise.device, torch.float64)
+    alpha = alpha.reshape(alpha.shape[0], -1, 1, 1)
     return amplitudes.unsqueeze(-1) * noise / torch.sqrt(2 - alpha)
 
 
@@ -242,12 +250,13 @@ def advance_pattern(
         pattern: Pattern coefficients (B, P, L, L).
         noise: Unit-variance coefficients (B, P, L, L).
         amplitudes: Noise amplitudes g_l, shape (B, P, L).
-        alpha: Parameter of the AR(1) process, shape (B,).
+        alpha: Parameter of the AR(1) process, shape (B,) or, one per pattern, (B, P).
 
     Returns:
         The pattern one step later, (B, P, L, L).
     """
-    alpha = alpha.to(noise.device, torch.float64).reshape(-1, 1, 1, 1)
+    alpha = alpha.to(noise.device, torch.float64)
+    alpha = alpha.reshape(alpha.shape[0], -1, 1, 1)
     return (1 - alpha) * pattern + amplitudes.unsqueeze(-1) * torch.sqrt(alpha) * noise
 
 
@@ -388,4 +397,241 @@ def kinetic_forcing_increment(
     increment[:, 1] = dynamics.laplacian * scaled[:, 0]
     if pattern.shape[1] == 2:
         increment[:, 2] = dynamics.laplacian * scaled[:, 1]
+    return increment
+
+
+# ---------------------------------------------------------------------------
+# Stochastically perturbed physics tendencies (SPPT)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class SpptSettings:
+    """Settings of the stochastically perturbed physics tendencies.
+
+    The pattern r is a sum of independent AR(1) Gaussian fields, one per scale k, and
+    is clipped to [-clip, clip] on the grid (Leutbecher et al. 2017, section 2.1).
+
+    Attributes:
+        amplitudes: Grid-point standard deviation sigma_k of each field, (K,).
+        length_scales: Correlation length L_k of each field [m], (K,).
+        correlation_times: Decorrelation time tau_k of each field [s], (K,); 0 is
+            white noise.
+        clip: Bound of the summed pattern.
+    """
+
+    amplitudes: tuple[float, ...]
+    length_scales: tuple[float, ...]
+    correlation_times: tuple[float, ...]
+    clip: float = 1.0
+
+
+def sppt_noise_amplitudes(
+    dynamics: SphereShallowWaterDynamics, sppt: SpptSettings, alpha: TensorLike
+) -> TensorLike:
+    r"""Noise amplitudes :math:`g_l` of the SPPT fields.
+
+    ECMWF Technical Memorandum 598 (appendix 8.1, eqs. 17 and 18) gives each
+    coefficient of degree :math:`l \ge 1` the variance spectrum
+    :math:`\exp(-\kappa T\,l(l+1))`, with :math:`\kappa T = (L/a)^2/2` for the
+    correlation length :math:`L`, and normalises it so that the grid-point variance is
+    :math:`\sigma^2`. With the orthonormal harmonics of torch-harmonics, a field whose
+    coefficients have the stationary variance :math:`g_l^2/(2-\alpha)` of the AR(1)
+    process of this module has the grid-point variance
+    :math:`\sum_l (2l+1)\,g_l^2 / (4\pi(2-\alpha))`, hence
+
+    .. math::
+
+        g_l = b\,e^{-\kappa T\,l(l+1)/2}, \qquad
+        b^2 = \frac{4\pi\sigma^2(2-\alpha)}{\sum_{l\ge1}(2l+1)\,e^{-\kappa T\,l(l+1)}}.
+
+    The AR(1) step of this module, :math:`1-\alpha` with :math:`\alpha = \Delta t/\tau`
+    (B09 eq. 2), replaces the :math:`\exp(-\Delta t/\tau)` of TM 598; the two agree
+    for :math:`\Delta t \ll \tau`.
+
+    Args:
+        dynamics: Fixed operators.
+        sppt: Settings.
+        alpha: Parameter of the AR(1) process of each field, shape (K,).
+
+    Returns:
+        Amplitudes (K, L).
+    """
+    device = dynamics.laplacian.device
+    lmax = dynamics.lmax
+    sigma = torch.tensor(sppt.amplitudes, dtype=torch.float64, device=device)
+    length = torch.tensor(sppt.length_scales, dtype=torch.float64, device=device)
+    alpha = alpha.to(device, torch.float64)
+    degree = torch.arange(lmax, dtype=torch.float64, device=device).reshape(1, lmax)
+
+    kappa = 0.5 * (length.reshape(-1, 1) / dynamics.radius) ** 2  # kappa T, (K, 1)
+    spectrum = torch.exp(-kappa * degree * (degree + 1) / 2)
+    spectrum[:, 0] = 0.0  # no global mean
+    total = ((2 * degree + 1) * spectrum**2).sum(dim=1)
+    b = torch.sqrt(4 * math.pi * sigma**2 * (2 - alpha) / total)
+    return b.reshape(-1, 1) * spectrum
+
+
+def sppt_pattern_on_grid(
+    dynamics: SphereShallowWaterDynamics, pattern: TensorLike, clip: float
+) -> TensorLike:
+    """The SPPT pattern r on the grid: the sum of the fields, clipped.
+
+    Args:
+        dynamics: Fixed operators.
+        pattern: Coefficients of the K fields, (B, K, L, L).
+        clip: Bound of the pattern.
+
+    Returns:
+        r on the grid, (B, *grid.shape).
+    """
+    return dynamics.to_grid(pattern.sum(dim=1)).clamp(-clip, clip)
+
+
+def physics_increment(
+    undamped_state: TensorLike, damped_state: TensorLike, hyperdiffusion: TensorLike
+) -> TensorLike:
+    """Change of the state by the drag and the relaxation in one step.
+
+    The damping of a step applies the hyperdiffusion, the drag and the relaxation
+    together. The physics are the drag and the relaxation: their change is the damped
+    state minus the state damped by the hyperdiffusion alone, which is numerical.
+
+    Args:
+        undamped_state: State before the damping, (B, 3, L, L).
+        damped_state: State after the damping, (B, 3, L, L).
+        hyperdiffusion: Factor of the hyperdiffusion for one step, (L, L).
+
+    Returns:
+        Increment of the state, (B, 3, L, L).
+    """
+    after_hyperdiffusion = undamped_state.clone()
+    after_hyperdiffusion[:, 1:] = hyperdiffusion * undamped_state[:, 1:]
+    return damped_state - after_hyperdiffusion
+
+
+def sppt_increment(
+    dynamics: SphereShallowWaterDynamics, pattern_grid: TensorLike, physics: TensorLike
+) -> TensorLike:
+    r"""Perturbation of the physics increment by the pattern, SPPT.
+
+    The tendencies of the height and of the wind are multiplied by :math:`1 + r`
+    (Buizza et al. 1999; Palmer et al. 2009), so the perturbation is :math:`r` times
+    the increment of the drag and the relaxation, on the grid. The wind is perturbed
+    as a vector, as ECMWF perturbs the tendencies of u and v, and its vorticity and
+    divergence follow. The global mean of the height perturbation is removed, so that
+    the mass is conserved (the "global fix" of Leutbecher et al. 2017).
+
+    Args:
+        dynamics: Fixed operators.
+        pattern_grid: r on the grid, (B, *grid.shape).
+        physics: Increment of the drag and the relaxation, (B, 3, L, L).
+
+    Returns:
+        Increment of the spectral state, (B, 3, L, L).
+    """
+    height = dynamics.to_grid(physics[:, 0])
+    wind = dynamics.wind(physics[:, 1], physics[:, 2])
+    geopotential = dynamics.to_coefficients(pattern_grid * height)
+    geopotential[:, 0, 0] = 0.0  # global fix: no change of the mass
+    vorticity, divergence = dynamics.vorticity_divergence(
+        pattern_grid.unsqueeze(1) * wind
+    )
+    return torch.tril(torch.stack([geopotential, vorticity, divergence], dim=1))
+
+
+# ---------------------------------------------------------------------------
+# Periodic forcing of The Well (planetswe)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class PeriodicForcingSettings:
+    """Settings of the daily and yearly height forcing of The Well's planetswe.
+
+    The defaults of the simulator are those of ``gen_SWE_from_ic_file.py`` in
+    PolymathicAI/the_well at commit aac88c0: 2 m per hour, width 2 pi / 3, maximum
+    declination 0.4 rad, a day of 24 h and a year of 1008 h.
+
+    Attributes:
+        amplitude: Amplitude h_f0 of the height tendency [m/s].
+        width: Width sigma of the latitude profile [rad].
+        declination: Maximum latitude of the centre [rad].
+        day: Period of the longitude of the centre [s].
+        year: Period of the latitude of the centre [s].
+    """
+
+    amplitude: float
+    width: float
+    declination: float
+    day: float
+    year: float
+
+
+def periodic_height_forcing(
+    dynamics: SphereShallowWaterDynamics,
+    periodic: PeriodicForcingSettings,
+    time: float,
+) -> TensorLike:
+    r"""Height tendency of The Well's forcing at one time.
+
+    .. math::
+
+        F = h_{f0}\,\cos(\lambda - \lambda_c)\,
+            \exp\big[-(\varphi - \varphi_c)^2/\sigma^2\big], \qquad
+        \lambda_c = 2\pi t / \text{day}, \quad
+        \varphi_c = \delta\,\sin(2\pi t / \text{year}),
+
+    with :math:`\varphi` the latitude: a source on the half of the sphere centred on
+    :math:`\lambda_c` and a sink on the other half, with no net mass. As in The Well,
+    the centre moves eastward, and the profile does not vanish at the poles.
+
+    Args:
+        dynamics: Fixed operators.
+        periodic: Settings.
+        time: Time t since the start of the run [s].
+
+    Returns:
+        F on the grid [m/s], shape (*grid.shape).
+    """
+    centre_lon = 2 * math.pi * time / periodic.day
+    centre_lat = periodic.declination * math.sin(2 * math.pi * time / periodic.year)
+    return (
+        periodic.amplitude
+        * torch.cos(dynamics.longitude - centre_lon)
+        * torch.exp(-(((dynamics.latitude - centre_lat) / periodic.width) ** 2))
+    )
+
+
+def periodic_forcing_increment(
+    dynamics: SphereShallowWaterDynamics,
+    periodic: PeriodicForcingSettings,
+    time: float,
+    batch: int,
+) -> TensorLike:
+    """Increment of the state by The Well's forcing over the step from ``time``.
+
+    The height gains F dt, with F at the middle of the step, as the geopotential of
+    the fluid depth: g F dt. The forcing is the same for every simulation.
+
+    Args:
+        dynamics: Fixed operators and time step.
+        periodic: Settings.
+        time: Time at the start of the step [s].
+        batch: Number of simulations B.
+
+    Returns:
+        Increment of the spectral state, (B, 3, L, L); only the geopotential changes.
+    """
+    forcing = periodic_height_forcing(dynamics, periodic, time + dynamics.dt / 2)
+    coefficients = dynamics.to_coefficients(forcing.unsqueeze(0))
+    increment = torch.zeros(
+        batch,
+        3,
+        dynamics.lmax,
+        dynamics.lmax,
+        dtype=coefficients.dtype,
+        device=coefficients.device,
+    )
+    increment[:, 0] = dynamics.gravity * dynamics.dt * torch.tril(coefficients[0])
     return increment

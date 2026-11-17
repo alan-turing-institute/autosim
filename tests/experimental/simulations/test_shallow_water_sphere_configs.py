@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from importlib.resources import files
 
 import pytest
@@ -21,24 +20,28 @@ from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E40
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 CONFIG_DIR = files("autosim") / "configs"
 DATASET_CONFIGS = [
-    "shallow_water_sphere_d1_galewsky",
-    "shallow_water_sphere_d2_rossby_haurwitz",
-    "shallow_water_sphere_d3_mountain",
-    "shallow_water_sphere_d4_vortical",
-    "shallow_water_sphere_d4_momentum",
-    "shallow_water_sphere_d4_backscatter",
-    "shallow_water_sphere_d5_galewsky_coarse",
-    "shallow_water_sphere_d5_forced_coarse",
-    "shallow_water_sphere_t1_williamson2",
+    "shallow_water_sphere_ds1_williamson3",
+    "shallow_water_sphere_ds2_shamir_paldor",
+    "shallow_water_sphere_ds3_galewsky",
+    "shallow_water_sphere_ds4_mountain",
+]
+# Configs of the "era5" family, which read the WeatherBench2 store
+ERA5_CONFIGS = [
+    "shallow_water_sphere_ds5_era5_weather",
+    "shallow_water_sphere_ds6_era5_climate",
 ]
 
 
-@pytest.mark.parametrize("name", DATASET_CONFIGS)
+@pytest.mark.parametrize(
+    "name",
+    DATASET_CONFIGS
+    + [pytest.param(name, marks=pytest.mark.network) for name in ERA5_CONFIGS],
+)
 def test_dataset_config_runs_at_a_small_size(name):
     path = CONFIG_DIR / "simulator" / "experimental" / f"{name}.yaml"
     config = OmegaConf.load(str(path))
     assert isinstance(config, DictConfig)
-    assert config.lmax >= 86  # development size, or the fine run of a coarse dataset
+    assert config.lmax == 256  # benchmark size
     assert 2 * config.nlat >= 3 * config.lmax - 2  # products free of aliasing
 
     # the same dataset at a small size and for two saved intervals
@@ -69,20 +72,6 @@ def test_dataset_config_runs_at_a_small_size(name):
         assert payload["baseline"].shape == payload["data"].shape
     if config.get("reference_members", 0) > 0:
         assert payload["reference_ensemble"].shape[:2] == (2, 2)
-
-
-def test_t1_generation_config_lists_the_four_tilts_of_w92():
-    config = OmegaConf.load(str(CONFIG_DIR / "generate_data_swe_sphere_t1.yaml"))
-    assert isinstance(config, DictConfig)
-    assert config.stratify.enabled
-    assert config.stratify.key == "simulator.parameters_range.tilt"
-    # "values" is also a method of the config object, so the key is read with []
-    tilts = [value[0] for value in config.stratify["values"]]
-    expected = [0.0, 0.05, math.pi / 2 - 0.05, math.pi / 2]
-    assert tilts == pytest.approx(expected)
-    for count in (
-        config.dataset.n_train,
-        config.dataset.n_valid,
-        config.dataset.n_test,
-    ):
-        assert count % 4 == 0
+    if config.get("return_periodic_forcing", False):
+        shape = (2, 3, *sim.output_grid.shape, 1)
+        assert payload["periodic_forcing"].shape == shape

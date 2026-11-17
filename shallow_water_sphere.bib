@@ -1,0 +1,916 @@
+% References of the spherical shallow water simulator
+% (src/autosim/experimental/simulations/shallow_water_sphere).
+%
+% Every entry was looked up while choosing the families and forcings of the benchmark.
+% The annote field says why to cite the entry. [V]: read in full text. [A]: abstract
+% or Crossref record only. Entries marked "not used" were looked up and set aside;
+% they are kept for future reference.
+
+% ---- W92 suite, its reference solutions and its critiques ----
+@article{Williamson1992,
+  author={Williamson, David L. and Drake, John B. and Hack, James J. and Jakob, R{\"u}diger and Swarztrauber, Paul N.},
+  title={A standard test set for numerical approximations to the shallow water equations in spherical geometry},
+  journal={J. Comput. Phys.},
+  volume={102},
+  number={1},
+  pages={211--224},
+  year={1992},
+  doi={10.1016/S0021-9991(05)80016-6},
+  annote={Defines cases 2, 3, 5, 6, 7 used by the simulator. Cite for every W92 family.}
+}
+@techreport{Williamson1991TM,
+  author={Williamson, David L. and Drake, John B. and Hack, James J. and Jakob, R{\"u}diger and Swarztrauber, Paul N.},
+  title={A Standard Test Set for Numerical Approximations to the Shallow Water Equations in Spherical Geometry},
+  institution={Oak Ridge National Laboratory},
+  number={ORNL/TM-11895},
+  year={1991},
+  doi={10.2172/5232139},
+  annote={Report version of W92 read here [V]; equation and page numbers in the code refer to it. Prints h0 = 5400 m for case 5.}
+}
+@techreport{Jakob1993,
+  author={Jakob, Ruediger and Hack, James J. and Williamson, David L.},
+  title={Solutions to the Shallow Water Test Set Using the Spectral Transform Method},
+  institution={NCAR},
+  number={NCAR/TN-388+STR},
+  year={1993},
+  url={https://opensky.ucar.edu/system/files/2024-08/technotes_155.pdf},
+  annote={[V] Case 2 trivial for spectral models (rounding errors only, section 2): why Williamson 3 replaces Williamson 2. Case 5 spectral ringing (p. 35) and h0 = 5960 m: why the Gaussian mountain.}
+}
+@article{JakobChien1995,
+  author={Jakob-Chien, Ruediger and Hack, James J. and Williamson, David L.},
+  title={Spectral transform solutions to the shallow water test set},
+  journal={J. Comput. Phys.},
+  volume={119},
+  number={1},
+  pages={164--187},
+  year={1995},
+  doi={10.1006/jcph.1995.1125},
+  annote={Journal version of J93, the W92 reference solutions ("J95" in Galewsky 2004).}
+}
+@article{Galewsky2004,
+  author={Galewsky, Joseph and Scott, Richard K. and Polvani, Lorenzo M.},
+  title={An initial-value problem for testing numerical models of the global shallow-water equations},
+  journal={Tellus A},
+  volume={56},
+  number={5},
+  pages={429--440},
+  year={2004},
+  doi={10.3402/tellusa.v56i5.14436},
+  annote={[V] D1 family. Introduction criticises W92 cases 1-7; conclusion offers the test as a complement to W92.}
+}
+@article{Galewsky2006corr,
+  author={Galewsky, J. and Scott, R. K. and Polvani, L. M.},
+  title={Corrigendum},
+  journal={Tellus A},
+  volume={58},
+  number={4},
+  pages={520--522},
+  year={2006},
+  doi={10.1111/j.1600-0870.2006.00192.x},
+  annote={Replaces Figs. 2 and 6 of Galewsky 2004; cite with it.}
+}
+@article{ThuburnLi2000,
+  author={Thuburn, John and Li, Yong},
+  title={Numerical simulations of {Rossby--Haurwitz} waves},
+  journal={Tellus A},
+  volume={52},
+  number={2},
+  pages={181--189},
+  year={2000},
+  doi={10.3402/tellusa.v52i2.12258},
+  annote={[V] The wavenumber-4 Rossby-Haurwitz wave is unstable through a triad (1,3,4)/(1,4,5) and breaks down after days 50-55 at spectral T170. Why the family is replaced; the nonlinear Shamir-Paldor waves partly recover this breakdown.}
+}
+@article{Hoskins1973,
+  author={Hoskins, B. J.},
+  title={Stability of the {Rossby--Haurwitz} wave},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={99},
+  number={422},
+  pages={723--745},
+  year={1973},
+  doi={10.1002/qj.49709942213},
+  annote={[A] Rossby-Haurwitz waves of wavenumber <= 5 stable, > 5 may be unstable. Part of the reason the Rossby-Haurwitz family is replaced by the Shamir-Paldor waves.}
+}
+@article{Baines1976,
+  author={Baines, P. G.},
+  title={The stability of planetary waves on a sphere},
+  journal={J. Fluid Mech.},
+  volume={73},
+  number={2},
+  pages={193--213},
+  year={1976},
+  doi={10.1017/S0022112076001341},
+  annote={[A] Triad instability of planetary waves above a threshold amplitude: the instability of the Rossby-Haurwitz wave, the family replaced by the Shamir-Paldor waves.}
+}
+@article{Scott2016,
+  author={Scott, R. K. and Harris, L. M. and Polvani, L. M.},
+  title={A test case for the inviscid shallow-water equations on the sphere},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={142},
+  number={694},
+  pages={488--495},
+  year={2016},
+  doi={10.1002/qj.2667},
+  annote={[V] Critique of Galewsky 2004: solution depends on diffusion; inviscid day 6 not converged.}
+}
+@article{Shipton2018,
+  author={Shipton, J. and Gibson, T. H. and Cotter, C. J.},
+  title={Higher-order compatible finite element schemes for the nonlinear rotating shallow water equations on the sphere},
+  journal={J. Comput. Phys.},
+  volume={375},
+  pages={1121--1137},
+  year={2018},
+  doi={10.1016/j.jcp.2018.08.027},
+  annote={[V] Grid imprinting can change the Galewsky day-6 wavenumber on non lat-lon grids (section 3.3).}
+}
+@article{Williamson2007,
+  author={Williamson, David L.},
+  title={The evolution of dynamical cores for global atmospheric models},
+  journal={J. Meteor. Soc. Japan},
+  volume={85B},
+  pages={241--269},
+  year={2007},
+  doi={10.2151/jmsj.85b.241},
+  annote={[V] Review; section 5 recommends Galewsky and other additions to W92.}
+}
+@article{Lauter2005,
+  author={L{\"a}uter, Matthias and Handorf, D{\"o}rthe and Dethloff, Klaus},
+  title={Unsteady analytical solutions of the spherical shallow water equations},
+  journal={J. Comput. Phys.},
+  volume={210},
+  number={2},
+  pages={535--553},
+  year={2005},
+  doi={10.1016/j.jcp.2005.04.022},
+  annote={[A] Unsteady exact solutions. Considered and not used: every emulator is scored against its own simulation, so exact solutions are not needed.}
+}
+@article{ShamirPaldor2016,
+  author={Shamir, Ofer and Paldor, Nathan},
+  title={A quantitative test case for global-scale dynamical cores based on analytic wave solutions of the shallow-water equations},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={142},
+  number={700},
+  pages={2705--2714},
+  year={2016},
+  doi={10.1002/qj.2861},
+  annote={[V] Basis of the shamir_paldor family (dataset 2), read in full. Rossby-Haurwitz waves are not solutions of the SWE, contain no inertia-gravity waves and break down in finite time (section 1). Eqs. 7-19 give the phase speeds (roots of a cubic) and the structure (Gegenbauer functions), implemented in shamir_paldor.py; the printed prefactor of eq. 12b is not a height, and rows 1 and 3 of eq. 6 give a H sqrt(2 Omega |K_-|) / K_-. Published wave (n, k) = (5, 10) at gH = 5e4 m^2/s^2, 100 periods in CESM; phase speed and principal-component scores (section 5, Table 1). Supporting code s3.shallow_water_waves_test.py (Wiley supporting information).}
+}
+@article{Shamir2019,
+  author={Shamir, Ofer and Yacoby, Itamar and Ziskin Ziv, Shlomi and Paldor, Nathan},
+  title={The {Matsuno} baroclinic wave test case},
+  journal={Geosci. Model Dev.},
+  volume={12},
+  number={6},
+  pages={2181--2193},
+  year={2019},
+  doi={10.5194/gmd-12-2181-2019},
+  annote={[A] Equatorial (Matsuno) waves test. Known gap of the benchmark (no tropical-wave family).}
+}
+@article{Flyer2012,
+  author={Flyer, Natasha and Lehto, Erik and Blaise, S{\'e}bastien and Wright, Grady B. and St-Cyr, Amik},
+  title={A guide to {RBF}-generated finite differences for nonlinear transport: Shallow water simulations on a sphere},
+  journal={J. Comput. Phys.},
+  volume={231},
+  number={11},
+  pages={4078--4095},
+  year={2012},
+  doi={10.1016/j.jcp.2012.01.028},
+  annote={[V] Section 5.1: cone vs smooth Gaussian mountain; the cone caps accuracy. Why D3 uses a Gaussian.}
+}
+@misc{Jablonowski2008DCMIP,
+  author={Jablonowski, Christiane and Lauritzen, Peter and Nair, Ram and Taylor, Mark},
+  title={Idealized test cases for the dynamical cores of Atmospheric General Circulation Models: A proposal for the NCAR ASP 2008 summer colloquium},
+  year={2008},
+  url={https://public.websites.umich.edu/~cjablono/DCMIP-2008_TestCaseDocument_29May2008.pdf},
+  annote={[V] Section 1.5: Gaussian mountain (h0 2000 m, d 1500 km, u0 20 m/s) used for D3. Eq. 16 confirms the W92 rotated Coriolis.}
+}
+@misc{Ullrich2012DCMIP,
+  author={Ullrich, Paul A. and Jablonowski, Christiane and Kent, James and Lauritzen, Peter H. and Nair, Ramachandran D. and Taylor, Mark A.},
+  title={Dynamical Core Model Intercomparison Project ({DCMIP}) Test Case Document, v1.7},
+  year={2012},
+  url={https://public.websites.umich.edu/~cjablono/DCMIP-2012_TestCaseDocument_v1.7.pdf},
+  annote={Checked: 3D tests only, no shallow-water case.}
+}
+@article{Lin2017,
+  author={Lin, Shian-Jiann and Harris, Lucas and Chen, Xi and Yao, Weiye and Chai, Junyi},
+  title={Colliding modons: A nonlinear test for the evaluation of global dynamical cores},
+  journal={J. Adv. Model. Earth Syst.},
+  volume={9},
+  number={7},
+  pages={2483--2492},
+  year={2017},
+  doi={10.1002/2017MS000965},
+  annote={[A] Vortex test usable in SWE cores. Not used.}
+}
+@article{HughesJablonowski2023,
+  author={Hughes, Owen K. and Jablonowski, Christiane},
+  title={A mountain-induced moist baroclinic wave test case for the dynamical cores of atmospheric general circulation models},
+  journal={Geosci. Model Dev.},
+  volume={16},
+  number={22},
+  pages={6805--6831},
+  year={2023},
+  doi={10.5194/gmd-16-6805-2023},
+  annote={[A] 3D analytic-mountain test; looked up for smooth orography, not used.}
+}
+@misc{Heinze2002,
+  author={Heinze, Thomas},
+  title={A close look to test case 5},
+  howpublished={Talk, Fields Institute workshop on PDEs on the Sphere},
+  year={2002},
+  url={https://gfs.fields.utoronto.ca/talks/close-look-to-test-case-5},
+  annote={Talk proposing a modified case 5; no paper found.}
+}
+@misc{Montoya2025,
+  author={Montoya, Tristan and Rueda-Ram{\'i}rez, Andr{\'e}s M. and Gassner, Gregor J.},
+  title={Entropy-stable discontinuous spectral-element methods for the spherical shallow water equations in covariant form},
+  year={2025},
+  eprint={2509.08790},
+  archivePrefix={arXiv},
+  annote={[V] Uses h0 = 5960 m for case 5 (published W92) and restates the Lauter 2005 solution.}
+}
+@article{Ritchie1988,
+  author={Ritchie, Harold},
+  title={Application of the Semi-{L}agrangian Method to a Spectral Model of the Shallow Water Equations},
+  journal={Mon. Wea. Rev.},
+  volume={116},
+  number={8},
+  pages={1587--1598},
+  year={1988},
+  doi={10.1175/1520-0493(1988)116<1587:AOTSLM>2.0.CO;2},
+  annote={Source of the 21 Dec 1978 state of W92 case 7 (not read).}
+}
+@article{Williamson1976,
+  author={Williamson, David L.},
+  title={Normal Mode Initialization Procedure Applied to Forecasts with the Global Shallow Water Equations},
+  journal={Mon. Wea. Rev.},
+  volume={104},
+  number={2},
+  pages={195--206},
+  year={1976},
+  doi={10.1175/1520-0493(1976)104<0195:NMIPAT>2.0.CO;2},
+  annote={Normal-mode initialisation of analysed SWE states (W92 case 7). Not read; the ERA5 family uses nonlinear balance instead.}
+}
+@techreport{Drake1999,
+  author={Drake, J. B. and Swarztrauber, P. N. and Williamson, D. L.},
+  title={Cartesian Methods for the Shallow Water Equations on a Sphere},
+  institution={Oak Ridge National Laboratory},
+  number={ORNL/TM-13430},
+  year={1999},
+  url={https://info.ornl.gov/sites/publications/Files/Pub57602.pdf},
+  annote={[V] Later use of case 7 data with nonlinear normal-mode filtering.}
+}
+
+% ---- Datasets and emulators on the sphere ----
+@inproceedings{Ohana2024,
+  author={Ohana, Ruben and McCabe, Michael and Meyer, Lucas and Morel, Rudy and Agocs, Fruzsina J. and others},
+  title={The Well: a Large-Scale Collection of Diverse Physics Simulations for Machine Learning},
+  booktitle={NeurIPS 2024 Datasets and Benchmarks Track},
+  year={2024},
+  eprint={2412.00568},
+  archivePrefix={arXiv},
+  annote={[V] PlanetSWE: ERA5 500 hPa initial states, Earth orography, daily and yearly height forcing; the protocol of dataset 6 (40 trajectories, 3024 hourly steps). The released files come from the current code (PolymathicAI/the_well@aac88c0, gen_SWE_from_ic_file.py: sigma = 2 pi / 3, h_f0 = 2 m/h, burn-in 0.25 year): their time coordinate starts at 252.0 h. The paper (App. C.8) and the dataset card describe the earlier code (sigma = pi/2, half-year burn-in).}
+}
+@article{McCabe2023,
+  author={McCabe, Michael and Harrington, Peter and Subramanian, Shashank and Brown, Jed},
+  title={Towards Stability of Autoregressive Neural Operators},
+  journal={Transactions on Machine Learning Research},
+  year={2023},
+  eprint={2306.10619},
+  archivePrefix={arXiv},
+  annote={[V] First use of the PlanetSWE data, generated by the earlier code (commit 574957b of the_well).}
+}
+@inproceedings{Bonev2023,
+  author={Bonev, Boris and Kurth, Thorsten and Hundt, Christian and Pathak, Jaideep and Baust, Maximilian and Kashinath, Karthik and Anandkumar, Anima},
+  title={Spherical {Fourier} Neural Operators: Learning Stable Dynamics on the Sphere},
+  booktitle={Proc. 40th ICML},
+  series={PMLR},
+  volume={202},
+  pages={2806--2823},
+  year={2023},
+  url={https://proceedings.mlr.press/v202/bonev23a.html},
+  annote={[V] ML practice for spherical SWE: torch-harmonics dataset with random (Gaussian-random-field-like) unbalanced initial states, no forcing or orography. The baseline that the benchmark extends.}
+}
+@article{Gupta2023,
+  author={Gupta, Jayesh K. and Brandstetter, Johannes},
+  title={Towards Multi-spatiotemporal-scale Generalized {PDE} Modeling},
+  journal={Transactions on Machine Learning Research},
+  year={2023},
+  eprint={2209.15616},
+  archivePrefix={arXiv},
+  annote={[V] PDEArena ShallowWater-2D (SpeedyWeather.jl): random zonal-wind ICs, Earth orography, no forcing.}
+}
+@software{Klower2022,
+  author={Kl{\"o}wer, Milan and Kimpson, Tom and White, Alistair and Giordano, Mos{\`e}},
+  title={milankl/SpeedyWeather.jl: v0.2.1},
+  year={2022},
+  version={v0.2.1},
+  doi={10.5281/zenodo.6788067},
+  annote={Solver of the PDEArena SWE data.}
+}
+@article{Burns2020,
+  author={Burns, Keaton J. and Vasil, Geoffrey M. and Oishi, Jeffrey S. and Lecoanet, Daniel and Brown, Benjamin P.},
+  title={Dedalus: A flexible framework for numerical simulations with spectral methods},
+  journal={Physical Review Research},
+  volume={2},
+  number={2},
+  pages={023068},
+  year={2020},
+  doi={10.1103/PhysRevResearch.2.023068},
+  annote={Solver of The Well PlanetSWE.}
+}
+@article{Rasp2024,
+  author={Rasp, Stephan and Hoyer, Stephan and Merose, Alexander and Langmore, Ian and Battaglia, Peter and Russell, Tyler and others},
+  title={{WeatherBench} 2: A Benchmark for the Next Generation of Data-Driven Global Weather Models},
+  journal={J. Adv. Model. Earth Syst.},
+  volume={16},
+  number={6},
+  pages={e2023MS004019},
+  year={2024},
+  doi={10.1029/2023MS004019},
+  annote={[A] Source of the ERA5 store read by the era5 family: gs://weatherbench2/datasets/era5/1959-2023_01_10-wb13-6h-1440x721.zarr (checked: 93544 six-hourly times from 1959-01-01, latitude from 90 to -90).}
+}
+@article{Hersbach2020,
+  author={Hersbach, Hans and Bell, Bill and Berrisford, Paul and others},
+  title={The {ERA5} global reanalysis},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={146},
+  number={730},
+  pages={1999--2049},
+  year={2020},
+  doi={10.1002/qj.3803},
+  annote={Source of the D6/D7 initial states and orography.}
+}
+@article{Nathaniel2026,
+  author={Nathaniel, Juan and Gentine, Pierre},
+  title={Generative emulation of chaotic dynamics with coherent prior},
+  journal={Comput. Methods Appl. Mech. Eng.},
+  volume={448},
+  pages={118410},
+  year={2026},
+  doi={10.1016/j.cma.2025.118410},
+  annote={Generative emulator trained on randomised Galewsky trajectories; precedent for D1.}
+}
+@inproceedings{LiuSchiaffini2024,
+  author={Liu-Schiaffini, Miguel and Berner, Julius and Bonev, Boris and Kurth, Thorsten and Azizzadenesheli, Kamyar and Anandkumar, Anima},
+  title={Neural Operators with Localized Integral and Differential Kernels},
+  booktitle={Proc. 41st ICML},
+  year={2024},
+  eprint={2402.16845},
+  archivePrefix={arXiv},
+  annote={Reuses the Bonev SWE data.}
+}
+@article{Bulte2025,
+  author={B{\"u}lte, Christopher and Scholl, Philipp and Kutyniok, Gitta},
+  title={Probabilistic neural operators for functional uncertainty quantification},
+  journal={Transactions on Machine Learning Research},
+  year={2025},
+  eprint={2502.12902},
+  archivePrefix={arXiv},
+  annote={Probabilistic emulator on spherical SWE with random-field ICs.}
+}
+@misc{Bonev2025,
+  author={Bonev, Boris and Rietmann, Max and Paris, Andrea and Carpentieri, Alberto and Kurth, Thorsten},
+  title={Attention on the Sphere},
+  year={2025},
+  eprint={2505.11157},
+  archivePrefix={arXiv},
+  annote={Reuses the torch-harmonics SWE generator.}
+}
+@inproceedings{Tang2026,
+  author={Tang, Hao and Chen, Hao and Li, Chao},
+  title={Generalized Spherical Neural Operators: {G}reen's Function Formulation},
+  booktitle={ICLR},
+  year={2026},
+  eprint={2512.10723},
+  archivePrefix={arXiv},
+  annote={Recent spherical SWE emulator benchmark.}
+}
+@inproceedings{Li2026,
+  author={Li, Herui and Lu, Bin and Qi, Haonan and Zhou, Lei and Fu, Luoyi and Wang, Xinbing and Jin, Meng},
+  title={{DIAGNO}: Diagonal Spherical Neural Operators for Heterogeneous Earth Dynamics Modeling},
+  booktitle={NeurIPS},
+  year={2026},
+  eprint={2611.16356},
+  archivePrefix={arXiv},
+  annote={Recent emulator with random and Galewsky SWE ICs.}
+}
+
+% ---- Stochastic forcing: SKEB, SPPT, SPP ----
+@article{Berner2017,
+  author={Berner, J. and Achatz, U. and Batt{\'e}, L. and Bengtsson, L. and de la C{\'a}mara, A. and Christensen, H. M. and others},
+  title={Stochastic Parameterization: Toward a New View of Weather and Climate Models},
+  journal={Bull. Amer. Meteor. Soc.},
+  volume={98},
+  number={3},
+  pages={565--588},
+  year={2017},
+  doi={10.1175/BAMS-D-15-00268.1},
+  annote={[V] Review. SPPT perturbs the net tendency of the physical parameterisations, SKEBS re-injects dissipated energy (p. 568): why SPPT acts on the relaxation and drag only, and why the two are complementary.}
+}
+@article{Berner2009,
+  author={Berner, J. and Shutts, G. J. and Leutbecher, M. and Palmer, T. N.},
+  title={A Spectral Stochastic Kinetic Energy Backscatter Scheme and Its Impact on Flow-Dependent Predictability in the {ECMWF} Ensemble Prediction System},
+  journal={J. Atmos. Sci.},
+  volume={66},
+  number={3},
+  pages={603--626},
+  year={2009},
+  doi={10.1175/2008JAS2677.1},
+  annote={[V] AR(1) spectral pattern, p = -1.27, tau = 6 h, eq. 13 local backscatter: the vortical/backscatter forcings. Section 5: constant vs flow-dependent rate differ little.}
+}
+@article{Shutts2005,
+  author={Shutts, G.},
+  title={A kinetic energy backscatter algorithm for use in ensemble prediction systems},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={131},
+  number={612},
+  pages={3079--3102},
+  year={2005},
+  doi={10.1256/qj.04.106},
+  annote={[V] Original SKEB; vorticity forcing chosen to limit gravity waves.}
+}
+@article{Shutts2015,
+  author={Shutts, G.},
+  title={A stochastic convective backscatter scheme for use in ensemble prediction systems},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={141},
+  number={692},
+  pages={2602--2616},
+  year={2015},
+  doi={10.1002/qj.2547},
+  annote={[A] Adds divergent perturbations (cited by Berner 2017): basis of the momentum forcing.}
+}
+@article{Buizza1999,
+  author={Buizza, R. and Miller, M. and Palmer, T. N.},
+  title={Stochastic representation of model uncertainties in the {ECMWF} ensemble prediction system},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={125},
+  number={560},
+  pages={2887--2908},
+  year={1999},
+  doi={10.1002/qj.49712556006},
+  annote={[A] Original SPPT.}
+}
+@techreport{Palmer2009TM598,
+  author={Palmer, T. N. and Buizza, R. and Doblas-Reyes, F. and Jung, T. and Leutbecher, M. and Shutts, G. J. and Steinheimer, M. and Weisheimer, A.},
+  title={Stochastic parametrization and model uncertainty},
+  institution={ECMWF},
+  type={Technical Memorandum},
+  number={598},
+  year={2009},
+  doi={10.21957/ps8gbwbdv},
+  annote={[V] Revised SPPT X_p = (1 + r mu) X_c with an AR(1) spectral pattern; drag and radiation tendencies are perturbed.}
+}
+@article{Leutbecher2017,
+  author={Leutbecher, M. and Lock, S.-J. and Ollinaho, P. and Lang, S. T. K. and Balsamo, G. and Bechtold, P. and others},
+  title={Stochastic representations of model uncertainties at {ECMWF}: state of the art and future vision},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={143},
+  number={707},
+  pages={2315--2339},
+  year={2017},
+  doi={10.1002/qj.3094},
+  annote={[V via TM 785] SPPT three-scale pattern (Table 1), clipping to [-1, 1], global fix: source of the SPPT settings. Counterpoint: SKEB adds little spread on top of SPPT in the IFS.}
+}
+@article{Ollinaho2017,
+  author={Ollinaho, P. and Lock, S.-J. and Leutbecher, M. and Bechtold, P. and Beljaars, A. and Bozzo, A. and Forbes, R. M. and Haiden, T. and Hogan, R. J. and Sandu, I.},
+  title={Towards process-level representation of model uncertainties: stochastically perturbed parametrizations in the {ECMWF} ensemble},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={143},
+  number={702},
+  pages={408--422},
+  year={2017},
+  doi={10.1002/qj.2931},
+  annote={[A] SPP. For a linear relaxation SPPT equals an SPP perturbation of the relaxation time.}
+}
+@article{Lang2021,
+  author={Lang, S. T. K. and Lock, S.-J. and Leutbecher, M. and Bechtold, P. and Forbes, R. M.},
+  title={Revision of the Stochastically Perturbed Parametrisations model uncertainty scheme in the Integrated Forecasting System},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={147},
+  number={735},
+  pages={1364--1381},
+  year={2021},
+  doi={10.1002/qj.3978},
+  annote={[A] Revised SPP, skill similar to SPPT.}
+}
+@article{Lock2019,
+  author={Lock, S.-J. and Lang, S. T. K. and Leutbecher, M. and Hogan, R. J. and Vitart, F.},
+  title={Treatment of model uncertainty from radiation by the Stochastically Perturbed Parametrization Tendencies ({SPPT}) scheme and associated revisions in the {ECMWF} ensembles},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={145},
+  number={S1},
+  pages={75--89},
+  year={2019},
+  doi={10.1002/qj.3570},
+  annote={[A] Clear-sky radiation removed from SPPT (Cycle 45r1). Caveat for perturbing a radiative-like relaxation.}
+}
+@misc{Leutbecher2024,
+  author={Leutbecher, M. and Lang, S. and Lock, S.-J. and Roberts, C. D. and Tsiringakis, A.},
+  title={Improving the physical consistency of ensemble forecasts by using {SPP} in the {IFS}},
+  howpublished={ECMWF Newsletter 181, 26--31},
+  year={2024},
+  doi={10.21957/mlz238dk1p},
+  annote={[V] SPP replaces SPPT operationally (Cycle 49r1, Nov 2024): latest operational state.}
+}
+@article{Palmer2019,
+  author={Palmer, T. N.},
+  title={Stochastic weather and climate models},
+  journal={Nat. Rev. Phys.},
+  volume={1},
+  number={7},
+  pages={463--471},
+  year={2019},
+  doi={10.1038/s42254-019-0062-2},
+  annote={[V] Complementarity: SPPT is incomplete without stochastic backscatter. Cite for keeping vortical/backscatter alongside SPPT.}
+}
+@article{Arnold2013,
+  author={Arnold, H. M. and Moroz, I. M. and Palmer, T. N.},
+  title={Stochastic parametrizations and model uncertainty in the {Lorenz} '96 system},
+  journal={Phil. Trans. R. Soc. A},
+  volume={371},
+  number={1991},
+  pages={20110479},
+  year={2013},
+  doi={10.1098/rsta.2011.0479},
+  annote={[V] Complementarity of SPPT and the vortical forcing: compares additive and multiplicative AR(1) noise in Lorenz 96; pure multiplicative noise fails where the tendency is small. Cited in the forcing cell for keeping both.}
+}
+@article{Christensen2020,
+  author={Christensen, H. M.},
+  title={Constraining stochastic parametrisation schemes using high-resolution simulations},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={146},
+  number={727},
+  pages={938--962},
+  year={2020},
+  doi={10.1002/qj.3717},
+  annote={[V] Complementarity of SPPT and vortical: coarse-graining supports multiplicative SPPT but shows it cannot represent uncertainty for small tendencies, so additive noise is also needed. Also supports the D5 coarse-graining design.}
+}
+@article{Berner2015,
+  author={Berner, J. and Fossell, K. R. and Ha, S.-Y. and Hacker, J. P. and Snyder, C.},
+  title={Increasing the Skill of Probabilistic Forecasts: Understanding Performance Improvements from Model-Error Representations},
+  journal={Mon. Wea. Rev.},
+  volume={143},
+  number={4},
+  pages={1295--1320},
+  year={2015},
+  doi={10.1175/MWR-D-14-00091.1},
+  annote={[A] Complementarity: combining several model-error schemes gives the best ensembles.}
+}
+@article{Zhou2022,
+  author={Zhou, X. and Zhu, Y. and Hou, D. and Fu, B. and Li, W. and Guan, H. and others},
+  title={The Development of the {NCEP} Global Ensemble Forecast System Version 12},
+  journal={Wea. Forecasting},
+  volume={37},
+  number={6},
+  pages={1069--1084},
+  year={2022},
+  doi={10.1175/WAF-D-21-0112.1},
+  annote={[A] Operational system running SKEB and SPPT together.}
+}
+@article{Sura2005,
+  author={Sura, P. and Newman, M. and Penland, C. and Sardeshmukh, P.},
+  title={Multiplicative Noise and Non-Gaussianity: A Paradigm for Atmospheric Regimes?},
+  journal={J. Atmos. Sci.},
+  volume={62},
+  number={5},
+  pages={1391--1409},
+  year={2005},
+  doi={10.1175/JAS3408.1},
+  annote={[A] Multiplicative noise on damping acts as stochastic parameters and gives non-Gaussian statistics: SPPT on the linear relaxation is a random relaxation time, distinct from the additive vortical forcing.}
+}
+@article{Sardeshmukh2009,
+  author={Sardeshmukh, P. D. and Sura, P.},
+  title={Reconciling Non-Gaussian Climate Statistics with Linear Dynamics},
+  journal={J. Climate},
+  volume={22},
+  number={5},
+  pages={1193--1207},
+  year={2009},
+  doi={10.1175/2008JCLI2358.1},
+  annote={[A] Correlated additive and multiplicative noise together.}
+}
+@article{Majda2009,
+  author={Majda, A. J. and Franzke, C. and Crommelin, D.},
+  title={Normal forms for reduced stochastic climate models},
+  journal={Proc. Natl. Acad. Sci. USA},
+  volume={106},
+  number={10},
+  pages={3649--3653},
+  year={2009},
+  doi={10.1073/pnas.0900173106},
+  annote={[A] CAM noise arises naturally in reduced climate models: theory behind combining additive and multiplicative forcing.}
+}
+@article{Christensen2015,
+  author={Christensen, H. M. and Moroz, I. M. and Palmer, T. N.},
+  title={Simulating weather regimes: impact of stochastic and perturbed parameter schemes in a simple atmospheric model},
+  journal={Clim. Dyn.},
+  volume={44},
+  number={7-8},
+  pages={2195--2214},
+  year={2015},
+  doi={10.1007/s00382-014-2239-9},
+  annote={[A] Temporally correlated noise needed (white noise as poor as deterministic): supports AR(1) patterns.}
+}
+@article{Christensen2017,
+  author={Christensen, H. M. and Lock, S.-J. and Moroz, I. M. and Palmer, T. N.},
+  title={Introducing independent patterns into the Stochastically Perturbed Parametrization Tendencies ({SPPT}) scheme},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={143},
+  number={706},
+  pages={2168--2181},
+  year={2017},
+  doi={10.1002/qj.3075},
+  annote={[A] SPPT with independent patterns per process (possible extension: separate relaxation and drag patterns).}
+}
+@article{Dawson2015,
+  author={Dawson, A. and Palmer, T. N.},
+  title={Simulating weather regimes: impact of model resolution and stochastic parameterization},
+  journal={Clim. Dyn.},
+  volume={44},
+  number={7-8},
+  pages={2177--2193},
+  year={2015},
+  doi={10.1007/s00382-014-2238-x},
+  annote={[A] IFS study (not idealised), cited by Berner 2017.}
+}
+@article{Subramanian2019,
+  author={Subramanian, A. and Juricke, S. and Dueben, P. and Palmer, T.},
+  title={A Stochastic Representation of Subgrid Uncertainty for Dynamical Core Development},
+  journal={Bull. Amer. Meteor. Soc.},
+  volume={100},
+  number={6},
+  pages={1091--1101},
+  year={2019},
+  doi={10.1175/BAMS-D-17-0040.1},
+  annote={[V] Stochastic Held-Suarez: SPPT-derived noise in an idealised dycore, the closest idealised precedent.}
+}
+
+% ---- Forced-dissipative shallow-water and 2D turbulence ----
+@article{Scott2007,
+  author={Scott, R. K. and Polvani, L. M.},
+  title={Forced-Dissipative Shallow-Water Turbulence on the Sphere and the Atmospheric Circulation of the Giant Planets},
+  journal={J. Atmos. Sci.},
+  volume={64},
+  number={9},
+  pages={3158--3176},
+  year={2007},
+  doi={10.1175/JAS4003.1},
+  annote={[V] Random vorticity forcing at a fixed energy rate with hyperdiffusion and drag or relaxation: precedent for the vortical forcing.}
+}
+@article{Scott2008,
+  author={Scott, R. K. and Polvani, L. M.},
+  title={Equatorial superrotation in shallow atmospheres},
+  journal={Geophys. Res. Lett.},
+  volume={35},
+  number={24},
+  pages={L24202},
+  year={2008},
+  doi={10.1029/2008GL036060},
+  annote={[V] Vorticity forcing + linear friction + height relaxation read as radiative cooling: closest analogue of the D4 climate, and why relaxation counts as physics for SPPT.}
+}
+@article{Showman2007,
+  author={Showman, A. P.},
+  title={Numerical Simulations of Forced Shallow-Water Turbulence: Effects of Moist Convection on the Large-Scale Circulation of {Jupiter} and {Saturn}},
+  journal={J. Atmos. Sci.},
+  volume={64},
+  number={9},
+  pages={3132--3157},
+  year={2007},
+  doi={10.1175/JAS4007.1},
+  annote={[A] Random mass-pulse forcing (removed from this simulator in 42e854f).}
+}
+@article{Cho1996,
+  author={Cho, J. Y-K. and Polvani, L. M.},
+  title={The emergence of jets and vortices in freely evolving, shallow-water turbulence on a sphere},
+  journal={Phys. Fluids},
+  volume={8},
+  number={6},
+  pages={1531--1552},
+  year={1996},
+  doi={10.1063/1.868929},
+  annote={[A] Unforced decaying SWE turbulence on the sphere.}
+}
+@article{Thuburn2014,
+  author={Thuburn, J. and Kent, J. and Wood, N.},
+  title={Cascades, backscatter and conservation in numerical models of two-dimensional turbulence},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={140},
+  number={679},
+  pages={626--638},
+  year={2014},
+  doi={10.1002/qj.2166},
+  annote={[A] Doubly periodic barotropic vorticity; backscatter schemes act as energy fixers.}
+}
+@article{Frederiksen1997,
+  author={Frederiksen, J. S. and Davies, A. G.},
+  title={Eddy Viscosity and Stochastic Backscatter Parameterizations on the Sphere for Atmospheric Circulation Models},
+  journal={J. Atmos. Sci.},
+  volume={54},
+  number={20},
+  pages={2475--2492},
+  year={1997},
+  doi={10.1175/1520-0469(1997)054<2475:EVASBP>2.0.CO;2},
+  annote={[A] Stochastic backscatter on the sphere from closure theory.}
+}
+@article{Frederiksen2006,
+  author={Frederiksen, J. S. and Kepert, S. M.},
+  title={Dynamical Subgrid-Scale Parameterizations from Direct Numerical Simulations},
+  journal={J. Atmos. Sci.},
+  volume={63},
+  number={11},
+  pages={3006--3019},
+  year={2006},
+  doi={10.1175/JAS3795.1},
+  annote={[A] Backscatter and drain viscosity for barotropic flow on the sphere.}
+}
+@article{Kitsios2012,
+  author={Kitsios, V. and Frederiksen, J. S. and Zidikheri, M. J.},
+  title={Subgrid Model with Scaling Laws for Atmospheric Simulations},
+  journal={J. Atmos. Sci.},
+  volume={69},
+  number={4},
+  pages={1427--1445},
+  year={2012},
+  doi={10.1175/JAS-D-11-0163.1},
+  annote={[A] Scaling laws for subgrid backscatter.}
+}
+@article{Kitsios2019,
+  author={Kitsios, V. and Frederiksen, J. S.},
+  title={Subgrid Parameterizations of the Eddy--Eddy, Eddy--Mean Field, Eddy--Topographic, Mean Field--Mean Field, and Mean Field--Topographic Interactions in Atmospheric Models},
+  journal={J. Atmos. Sci.},
+  volume={76},
+  number={2},
+  pages={457--477},
+  year={2019},
+  doi={10.1175/JAS-D-18-0255.1},
+  annote={[A] 3D extension of the closure approach.}
+}
+@article{Perezhogin2019,
+  author={Perezhogin, P. A. and Glazunov, A. V. and Gritsun, A. S.},
+  title={Stochastic and deterministic kinetic energy backscatter parameterizations for simulation of the two-dimensional turbulence},
+  journal={Russ. J. Numer. Anal. Math. Model.},
+  volume={34},
+  number={4},
+  pages={197--213},
+  year={2019},
+  doi={10.1515/rnam-2019-0017},
+  annote={[A] Stochastic + deterministic backscatter restore the 2D spectrum.}
+}
+@article{Gagne2020,
+  author={Gagne, D. J. and Christensen, H. M. and Subramanian, A. C. and Monahan, A. H.},
+  title={Machine Learning for Stochastic Parameterization: Generative Adversarial Networks in the {Lorenz} '96 Model},
+  journal={J. Adv. Model. Earth Syst.},
+  volume={12},
+  number={3},
+  pages={e2019MS001896},
+  year={2020},
+  doi={10.1029/2019MS001896},
+  annote={[A] ML stochastic parameterisation (context for probabilistic emulators).}
+}
+@article{Guillaumin2021,
+  author={Guillaumin, A. P. and Zanna, L.},
+  title={Stochastic-Deep Learning Parameterization of Ocean Momentum Forcing},
+  journal={J. Adv. Model. Earth Syst.},
+  volume={13},
+  number={9},
+  pages={e2021MS002534},
+  year={2021},
+  doi={10.1029/2021MS002534},
+  annote={[A] Stochastic CNN subgrid forcing run online in a shallow-water model.}
+}
+@article{Perezhogin2023,
+  author={Perezhogin, P. and Zanna, L. and Fernandez-Granda, C.},
+  title={Generative Data-Driven Approaches for Stochastic Subgrid Parameterizations in an Idealized Ocean Model},
+  journal={J. Adv. Model. Earth Syst.},
+  volume={15},
+  number={10},
+  pages={e2023MS003681},
+  year={2023},
+  doi={10.1029/2023MS003681},
+  annote={[A] Spatially correlated generative noise beats independent noise.}
+}
+
+% ---- Shamir-Paldor waves and the normal modes of the shallow water equations ----
+@article{Paldor2013,
+  author={Paldor, Nathan and De-Leon, Yair and Shamir, Ofer},
+  title={Planetary ({R}ossby) waves and inertia--gravity ({P}oincar{\'e}) waves in a barotropic ocean over a sphere},
+  journal={J. Fluid Mech.},
+  volume={726},
+  pages={123--136},
+  year={2013},
+  doi={10.1017/jfm.2013.219},
+  annote={[A] The analytic wave solutions of the linearised SWE behind the shamir_paldor family; Shamir and Paldor (2016) give every formula needed.}
+}
+@article{Garfinkel2017,
+  author={Garfinkel, Chaim I. and Fouxon, Itzhak and Shamir, Ofer and Paldor, Nathan},
+  title={Classification of eastward propagating waves on the spherical {E}arth},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={143},
+  number={704},
+  pages={1554--1564},
+  year={2017},
+  doi={10.1002/qj.3025},
+  annote={[V] Restates the Schroedinger form of the wave equations; the approximate solutions are poor at small k and n. Why the dataset avoids the smallest wavenumbers.}
+}
+@article{DeLeon2011,
+  author={De-Leon, Yair and Paldor, Nathan},
+  title={Zonally propagating wave solutions of {L}aplace Tidal Equations in a baroclinic ocean of an aqua-planet},
+  journal={Tellus A},
+  volume={63},
+  number={2},
+  pages={348--353},
+  year={2011},
+  doi={10.1111/j.1600-0870.2010.00490.x},
+  annote={[V] The small-gH counterpart of the waves; Shamir and Paldor (2016, section 6) found its phase speeds 40 per cent off in CESM. Not used.}
+}
+@article{Kasahara1976,
+  author={Kasahara, Akira},
+  title={Normal Modes of Ultralong Waves in the Atmosphere},
+  journal={Mon. Wea. Rev.},
+  volume={104},
+  number={6},
+  pages={669--690},
+  year={1976},
+  doi={10.1175/1520-0493(1976)104<0669:NMOUWI>2.0.CO;2},
+  annote={[A] Exact normal modes (Hough functions) of the SWE on the sphere, computed as a matrix eigenproblem. Considered as an alternative to the approximate Shamir-Paldor waves; not used.}
+}
+@article{SwarztrauberKasahara1985,
+  author={Swarztrauber, Paul N. and Kasahara, Akira},
+  title={The Vector Harmonic Analysis of {L}aplace's Tidal Equations},
+  journal={SIAM J. Sci. Stat. Comput.},
+  volume={6},
+  number={2},
+  pages={464--491},
+  year={1985},
+  doi={10.1137/0906033},
+  annote={[A] Numerical method for the exact normal modes. Considered, not used.}
+}
+@article{LonguetHiggins1968,
+  author={Longuet-Higgins, M. S.},
+  title={The Eigenfunctions of {L}aplace's Tidal Equations over a Sphere},
+  journal={Phil. Trans. R. Soc. A},
+  volume={262},
+  number={1132},
+  pages={511--607},
+  year={1968},
+  doi={10.1098/rsta.1968.0003},
+  annote={[A] Classical theory of the normal modes of the SWE on the sphere. Background.}
+}
+@article{Zagar2015,
+  author={{\v Z}agar, N. and Kasahara, A. and Terasaki, K. and Tribbia, J. and Tanaka, H.},
+  title={Normal-mode function representation of global 3-{D} data sets: open-access software for the atmospheric research community},
+  journal={Geosci. Model Dev.},
+  volume={8},
+  number={4},
+  pages={1169--1195},
+  year={2015},
+  doi={10.5194/gmd-8-1169-2015},
+  annote={[V, section 2] MODES software for the normal modes. Considered, not used.}
+}
+@article{Brachet2021,
+  author={Brachet, M. and Croisille, J.-P.},
+  title={Spherical shallow-water wave simulation by a cubed-sphere finite-difference solver},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={147},
+  number={735},
+  pages={786--800},
+  year={2021},
+  doi={10.1002/qj.3946},
+  annote={[V, author preprint] Run the Shamir-Paldor test (H = 5000 m; periods 3.16 h and 12.03 days for the published wave), which our implementation of eqs. 7-11 reproduces (3.2 h, 12.0 days).}
+}
+@article{Benard2019,
+  author={B{\'e}nard, Pierre},
+  title={Numerical investigation of {R}ossby waves for nonlinear shallow-water equations on the sphere},
+  journal={Q. J. R. Meteorol. Soc.},
+  volume={145},
+  number={721},
+  pages={1461--1473},
+  year={2019},
+  doi={10.1002/qj.3504},
+  annote={[A] Rossby modes of the nonlinear SWE undergo instabilities like those of the barotropic vorticity equation: what the large-amplitude waves of dataset 2 can show.}
+}
+@software{Ziskin2019pymaws,
+  author={Ziskin Ziv, Shlomi and Shamir, Ofer},
+  title={ofershamir/matsuno: release 0.1.1},
+  publisher={Zenodo},
+  version={v0.1.1},
+  year={2019},
+  doi={10.5281/zenodo.2605203},
+  annote={Python code of the Matsuno test case (Shamir et al. 2019, H = 30 m); no barotropic solution. Looked up, not used.}
+}
+@misc{Muser2026Dandelion,
+  author={Muser, Till and Abati, Giovanni and Dokmani{\'c}, Ivan},
+  title={Dandelion: A Spherical Flower for Neural Simulation of Planetary Dynamics},
+  year={2026},
+  eprint={2608.27521},
+  archivePrefix={arXiv},
+  annote={Uses PlanetSWE without regenerating it, and quotes sigma = pi/2 and a half-year burn-in from The Well's documentation, not from the code that generated the data.}
+}
+@misc{TheWellIssue96,
+  title={{PolymathicAI/the\_well} issue 96: planetswe time intervals},
+  year={2026},
+  url={https://github.com/PolymathicAI/the_well/issues/96},
+  annote={The stored time intervals of PlanetSWE vary between 0.983 and 1.018 h (CFL time steps). Background for dataset 6.}
+}

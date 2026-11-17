@@ -3,7 +3,9 @@ autosim.experimental.simulations.shallow_water_sphere
 
 Shallow water equations on the rotating sphere, solved with spherical harmonics
 (torch-harmonics, the ``spherical`` extra). The package is the data generator of a
-benchmark for probabilistic emulators on the sphere.
+benchmark for probabilistic emulators on the sphere. The file
+``shallow_water_sphere.bib`` at the root of the repository lists the references below,
+each with the reason to cite it.
 
 Initial conditions
 ------------------
@@ -13,55 +15,99 @@ its parameters. Equal bounds at the published values give the published case.
 
 =========================  ===================================================
 ``galewsky``               unstable jet with a height bump (Galewsky et al. 2004)
-``williamson2``            steady flow about a tilted axis (W92 case 2)
-``rossby_haurwitz``        Rossby-Haurwitz wave (W92 case 6)
-``mountain``               zonal flow over an isolated mountain (W92 case 5)
-``restart``                a supplied state: branching and ensembles
-``from_fields``            supplied fields after a balance step (W92 case 7)
+``williamson3``            steady jet with compact support about a tilted axis
+                           (W92 case 3)
+``shamir_paldor``          Rossby or inertia-gravity wave of the linearised SWE
+                           (Shamir and Paldor 2016)
+``mountain``               zonal flow over a Gaussian mountain (W92 case 5, with
+                           the mountain of DCMIP-2008)
+``era5``                   ERA5 at 500 hPa over the smoothed orography of the
+                           Earth, balanced (W92 case 7; ``era5`` extra and
+                           network access)
 =========================  ===================================================
 
-Physics
--------
+Each family exercises a different part of the dynamics. ``williamson3`` is steady:
+the emulator should not drift, and the tilted case is the rotated one. W92 case 2 is
+not used, because a spectral model represents it exactly (Jakob et al. 1993).
+``shamir_paldor`` carries one Rossby or inertia-gravity wave from the closed forms of
+Shamir and Paldor (2016). The Rossby-Haurwitz wave of W92 case 6 is not used: it is not
+a solution of the shallow water equations and contains no gravity waves.
+``galewsky`` has a gravity-wave adjustment and the roll-up of a shear instability.
+``mountain`` replaces the cone of W92, whose truncated series rings, by a smooth
+mountain. ``era5`` gives real atmospheric states. Its orography is smoothed with the
+filter :math:`\exp[-(l/28)^4]`, so the layer between the ground and the 500 hPa
+surface stays positive over Tibet, and a date whose balanced depth falls below
+``era5_min_depth`` is drawn again.
+
+Physics and forcing
+-------------------
 
 The Coriolis parameter is a grid field for a rotation axis of any direction
 (``rotation_axis``). An orography enters through the free surface. With
 ``return_constant_fields=True`` both are returned in ``constant_fields``.
-``relaxation_time`` relaxes the height towards the balanced height of a zonal jet and
-``drag_time`` damps the wind; together they give a statistically steady flow with a
-jet and eddies.
 
-Stochastic forcing
-------------------
+The processes below can be used alone or together:
 
-``forcing_type`` is ``"none"``, ``"vortical"`` or ``"momentum"``. Both follow
-Berner et al. (2009): a pattern in spherical harmonics whose
-coefficients are AR(1) processes, with ``forcing_energy_rate`` the kinetic energy
-injected per unit mass and time. ``forcing_backscatter_fraction`` adds a fraction of
-the diagnosed dissipation to that rate, as its global mean or, with
-``forcing_backscatter_mode="local"``, as a field: the noise then depends on the flow.
+- ``relaxation_time`` relaxes the height towards an equilibrium and ``drag_time``
+  damps the wind. With ``relaxation_target="jet"`` the equilibrium is the balanced
+  height of a zonal jet, and the flow reaches a statistically steady state with a jet
+  and eddies. With ``"era5_climatology"`` it is the ERA5 1990-2019 climatology of the
+  start date's day and hour.
+- ``forcing_type`` ``"vortical"`` or ``"momentum"``: the kinetic-energy forcing of
+  Berner et al. (2009), a pattern in spherical harmonics whose coefficients are AR(1)
+  processes, with ``forcing_energy_rate`` the kinetic energy injected per unit mass
+  and time. ``"momentum"`` adds a divergent part (Shutts 2015).
+  ``forcing_backscatter_fraction`` adds a fraction of the diagnosed dissipation to
+  that rate, as its global mean or, with ``forcing_backscatter_mode="local"``, as a
+  field (B09 eq. 13): the noise then depends on the flow.
+- ``sppt_amplitudes``: stochastically perturbed physics tendencies (ECMWF's SPPT,
+  Palmer et al. 2009). The increment of the drag and the relaxation is multiplied by
+  ``1 + r``, with ``r`` a sum of AR(1) Gaussian fields, clipped. The kinetic forcing
+  is additive and acts on the wind; SPPT is multiplicative and acts mostly on the
+  height. The two are complementary (Arnold et al. 2013; Christensen 2020).
+- ``periodic_forcing_amplitude``: the daily and yearly height source of The Well's
+  planetswe (Ohana et al. 2024), as in its generation code: the run is no longer
+  autonomous. ``return_periodic_forcing=True`` returns the forcing at each saved frame,
+  a known input of the emulator.
 
-The pattern has memory. ``branch_forcing_state="redraw"`` draws it anew where a
-forecast branches, so the forecast depends on the saved fields alone. ``"carry"``
-keeps it, and ``return_forcing_state=True`` returns it as an extra input.
+The random patterns have memory. At the first saved frame they are drawn anew, so the
+forecast from that frame depends on the saved fields alone. ``return_forcing_state``
+returns the kinetic pattern as an extra input, and ``return_additional_input_fields``
+the increments added by all the forcings between frames.
 
 Ensembles and coarse-graining
 -----------------------------
 
-A restart with ``n`` simulations gives ``n`` members from one state.
 ``reference_members`` branches members from the first saved frame of every generated
-simulation. ``output_lmax`` saves the run truncated to a lower band limit, and
-``return_baseline=True`` adds the run of the solver at that band limit.
+simulation, each with its own random streams. ``output_lmax`` saves the run truncated
+to a lower band limit, and ``return_baseline=True`` adds the run of the solver at that
+band limit.
 
 Datasets
 --------
 
-The configs ``shallow_water_sphere_d*.yaml`` and ``shallow_water_sphere_t*.yaml``
-define the datasets of the benchmark:
+The configs ``shallow_water_sphere_ds1_*.yaml`` to ``ds6_*.yaml`` define the six
+datasets of the benchmark, at L = 256 on the 384 x 768 Gauss-Legendre grid. Every run is
+an independent trajectory; only Williamson 3 is unforced.
+
+=========================  ==================================================  =================
+Config                     Family and forcing                                  Length, saved
+=========================  ==================================================  =================
+``ds1_williamson3``        W92 case 3, no forcing                              10 days, 6 h
+``ds2_shamir_paldor``      Shamir-Paldor wave, divergent forcing               10 days, 1 h
+``ds3_galewsky``           Galewsky jet, relaxation, drag, vortical, SPPT      10 days, 1 h
+``ds4_mountain``           Gaussian mountain, local backscatter                15 days, 6 h
+``ds5_era5_weather``       ERA5, relaxation to the climatology, drag,          10 days, 6 h
+                           vortical, SPPT
+``ds6_era5_climate``       ERA5, The Well's periodic forcing                   3 years, 1 h
+=========================  ==================================================  =================
 
 .. code-block:: console
 
-   uv run autosim --config-name generate_data_swe_sphere simulator=experimental/shallow_water_sphere_d1_galewsky
-   uv run autosim --config-name generate_data_swe_sphere_t1
+   uv run autosim --config-name generate_data_swe_sphere simulator=experimental/shallow_water_sphere_ds3_galewsky
+
+Dataset 6 follows PlanetSWE, with 40 trajectories (``dataset.n_train=32
+dataset.n_valid=4 dataset.n_test=4``).
 
 The notebook ``examples/experimental/01_05_spherical_shallow_water_benchmark.ipynb``
 runs every family and forcing at a small size.
@@ -79,6 +125,12 @@ runs every family and forcing at a small size.
    :members:
 
 .. automodule:: autosim.experimental.simulations.shallow_water_sphere.initial_conditions
+   :members:
+
+.. automodule:: autosim.experimental.simulations.shallow_water_sphere.shamir_paldor
+   :members:
+
+.. automodule:: autosim.experimental.simulations.shallow_water_sphere.era5
    :members:
 
 .. automodule:: autosim.experimental.simulations.shallow_water_sphere.forcing

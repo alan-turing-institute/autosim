@@ -27,9 +27,9 @@ tendencies equal torch-harmonics' ``ShallowWaterSolver.dudtspec``.
 
 **Time step.** Third-order Adams-Bashforth on the conservative terms, with the linear
 terms (hyperdiffusion, drag, relaxation) as an exact integrating factor. The forcing
-:math:`F` is stochastic and is added after each step by operator splitting: its
-increment is damped from the next step on and never enters the history of the
-Adams-Bashforth scheme (module ``integration``).
+:math:`F` is added after each step by operator splitting: its increment is damped
+from the next step on and never enters the history of the Adams-Bashforth scheme
+(module ``integration``).
 
 **Forcing** (module ``forcing``). ``"vortical"`` is a streamfunction pattern
 :math:`\psi'` whose coefficients follow the AR(1) process of Berner et al. (2009),
@@ -43,13 +43,16 @@ gained by a free random walk of the increments):
 :math:`\Gamma = \sum_l l(l+1)(2l+1)\,l^{2p}`. A backscatter adds
 a fraction of the kinetic energy lost to the hyperdiffusion (and to the drag, with
 ``backscatter_include_drag``) to :math:`\varepsilon`, as its global mean or as a
-field on the grid (Berner et al., eq. 13).
+field on the grid (Berner et al., eq. 13). SPPT multiplies the increment of the drag
+and the relaxation by a random pattern :math:`r` (ECMWF; Palmer et al. 2009,
+Leutbecher et al. 2017), and The Well's planetswe forcing adds a daily and yearly
+height source. The three forcings can be combined.
 
-**Latent forcing state.** The pattern has memory that the saved fields do not show.
-Where a forecast branches (a restart, or the first saved frame of a generated run),
-``branch_forcing_state="redraw"`` draws the pattern from its stationary distribution,
-so the forecast distribution is :math:`p(x_{n+1} \mid x_n)`. ``"carry"`` keeps the
-pattern, which ``return_forcing_state`` saves as an extra input: the oracle setting.
+**Latent forcing state.** The random patterns have memory that the saved fields do
+not show. At the first saved frame, where reference members branch, they are drawn
+anew from their stationary distribution, so the forecast distribution from that frame
+is :math:`p(x_{n+1} \mid x_n)`. ``return_forcing_state`` saves the kinetic pattern as
+an extra input.
 
 **Decisions.**
 
@@ -74,8 +77,10 @@ Modules:
 
 - ``dynamics``: operators, tendencies, time step, energy, conversion to and from
   saved fields;
-- ``initial_conditions``: one function per family (Galewsky jet, W92 cases 2, 5, 6);
-- ``forcing``: stochastic kinetic-energy forcing and backscatter;
+- ``initial_conditions``: one function per family (Galewsky jet, W92 cases 3 and 5);
+- ``shamir_paldor``: Rossby and inertia-gravity waves of Shamir and Paldor (2016);
+- ``era5``: initial states from ERA5 at 500 hPa (W92 case 7), from WeatherBench2;
+- ``forcing``: kinetic-energy forcing and backscatter, SPPT, periodic forcing;
 - ``integration``: the time loop of a batch and its energy budget;
 - ``diagnostics``: spectra, invariants, W92 error norms, non-zonal energy;
 - ``rotation``: rotation of states and saved frames by an element of SO(3);
@@ -83,9 +88,12 @@ Modules:
 
 References: Galewsky, Scott and Polvani (2004, Tellus A 56, 429-440); Williamson,
 Drake, Hack, Jakob and Swarztrauber (1992, J. Comput. Phys. 102, 211-224), "W92";
-Berner, Shutts, Leutbecher and Palmer (2009, J. Atmos. Sci. 66, 603-626), "B09".
+Berner, Shutts, Leutbecher and Palmer (2009, J. Atmos. Sci. 66, 603-626), "B09". The
+file ``shallow_water_sphere.bib`` at the root of the repository lists every reference
+with the reason to cite it.
 
-Requires the optional ``spherical`` extra (torch-harmonics with grid descriptors).
+Requires the optional ``spherical`` extra (torch-harmonics with grid descriptors), and
+the ``era5`` extra for the ``"era5"`` family.
 """
 
 from .diagnostics import (
@@ -110,8 +118,23 @@ from .dynamics import (
     step_damping_factors,
     total_energy,
 )
+from .era5 import (
+    ERA5_CLIMATOLOGY_STORE,
+    ERA5_RANGES,
+    ERA5_STORE,
+    Era5Fields,
+    era5_hours,
+    era5_initial_condition,
+    era5_source_dynamics,
+    era5_time_index,
+    load_era5_climatology,
+    load_era5_fields,
+    orography_filter,
+)
 from .forcing import (
     ForcingSettings,
+    PeriodicForcingSettings,
+    SpptSettings,
     advance_pattern,
     autoregressive_parameter,
     complex_noise,
@@ -119,20 +142,27 @@ from .forcing import (
     global_dissipation_rate,
     kinetic_forcing_increment,
     local_dissipation_rate,
+    periodic_forcing_increment,
+    periodic_height_forcing,
+    physics_increment,
+    sppt_increment,
+    sppt_noise_amplitudes,
+    sppt_pattern_on_grid,
     stationary_pattern,
     unit_rate_amplitudes,
 )
 from .initial_conditions import (
     GALEWSKY_RANGES,
     MOUNTAIN_RANGES,
-    ROSSBY_HAURWITZ_RANGES,
-    WILLIAMSON2_RANGES,
+    WILLIAMSON3_RANGES,
+    balance_state,
     balanced_geopotential,
     galewsky_initial_condition,
     mountain_initial_condition,
     mountain_orography,
-    rossby_haurwitz_initial_condition,
-    williamson2_initial_condition,
+    solid_body_zonal_flow,
+    tilted_pole_coriolis,
+    williamson3_initial_condition,
     zonal_jet,
 )
 from .integration import ENERGY_BUDGET_NAMES, integrate_trajectories
@@ -141,6 +171,15 @@ from .rotation import (
     rotate_fields,
     rotate_point,
     wigner_d_matrix,
+)
+from .shamir_paldor import (
+    SHAMIR_PALDOR_RANGES,
+    WAVE_TYPES,
+    gegenbauer,
+    meridional_structure,
+    phase_speeds,
+    shamir_paldor_initial_condition,
+    wave_phase_speed,
 )
 from .simulator import (
     FORCING_TYPES,
@@ -152,26 +191,39 @@ from .simulator import (
 
 __all__ = [
     "ENERGY_BUDGET_NAMES",
+    "ERA5_CLIMATOLOGY_STORE",
+    "ERA5_RANGES",
+    "ERA5_STORE",
     "FORCING_TYPES",
     "GALEWSKY_RANGES",
     "INITIAL_CONDITIONS",
     "MOUNTAIN_RANGES",
-    "ROSSBY_HAURWITZ_RANGES",
     "SAMPLED_SCALARS",
-    "WILLIAMSON2_RANGES",
+    "SHAMIR_PALDOR_RANGES",
+    "WAVE_TYPES",
+    "WILLIAMSON3_RANGES",
+    "Era5Fields",
     "ForcingSettings",
+    "PeriodicForcingSettings",
     "SphereShallowWaterDynamics",
     "SphericalShallowWater",
+    "SpptSettings",
     "adams_bashforth_step",
     "advance_pattern",
     "autoregressive_parameter",
+    "balance_state",
     "balanced_geopotential",
     "complex_noise",
     "coriolis_parameter",
     "degree_power",
     "dissipation_taper",
+    "era5_hours",
+    "era5_initial_condition",
+    "era5_source_dynamics",
+    "era5_time_index",
     "fields_to_spectral",
     "galewsky_initial_condition",
+    "gegenbauer",
     "global_dissipation_rate",
     "global_integral",
     "height_error_norms",
@@ -181,24 +233,38 @@ __all__ = [
     "invariants",
     "kinetic_energy_spectrum",
     "kinetic_forcing_increment",
+    "load_era5_climatology",
+    "load_era5_fields",
     "local_dissipation_rate",
     "make_grid",
+    "meridional_structure",
     "mountain_initial_condition",
     "mountain_orography",
     "non_zonal_energy",
-    "rossby_haurwitz_initial_condition",
+    "orography_filter",
+    "periodic_forcing_increment",
+    "periodic_height_forcing",
+    "phase_speeds",
+    "physics_increment",
     "rotate_coefficients",
     "rotate_fields",
     "rotate_point",
     "sample_generators",
     "shallow_water_tendencies",
+    "shamir_paldor_initial_condition",
+    "solid_body_zonal_flow",
     "spectral_to_fields",
+    "sppt_increment",
+    "sppt_noise_amplitudes",
+    "sppt_pattern_on_grid",
     "stationary_pattern",
     "step_damping_factors",
+    "tilted_pole_coriolis",
     "total_energy",
     "unit_rate_amplitudes",
+    "wave_phase_speed",
     "wigner_d_matrix",
-    "williamson2_initial_condition",
+    "williamson3_initial_condition",
     "wind_error_norms",
     "zonal_jet",
 ]

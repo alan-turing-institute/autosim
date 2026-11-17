@@ -40,6 +40,10 @@ GRAVITY = 9.80616
 MEAN_DEPTH = 1.0e4
 LMAX = 22
 DT = 300.0
+# Columns of the energy budget: the rate of the kinetic forcing, and the energy
+# changes of the processes before it
+RATE = ENERGY_BUDGET_NAMES.index("effective_forcing_energy_rate")
+CHANGES = slice(1, RATE)
 # The published Galewsky jet: equal bounds fix every parameter
 FIXED_GALEWSKY = {
     "jet_speed": (80.0, 80.0),
@@ -443,6 +447,20 @@ def test_relaxation_and_drag_through_the_simulator_conserve_the_mass():
     assert mean.abs().max() < 1e-2
 
 
+def test_jet_target_over_orography_is_the_depth_under_the_jet():
+    """Over a mountain, the equilibrium is the free surface of the jet minus g h_s."""
+    sim = _small_simulator(initial_condition="mountain", relaxation_time=24.0)
+    rows = sim.sample_inputs(2, random_seed=0)
+    _, coriolis, surface = sim.initial_problem(rows, [])
+    assert surface is not None
+    assert surface.abs().max() > 0
+    _, _, free_surface = sim.damping_settings(rows, coriolis, None)
+    _, _, equilibrium = sim.damping_settings(rows, coriolis, surface)
+    assert free_surface is not None
+    assert equilibrium is not None
+    torch.testing.assert_close(equilibrium, free_surface - surface, rtol=0.0, atol=0.0)
+
+
 # ---------------------------------------------------------------------------
 # Forced runs: reproducibility, outputs, energy budget
 # ---------------------------------------------------------------------------
@@ -590,12 +608,12 @@ def test_energy_budget_closes_in_double_precision():
     assert budget.shape == (batch, 4, len(ENERGY_BUDGET_NAMES))
     assert budget.dtype == torch.float64
     change = budget[:, 1:, 0] - budget[:, :-1, 0]
-    terms = budget[:, :-1, 1:6].sum(dim=-1)
+    terms = budget[:, :-1, CHANGES].sum(dim=-1)
     assert (change - terms).abs().max() < 1e-12 * budget[:, :, 0].abs().max()
     assert budget[:, -1, 1:].abs().max() == 0.0
     assert (budget[:, :-1, 2] <= 0).all()  # hyperdiffusion removes energy
     assert (budget[:, :-1, 3] < 0).all()  # so does the drag
-    assert (budget[:, :-1, 6] > 1e-5).all()  # base rate plus backscatter
+    assert (budget[:, :-1, RATE] > 1e-5).all()  # base rate plus backscatter
     # the first column is the energy of the saved states
     final_energy = total_energy(dynamics, output["final_state"])
     torch.testing.assert_close(budget[:, -1, 0], final_energy.cpu())
@@ -611,10 +629,10 @@ def test_energy_budget_through_the_simulator():
     sim = _small_simulator(return_energy_budget=True, **options)
     payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
     budget = payload["energy_budget"]
-    assert budget.shape == (2, 4, 7)
+    assert budget.shape == (2, 4, len(ENERGY_BUDGET_NAMES))
     assert sim.energy_budget_names == list(ENERGY_BUDGET_NAMES)
     change = budget[:, 1:, 0] - budget[:, :-1, 0]
-    terms = budget[:, :-1, 1:6].sum(dim=-1)
+    terms = budget[:, :-1, CHANGES].sum(dim=-1)
     # the saved budget is float32: its closure is that of the rounding of the energy
     torch.testing.assert_close(
         change, terms, rtol=1e-3, atol=1e-3 * budget[..., 0].max().item()
@@ -623,7 +641,7 @@ def test_energy_budget_through_the_simulator():
     # and it is positive on average
     assert budget[:, :-1, 5].mean() > 0
     torch.testing.assert_close(
-        budget[:, :-1, 6], torch.full_like(budget[:, :-1, 6], 1e-4)
+        budget[:, :-1, RATE], torch.full_like(budget[:, :-1, RATE], 1e-4)
     )
     # without drag and relaxation their terms are zero
     assert budget[..., 3].abs().max() == 0.0
@@ -641,7 +659,7 @@ def test_unforced_energy_budget_has_no_forcing_term():
     sim = _small_simulator(return_energy_budget=True)
     budget = sim.forward_samples_spatiotemporal(n=1, random_seed=0)["energy_budget"]
     assert budget[..., 5].abs().max() == 0.0
-    assert budget[..., 6].abs().max() == 0.0
+    assert budget[..., RATE].abs().max() == 0.0
     assert (budget[:, :-1, 2] <= 0).all()
 
 
@@ -664,11 +682,11 @@ def test_global_backscatter_drives_the_forcing_from_the_dissipation():
     ]
     payload_full = full.forward_samples_spatiotemporal(n=2, random_seed=0)
     budget_full = payload_full["energy_budget"]
-    assert (budget_half[:, 0, 6] > 0).all()
+    assert (budget_half[:, 0, RATE] > 0).all()
     assert payload_full["additional_input_fields"][:, 0].abs().max() > 0
     # the rate is proportional to the fraction, up to the feedback of the forcing
     # on the dissipation over these 3 h
-    ratio = budget_full[:, 0, 6] / budget_half[:, 0, 6]
+    ratio = budget_full[:, 0, RATE] / budget_half[:, 0, RATE]
     torch.testing.assert_close(ratio, torch.full_like(ratio, 2.0), rtol=0.15, atol=0.0)
 
 
@@ -691,7 +709,7 @@ def test_local_backscatter_rate_is_at_least_the_global_one():
         payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
         assert torch.isfinite(payload["data"]).all()
         assert payload["additional_input_fields"][:, 0].abs().max() > 0
-        rates[mode] = payload["energy_budget"][:, 0, 6]
+        rates[mode] = payload["energy_budget"][:, 0, RATE]
     assert (rates["local"] >= rates["global"]).all()
     assert (rates["local"] < 4 * rates["global"]).all()
 
@@ -716,7 +734,7 @@ def test_sampled_forcing_scalars_are_returned_in_constant_scalars():
     assert rate.unique().numel() == 4
     # each simulation was forced at its own rate
     torch.testing.assert_close(
-        payload["energy_budget"][:, 0, 6], rate, rtol=1e-5, atol=0.0
+        payload["energy_budget"][:, 0, RATE], rate, rtol=1e-5, atol=0.0
     )
 
 

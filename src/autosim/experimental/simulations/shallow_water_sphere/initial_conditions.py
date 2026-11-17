@@ -17,7 +17,7 @@ import torch
 
 from autosim.types import TensorLike
 
-from .dynamics import SphereShallowWaterDynamics
+from .dynamics import SphereShallowWaterDynamics, coriolis_parameter
 
 GALEWSKY_RANGES: dict[str, tuple[float, float]] = {
     "jet_speed": (60.0, 100.0),  # u_max [m/s], paper: 80
@@ -26,26 +26,21 @@ GALEWSKY_RANGES: dict[str, tuple[float, float]] = {
     "perturbation_lat": (math.pi / 5, math.pi / 3),  # bump latitude [rad], paper: pi/4
 }
 
-# W92 case 2, steady zonal flow about an axis tilted by alpha.
-WILLIAMSON2_RANGES: dict[str, tuple[float, float]] = {
+# W92 case 3, steady zonal jet with compact support about an axis tilted by alpha.
+WILLIAMSON3_RANGES: dict[str, tuple[float, float]] = {
     "flow_speed": (20.0, 40.0),  # u_0 [m/s], W92: 2 pi a / 12 days = 38.61
-    "tilt": (0.0, math.pi / 2),  # alpha [rad], W92: 0, 0.05, pi/2 - 0.05, pi/2
+    "tilt": (0.0, math.pi / 2),  # alpha [rad], W92: 0 and pi/3
 }
 
-# W92 case 6, Rossby-Haurwitz wave.
-ROSSBY_HAURWITZ_RANGES: dict[str, tuple[float, float]] = {
-    "wavenumber": (3.0, 6.0),  # R, rounded to the nearest integer, W92: 4
-    "wave_amplitude": (5.0e-6, 1.0e-5),  # K = omega [1/s], W92: 7.848e-6
-    "mean_depth": (7000.0, 9000.0),  # h_0 [m], W92: 8000
-}
-
-# W92 case 5, zonal flow over an isolated mountain. The flow speed and the depth h_0
-# (5960 m, the simulator's mean_depth) are the values of the journal version as quoted
-# in the literature; the ORNL report prints 5400 m and no speed.
+# W92 case 5, zonal flow over an isolated mountain, with the Gaussian mountain of
+# DCMIP-2008 (section 1.5) in place of the cone of W92. The flow speed and the depth
+# h_0 (5960 m, the simulator's mean_depth) are the values of the journal version as
+# quoted in the literature; the ORNL report prints 5400 m and no speed.
 MOUNTAIN_RANGES: dict[str, tuple[float, float]] = {
     "flow_speed": (10.0, 30.0),  # u_0 [m/s], W92: 20
-    "mountain_height": (1000.0, 3000.0),  # h_s0 [m], W92: 2000
-    "mountain_radius": (math.pi / 12, math.pi / 6),  # R [rad], W92: pi/9
+    "mountain_height": (1000.0, 3000.0),  # h_0 [m], W92 and DCMIP-2008: 2000
+    # half-width d [rad], 1000 to 2000 km on the Earth; DCMIP-2008: 1500 km
+    "mountain_width": (1.0e6 / 6.37122e6, 2.0e6 / 6.37122e6),
     "mountain_lon": (0.0, 2 * math.pi),  # lambda_c [rad], W92: -pi/2, i.e. 3 pi/2
     "mountain_lat": (-math.pi / 3, math.pi / 3),  # theta_c [rad], W92: pi/6
 }
@@ -94,6 +89,42 @@ def balanced_geopotential(
         math.sqrt(4 * math.pi) * dynamics.gravity * dynamics.mean_depth
     )
     return geopotential
+
+
+def balance_state(
+    dynamics: SphereShallowWaterDynamics,
+    state: TensorLike,
+    coriolis: TensorLike | None = None,
+    surface_geopotential: TensorLike | None = None,
+) -> TensorLike:
+    """Balance step of analysed fields: no divergence, height from the vorticity.
+
+    The divergence is removed and the free surface is replaced by the one in
+    nonlinear balance with the remaining wind (``balanced_geopotential``), with the
+    global mean of the supplied free surface. W92 (p. 19) suggests a discrete balance
+    of this kind for initial states; for analysed fields (case 7) it recommends a
+    normal-mode initialisation instead, which this step replaces.
+
+    Args:
+        dynamics: Fixed operators.
+        state: Spectral state (B, 3, L, L), the geopotential of the fluid depth.
+        coriolis: Coriolis parameter (B, *grid.shape); None is the polar one.
+        surface_geopotential: Coefficients of g h_s, (B, L, L); None is a flat bottom.
+
+    Returns:
+        The balanced spectral state (B, 3, L, L).
+    """
+    vorticity = state[:, 1]
+    divergence = torch.zeros_like(vorticity)
+    free_surface = balanced_geopotential(dynamics, vorticity, divergence, coriolis)
+    supplied_free_surface = state[:, 0]
+    if surface_geopotential is not None:
+        supplied_free_surface = supplied_free_surface + surface_geopotential
+    free_surface[:, 0, 0] = supplied_free_surface[:, 0, 0]
+    geopotential = free_surface
+    if surface_geopotential is not None:
+        geopotential = free_surface - surface_geopotential
+    return torch.tril(torch.stack([geopotential, vorticity, divergence], dim=1))
 
 
 def galewsky_initial_condition(
@@ -198,7 +229,10 @@ def galewsky_initial_condition(
                 generator=generator,
                 device=generator.device,
             )
-    noise[:, :, 0] = noise[:, :, 0].real  # a real field has real m = 0 coefficients
+    # A real field has real m = 0 coefficients. The real part is copied first: torch
+    # rejects a write from a view of the same memory (seen with one simulation and
+    # noise_lmax = 1).
+    noise[:, :, 0] = noise[:, :, 0].real.clone()
     scale = gravity * noise_amplitude * math.sqrt(4 * math.pi / (k * (k + 1)))
     geopotential[:, :k, :k] += scale * noise.to(device)
 
@@ -206,32 +240,68 @@ def galewsky_initial_condition(
     return torch.tril(state)  # keep m <= l
 
 
-def williamson2_initial_condition(
-    dynamics: SphereShallowWaterDynamics, flow_speed: TensorLike, tilt: TensorLike
+def tilted_pole_coriolis(
+    dynamics: SphereShallowWaterDynamics, tilt: TensorLike
 ) -> TensorLike:
-    r"""Steady zonal flow about a tilted axis, W92 case 2.
+    r"""Coriolis parameter of W92 eq. (96), for the rotation axis tilted by alpha.
 
-    The flow is a solid-body rotation about an axis tilted by :math:`\alpha` from the
-    geographic pole, and the Coriolis parameter uses the same axis (W92 eq. 96,
-    ``coriolis_parameter`` with the pole at longitude :math:`\pi` and latitude
-    :math:`\pi/2 - \alpha`), so the state is steady for any tilt. With
-    :math:`s = -\cos\lambda\cos\theta\sin\alpha + \sin\theta\cos\alpha`, the sine of
-    the latitude measured from the tilted pole (W92 eqs. 90, 91, 95):
-
-    .. math::
-
-        u = u_0(\cos\theta\cos\alpha + \cos\lambda\sin\theta\sin\alpha), \qquad
-        v = -u_0\sin\lambda\sin\alpha, \qquad
-        g h = g h_0 - \big(a\Omega u_0 + \tfrac12 u_0^2\big)\,s^2.
-
-    :math:`h_0` is ``mean_depth``. W92 uses :math:`u_0 = 2\pi a / 12` days,
-    :math:`g h_0 = 2.94\times10^4` m^2/s^2 and
-    :math:`\alpha = 0,\ 0.05,\ \pi/2 - 0.05,\ \pi/2`.
+    :math:`f = 2\Omega(-\cos\lambda\cos\theta\sin\alpha + \sin\theta\cos\alpha)`: the
+    rotation pole at longitude :math:`\pi` and latitude :math:`\pi/2 - \alpha`.
 
     Args:
         dynamics: Fixed operators.
-        flow_speed: Speed u_0 at the equator of the flow [m/s], shape (B,).
-        tilt: Angle alpha between the flow axis and the geographic pole [rad],
+        tilt: Angle alpha [rad], shape (B,).
+
+    Returns:
+        f on the grid [1/s], shape (B, *grid.shape).
+    """
+    # In float64: a pole misplaced by the float32 rounding of pi (1e-7 rad) unbalances
+    # a steady flow at the 1e-8 level.
+    axis_lon = torch.full(tilt.shape, math.pi, dtype=torch.float64)
+    axis_lat = math.pi / 2 - tilt.to(torch.float64)
+    return coriolis_parameter(dynamics, axis_lon, axis_lat)
+
+
+def williamson3_initial_condition(
+    dynamics: SphereShallowWaterDynamics, flow_speed: TensorLike, tilt: TensorLike
+) -> TensorLike:
+    r"""Steady zonal jet with compact support about a tilted axis, W92 case 3.
+
+    In the coordinates :math:`(\lambda', \theta')` whose pole is the rotation pole,
+    tilted by :math:`\alpha` from the geographic pole (W92 eq. 108,
+    :math:`\sin\theta' = \sin\theta\cos\alpha - \cos\theta\cos\lambda\sin\alpha`), the
+    wind is zonal (W92 eqs. 101 to 103):
+
+    .. math::
+
+        u' = u_0\, b(x)\, b(x_e - x)\, e^{4/x_e}, \qquad
+        x = x_e \frac{\theta' - \theta_b}{\theta_e - \theta_b}, \qquad
+        b(x) = e^{-1/x} \text{ for } x > 0, \ 0 \text{ otherwise},
+
+    with :math:`\theta_b = -\pi/6`, :math:`\theta_e = \pi/2` and :math:`x_e = 0.3`; its
+    maximum is :math:`u_0`. The flow about the unit vector :math:`\mathbf{n}` of the
+    rotation pole is :math:`u'\,(\mathbf{n}\times\hat{\mathbf{r}})/\cos\theta'`, which
+    in the local east and north directions is
+
+    .. math::
+
+        u = \frac{u'}{\cos\theta'}
+            (\cos\alpha\cos\theta + \sin\alpha\sin\theta\cos\lambda), \qquad
+        v = -\frac{u'}{\cos\theta'}\sin\alpha\sin\lambda.
+
+    The Coriolis parameter uses the same axis (``tilted_pole_coriolis``, W92 eq. 96).
+    The height is the one in nonlinear balance with the wind as represented with
+    degrees l < L (``balanced_geopotential``), as W92 (p. 19) suggests, in place of
+    the quadrature of W92 eq. (115). Its constant follows W92: :math:`h = h_0` where
+    the wind is zero, on the cap :math:`\theta' < \theta_b`; the represented height
+    has mean :math:`h_0` over that cap. :math:`h_0` is ``mean_depth``. W92 uses
+    :math:`u_0 = 2\pi a / 12` days, :math:`g h_0 = 2.94\times10^4` m^2/s^2 and
+    :math:`\alpha = 0` and :math:`\pi/3`.
+
+    Args:
+        dynamics: Fixed operators.
+        flow_speed: Maximum speed u_0 of the jet [m/s], shape (B,).
+        tilt: Angle alpha between the rotation axis and the geographic pole [rad],
             shape (B,).
 
     Returns:
@@ -239,113 +309,83 @@ def williamson2_initial_condition(
     """
     latitude = dynamics.latitude.unsqueeze(0)
     longitude = dynamics.longitude.unsqueeze(0)
+    grid_dims = tuple(range(-len(dynamics.grid.shape), 0))
     parameter_shape = (flow_speed.shape[0],) + (1,) * len(dynamics.grid.shape)
     u0 = flow_speed.to(latitude.device, torch.float64).reshape(parameter_shape)
     alpha = tilt.to(latitude.device, torch.float64).reshape(parameter_shape)
 
-    tilted_sine = -torch.cos(longitude) * torch.cos(latitude) * torch.sin(
-        alpha
-    ) + torch.sin(latitude) * torch.cos(alpha)
-    eastward = u0 * (
-        torch.cos(latitude) * torch.cos(alpha)
-        + torch.cos(longitude) * torch.sin(latitude) * torch.sin(alpha)
+    # Latitude theta' from the rotation pole, W92 eq. (108)
+    tilted_sine = torch.sin(latitude) * torch.cos(alpha) - torch.cos(
+        latitude
+    ) * torch.cos(longitude) * torch.sin(alpha)
+    tilted_latitude = torch.asin(tilted_sine.clamp(-1.0, 1.0))
+
+    # Jet speed u'(theta'), W92 eqs. (101) to (103). It is zero at both rotated poles,
+    # where cos(theta') vanishes.
+    theta_b = -math.pi / 6
+    theta_e = math.pi / 2
+    x_e = 0.3
+    x = x_e * (tilted_latitude - theta_b) / (theta_e - theta_b)
+    inside = (x > 0) & (x < x_e)
+    safe_x = torch.where(inside, x, x_e / 2)
+    speed = torch.where(
+        inside, u0 * torch.exp(4 / x_e - 1 / safe_x - 1 / (x_e - safe_x)), 0.0
     )
-    northward = -u0 * torch.sin(longitude) * torch.sin(alpha)
-    northward = northward.expand_as(eastward)
-    geopotential_grid = (
-        dynamics.gravity * dynamics.mean_depth
-        - (dynamics.radius * dynamics.omega * u0 + 0.5 * u0**2) * tilted_sine**2
+    tilted_cosine = torch.cos(tilted_latitude)
+    speed_over_cosine = torch.where(
+        inside, speed / torch.where(inside, tilted_cosine, 1.0), 0.0
     )
 
+    # Wind of the flow about the rotation pole, in the local east and north directions
+    eastward = speed_over_cosine * (
+        torch.cos(alpha) * torch.cos(latitude)
+        + torch.sin(alpha) * torch.sin(latitude) * torch.cos(longitude)
+    )
+    northward = -speed_over_cosine * torch.sin(alpha) * torch.sin(longitude)
     wind = torch.stack([eastward, northward], dim=1)
     vorticity, divergence = dynamics.vorticity_divergence(wind)
-    geopotential = dynamics.to_coefficients(geopotential_grid)
+
+    # Height in nonlinear balance with the represented wind, h = h_0 on the cap
+    coriolis = tilted_pole_coriolis(dynamics, tilt)
+    geopotential = balanced_geopotential(dynamics, vorticity, divergence, coriolis)
+    cap_weights = dynamics.quad_weights * (tilted_latitude < theta_b)
+    cap_mean = (dynamics.to_grid(geopotential) * cap_weights).sum(
+        dim=grid_dims
+    ) / cap_weights.sum(dim=grid_dims)
+    target = dynamics.gravity * dynamics.mean_depth
+    geopotential[:, 0, 0] += math.sqrt(4 * math.pi) * (target - cap_mean)
+
     state = torch.stack([geopotential, vorticity, divergence], dim=1)
     return torch.tril(state)  # keep m <= l
 
 
-def rossby_haurwitz_initial_condition(
-    dynamics: SphereShallowWaterDynamics,
-    wavenumber: TensorLike,
-    wave_amplitude: TensorLike,
-    mean_depth: TensorLike,
+def solid_body_zonal_flow(
+    dynamics: SphereShallowWaterDynamics, flow_speed: TensorLike
 ) -> TensorLike:
-    r"""Rossby-Haurwitz wave, W92 case 6.
+    r"""Solid-body zonal flow about the geographic pole, W92 case 2 without tilt.
 
-    Wind of the stream function
-    :math:`\psi = -a^2\omega\sin\theta + a^2 K\cos^R\theta\sin\theta\cos R\lambda`
-    (W92 eqs. 137, 138) and the height that makes the initial divergence tendency
-    zero (eqs. 140-143):
-
-    .. math::
-
-        u &= a\omega\cos\theta
-            + aK\cos^{R-1}\theta\,(R\sin^2\theta - \cos^2\theta)\cos R\lambda, \\
-        v &= -aKR\cos^{R-1}\theta\,\sin\theta\,\sin R\lambda, \\
-        g h &= g h_0 + a^2 A(\theta) + a^2 B(\theta)\cos R\lambda
-            + a^2 C(\theta)\cos 2R\lambda,
-
-    .. math::
-
-        A &= \tfrac{\omega}{2}(2\Omega+\omega)\cos^2\theta + \tfrac14 K^2\cos^{2R}\theta
-            \big[(R+1)\cos^2\theta + (2R^2-R-2) - 2R^2\cos^{-2}\theta\big], \\
-        B &= \frac{2(\Omega+\omega)K}{(R+1)(R+2)}\cos^R\theta
-            \big[(R^2+2R+2) - (R+1)^2\cos^2\theta\big], \\
-        C &= \tfrac14 K^2\cos^{2R}\theta\big[(R+1)\cos^2\theta - (R+2)\big].
-
-    W92 uses :math:`\omega = K = 7.848\times10^{-6}` 1/s, :math:`h_0 = 8000` m and
-    :math:`R = 4`. Here :math:`\omega = K` is one parameter.
+    :math:`u = u_0\cos\theta`, :math:`v = 0` and
+    :math:`g h = g h_0 - (a\Omega u_0 + \tfrac12 u_0^2)\sin^2\theta` (W92 eqs. 90, 91,
+    95 with :math:`\alpha = 0`), with :math:`h_0` = ``mean_depth``: the background
+    flow of W92 case 5.
 
     Args:
         dynamics: Fixed operators.
-        wavenumber: Zonal wavenumber R, integer values, shape (B,).
-        wave_amplitude: omega = K [1/s], shape (B,).
-        mean_depth: Depth h_0 of eq. (140) [m], shape (B,).
+        flow_speed: Speed u_0 at the equator [m/s], shape (B,).
 
     Returns:
         Spectral state (B, 3, L, L).
     """
     latitude = dynamics.latitude.unsqueeze(0)
-    longitude = dynamics.longitude.unsqueeze(0)
-    parameter_shape = (wavenumber.shape[0],) + (1,) * len(dynamics.grid.shape)
-    R = wavenumber.to(latitude.device, torch.float64).reshape(parameter_shape)
-    K = wave_amplitude.to(latitude.device, torch.float64).reshape(parameter_shape)
-    h0 = mean_depth.to(latitude.device, torch.float64).reshape(parameter_shape)
-    omega_wave = K  # W92 takes omega = K
-    a = dynamics.radius
-    Omega = dynamics.omega
-    cos_lat = torch.cos(latitude)
-    sin_lat = torch.sin(latitude)
-
-    # Wind, eqs. (137) and (138)
-    eastward = a * omega_wave * cos_lat + a * K * cos_lat ** (R - 1) * (
-        R * sin_lat**2 - cos_lat**2
-    ) * torch.cos(R * longitude)
-    northward = -a * K * R * cos_lat ** (R - 1) * sin_lat * torch.sin(R * longitude)
-
-    # Height, eqs. (140) to (143). cos^(2R) * cos^(-2) is written cos^(2R - 2).
-    A = 0.5 * omega_wave * (2 * Omega + omega_wave) * cos_lat**2 + 0.25 * K**2 * (
-        (R + 1) * cos_lat ** (2 * R + 2)
-        + (2 * R**2 - R - 2) * cos_lat ** (2 * R)
-        - 2 * R**2 * cos_lat ** (2 * R - 2)
-    )
-    B = (
-        2
-        * (Omega + omega_wave)
-        * K
-        / ((R + 1) * (R + 2))
-        * cos_lat**R
-        * ((R**2 + 2 * R + 2) - (R + 1) ** 2 * cos_lat**2)
-    )
-    C = 0.25 * K**2 * cos_lat ** (2 * R) * ((R + 1) * cos_lat**2 - (R + 2))
+    parameter_shape = (flow_speed.shape[0],) + (1,) * len(dynamics.grid.shape)
+    u0 = flow_speed.to(latitude.device, torch.float64).reshape(parameter_shape)
+    eastward = u0 * torch.cos(latitude)
     geopotential_grid = (
-        dynamics.gravity * h0
-        + a**2 * A
-        + a**2 * B * torch.cos(R * longitude)
-        + a**2 * C * torch.cos(2 * R * longitude)
+        dynamics.gravity * dynamics.mean_depth
+        - (dynamics.radius * dynamics.omega * u0 + 0.5 * u0**2)
+        * torch.sin(latitude) ** 2
     )
-
-    wind = torch.stack([eastward, northward], dim=1)
+    wind = torch.stack([eastward, torch.zeros_like(eastward)], dim=1)
     vorticity, divergence = dynamics.vorticity_divergence(wind)
     geopotential = dynamics.to_coefficients(geopotential_grid)
     state = torch.stack([geopotential, vorticity, divergence], dim=1)
@@ -357,23 +397,24 @@ def mountain_orography(
     mountain_lon: TensorLike,
     mountain_lat: TensorLike,
     mountain_height: TensorLike,
-    mountain_radius: TensorLike,
+    mountain_width: TensorLike,
 ) -> TensorLike:
-    r"""Isolated conical mountain of W92 case 5 (eq. 134).
+    r"""Isolated Gaussian mountain of DCMIP-2008 (section 1.5, eqs. 81 and 82).
 
-    :math:`h_s = h_{s0}\,(1 - r/R)` with
-    :math:`r^2 = \min[R^2, (\lambda-\lambda_c)^2 + (\theta-\theta_c)^2]`: a cone in
-    longitude and latitude. W92 uses :math:`h_{s0} = 2000` m, :math:`R = \pi/9`,
-    :math:`\lambda_c = -\pi/2` and :math:`\theta_c = \pi/6`. The cone has a corner at
-    its summit and at its foot, so its truncated series rings (Galewsky et al. 2004).
-    The solver uses the truncated series returned here.
+    :math:`h_s = h_0 \exp[-(r/d)^2]` with :math:`r` the great-circle angle to the
+    summit, :math:`\cos r = \sin\theta_c\sin\theta + \cos\theta_c\cos\theta
+    \cos(\lambda - \lambda_c)`, and :math:`d` the half-width. DCMIP-2008 uses
+    :math:`h_0 = 2000` m and :math:`d` = 1500 km. It replaces the cone of W92 case 5
+    (eq. 134), which is not differentiable at its summit and foot, so that its
+    truncated series rings (J95; Galewsky et al. 2004); the Gaussian is smooth. The
+    solver uses the truncated series returned here.
 
     Args:
         dynamics: Fixed operators.
         mountain_lon: Longitude of the summit lambda_c [rad], shape (B,).
         mountain_lat: Latitude of the summit theta_c [rad], shape (B,).
-        mountain_height: Height of the summit h_s0 [m], shape (B,).
-        mountain_radius: Radius R of the base [rad], shape (B,).
+        mountain_height: Height of the summit h_0 [m], shape (B,).
+        mountain_width: Half-width d as an angle on the sphere [rad], shape (B,).
 
     Returns:
         Coefficients of the surface geopotential g h_s, shape (B, L, L).
@@ -384,13 +425,14 @@ def mountain_orography(
     lon_c = mountain_lon.to(latitude.device, torch.float64).reshape(parameter_shape)
     lat_c = mountain_lat.to(latitude.device, torch.float64).reshape(parameter_shape)
     height = mountain_height.to(latitude.device, torch.float64).reshape(parameter_shape)
-    radius = mountain_radius.to(latitude.device, torch.float64).reshape(parameter_shape)
+    width = mountain_width.to(latitude.device, torch.float64).reshape(parameter_shape)
 
-    # Longitude difference in [-pi, pi)
-    delta_lon = torch.remainder(longitude - lon_c + torch.pi, 2 * torch.pi) - torch.pi
-    distance = torch.sqrt(delta_lon**2 + (latitude - lat_c) ** 2)
-    distance = torch.minimum(distance, radius)
-    surface_height = height * (1 - distance / radius)
+    # Great-circle angle to the summit, DCMIP-2008 eq. (82) divided by a
+    cosine = torch.sin(lat_c) * torch.sin(latitude) + torch.cos(lat_c) * torch.cos(
+        latitude
+    ) * torch.cos(longitude - lon_c)
+    distance = torch.acos(cosine.clamp(-1.0, 1.0))
+    surface_height = height * torch.exp(-((distance / width) ** 2))
 
     surface_geopotential = dynamics.gravity * dynamics.to_coefficients(surface_height)
     return torch.tril(surface_geopotential)  # keep m <= l
@@ -402,13 +444,14 @@ def mountain_initial_condition(
     mountain_lon: TensorLike,
     mountain_lat: TensorLike,
     mountain_height: TensorLike,
-    mountain_radius: TensorLike,
+    mountain_width: TensorLike,
 ) -> tuple[TensorLike, TensorLike]:
-    """Zonal flow over an isolated mountain, W92 case 5.
+    """Zonal flow over an isolated mountain, W92 case 5 with a Gaussian mountain.
 
-    The wind and the free surface are those of case 2 without tilt, with h_0 =
-    ``mean_depth``. The mountain is placed under this balanced flow, so the fluid depth
-    of the state is the free surface minus the mountain, and the flow adjusts by
+    The wind and the free surface are those of case 2 without tilt
+    (``solid_body_zonal_flow``), with h_0 = ``mean_depth``. The mountain
+    (``mountain_orography``) is placed under this balanced flow, so the fluid depth of
+    the state is the free surface minus the mountain, and the flow adjusts by
     radiating gravity waves.
 
     Args:
@@ -417,16 +460,15 @@ def mountain_initial_condition(
         mountain_lon: Longitude of the summit [rad], shape (B,).
         mountain_lat: Latitude of the summit [rad], shape (B,).
         mountain_height: Height of the summit [m], shape (B,).
-        mountain_radius: Radius of the base [rad], shape (B,).
+        mountain_width: Half-width of the mountain [rad], shape (B,).
 
     Returns:
         The spectral state (B, 3, L, L) and the coefficients of the surface
         geopotential g h_s, shape (B, L, L).
     """
-    no_tilt = torch.zeros_like(flow_speed)
-    state = williamson2_initial_condition(dynamics, flow_speed, no_tilt)
+    state = solid_body_zonal_flow(dynamics, flow_speed)
     surface_geopotential = mountain_orography(
-        dynamics, mountain_lon, mountain_lat, mountain_height, mountain_radius
+        dynamics, mountain_lon, mountain_lat, mountain_height, mountain_width
     )
     state[:, 0] = state[:, 0] - surface_geopotential  # Phi = g * fluid depth
     return state, surface_geopotential

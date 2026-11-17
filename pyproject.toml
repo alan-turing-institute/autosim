@@ -32,6 +32,13 @@ spherical = [
     # Grid descriptors and HEALPix are on torch-harmonics main (unreleased v1.0 line).
     "torch-harmonics @ git+https://github.com/NVIDIA/torch-harmonics.git@c9bc3b8; python_version >= '3.11'",
 ]
+# ERA5 initial states of the spherical shallow water simulator (WeatherBench2 store),
+# checked with xarray 2026.9, zarr 3.4 and gcsfs 2026.10.
+era5 = [
+    "xarray>=2026.9; python_version >= '3.11'",
+    "zarr>=3.1,<4; python_version >= '3.11'",
+    "gcsfs>=2026.10; python_version >= '3.11'",
+]
 dev = [
     "ipykernel>=7.1.0",
     "pytest>=9.0.1",
@@ -58,9 +65,10 @@ relative_files = true
 source = [".", "/tmp"]
 
 [tool.pytest.ini_options]
-addopts = "--ignore=v0 --ignore=outputs -m 'not slow'"
+addopts = "--ignore=v0 --ignore=outputs -m 'not slow and not network'"
 markers = [
     "slow: long validation runs, excluded by default; select them with -m slow",
+    "network: reads remote data (ERA5 from WeatherBench2), excluded by default; select them with -m network",
 ]
 
 [tool.pyright]

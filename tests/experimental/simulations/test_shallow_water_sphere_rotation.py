@@ -17,13 +17,12 @@ from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E40
     coriolis_parameter,
     mountain_initial_condition,
     mountain_orography,
-    rossby_haurwitz_initial_condition,
     rotate_coefficients,
     rotate_fields,
     rotate_point,
+    shamir_paldor_initial_condition,
     spectral_to_fields,
     wigner_d_matrix,
-    williamson2_initial_condition,
 )
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -35,6 +34,10 @@ W2_MEAN_DEPTH = 2.94e4 / GRAVITY
 
 # Three different angles, so that a sign error in one of them cannot hide
 ANGLES = (0.7, 1.1, -0.4)
+# The Gaussian mountain of half-width 1500 km has negligible power above degree 43, so
+# its rotated coefficients equal those of the mountain at the rotated summit to
+# round-off (measured: 1.7e-15 at lmax = 43).
+GAUSSIAN_ROTATION_TOLERANCE = 1e-13
 
 
 def _dynamics(lmax, nlat, nlon, mean_depth):
@@ -45,6 +48,35 @@ def _dynamics(lmax, nlat, nlon, mean_depth):
         grid, lmax, RADIUS, OMEGA, GRAVITY, mean_depth, 3600 / steps_per_hour, DEVICE
     )
     return dynamics, steps_per_hour
+
+
+def _solid_body_state(dynamics, tilt):
+    r"""Solid-body flow about an axis tilted by ``tilt``, W92 case 2 (eqs. 90, 91, 95).
+
+    The wind has degree 1 and the height degrees 0 and 2, so the truncated basis holds
+    the state exactly: a reference for the rotation operator at round-off.
+    """
+    latitude = dynamics.latitude.unsqueeze(0)
+    longitude = dynamics.longitude.unsqueeze(0)
+    u0 = W2_FLOW_SPEED
+    tilted_sine = -torch.cos(longitude) * torch.cos(latitude) * math.sin(
+        tilt
+    ) + torch.sin(latitude) * math.cos(tilt)
+    eastward = u0 * (
+        torch.cos(latitude) * math.cos(tilt)
+        + torch.cos(longitude) * torch.sin(latitude) * math.sin(tilt)
+    )
+    northward = (-u0 * torch.sin(longitude) * math.sin(tilt)).expand_as(eastward)
+    geopotential = (
+        GRAVITY * W2_MEAN_DEPTH - (RADIUS * OMEGA * u0 + 0.5 * u0**2) * tilted_sine**2
+    )
+    vorticity, divergence = dynamics.vorticity_divergence(
+        torch.stack([eastward, northward], dim=1)
+    )
+    state = torch.stack(
+        [dynamics.to_coefficients(geopotential), vorticity, divergence], dim=1
+    )
+    return torch.tril(state)
 
 
 def _rotation_matrix(alpha, beta, gamma):
@@ -202,18 +234,15 @@ def test_rotate_point():
 
 
 @pytest.mark.parametrize("tilt", [0.05, 0.7, math.pi / 2])
-def test_rotating_williamson2_gives_the_tilted_state(tilt):
+def test_rotating_the_solid_body_flow_gives_the_tilted_state(tilt):
     """W92 case 2 at tilt 0, rotated by the tilt, is the analytic state at that tilt.
 
     The rotation pole of the tilted case is the geographic pole turned by
     beta = -tilt about the y axis (W92 eq. 96).
     """
     dynamics, _ = _dynamics(32, 48, 96, W2_MEAN_DEPTH)
-    flow_speed = torch.tensor([W2_FLOW_SPEED], dtype=torch.float64)
-    no_tilt = torch.tensor([0.0], dtype=torch.float64)
-    tilted = torch.tensor([tilt], dtype=torch.float64)
-    state = williamson2_initial_condition(dynamics, flow_speed, no_tilt)
-    expected = williamson2_initial_condition(dynamics, flow_speed, tilted)
+    state = _solid_body_state(dynamics, 0.0)
+    expected = _solid_body_state(dynamics, tilt)
 
     rotated = rotate_coefficients(state, 0.0, -tilt, 0.0)
     geopotential_scale = expected[:, 0].abs().max()
@@ -237,13 +266,8 @@ def test_wind_components_do_not_rotate_as_scalars():
     """Rotating the maps of u and v as two scalars gives a wrong wind."""
     dynamics, _ = _dynamics(32, 48, 96, W2_MEAN_DEPTH)
     tilt = 0.7
-    flow_speed = torch.tensor([W2_FLOW_SPEED], dtype=torch.float64)
-    state = williamson2_initial_condition(
-        dynamics, flow_speed, torch.tensor([0.0], dtype=torch.float64)
-    )
-    expected = williamson2_initial_condition(
-        dynamics, flow_speed, torch.tensor([tilt], dtype=torch.float64)
-    )
+    state = _solid_body_state(dynamics, 0.0)
+    expected = _solid_body_state(dynamics, tilt)
     frames = spectral_to_fields(dynamics, state)
     expected_frames = spectral_to_fields(dynamics, expected)
 
@@ -264,13 +288,16 @@ def test_rotated_problem_matches_rotated_simulation():
     round-off amplified by 12 h of integration.
     """
     alpha, beta, gamma = ANGLES
-    dynamics, steps_per_hour = _dynamics(43, 64, 128, 8000.0)
+    depth = 5.0e4 / GRAVITY  # gH of the published wave of Shamir and Paldor (2016)
+    dynamics, steps_per_hour = _dynamics(43, 64, 128, depth)
     assert dynamics.exact_products
-    state = rossby_haurwitz_initial_condition(
+    one = torch.ones(1, dtype=torch.float64)
+    state = shamir_paldor_initial_condition(
         dynamics,
-        wavenumber=torch.tensor([4.0]),
-        wave_amplitude=torch.tensor([7.848e-6], dtype=torch.float64),
-        mean_depth=torch.tensor([8000.0]),
+        wave_type=one,  # eastward inertia-gravity wave
+        zonal_wavenumber=10 * one,
+        mode_number=5 * one,
+        wave_amplitude=5 * one,
     )
     steps = 12 * steps_per_hour
 
@@ -297,14 +324,14 @@ def test_rotated_problem_matches_rotated_simulation():
 def test_rotated_problem_with_orography_matches_rotated_simulation():
     """The same with a mountain: the orography is rotated with the state.
 
-    The cone of W92 is defined in longitude and latitude, so the rotated orography
-    is the rotation of its coefficients and not the cone at the rotated summit.
+    The Gaussian mountain depends on the great-circle distance to its summit only, so
+    the rotation of its coefficients is the mountain at the rotated summit.
     """
     alpha, beta, gamma = ANGLES
     dynamics, steps_per_hour = _dynamics(43, 64, 128, 5960.0)
     parameters = [
         torch.tensor([value], dtype=torch.float64)
-        for value in (20.0, 1.5 * math.pi, math.pi / 6, 2000.0, math.pi / 9)
+        for value in (20.0, 1.5 * math.pi, math.pi / 6, 2000.0, 1.5e6 / RADIUS)
     ]
     state, surface = mountain_initial_condition(dynamics, *parameters)
     steps = 6 * steps_per_hour
@@ -328,15 +355,16 @@ def test_rotated_problem_with_orography_matches_rotated_simulation():
         difference = (simulated_rotation[:, index] - rotated_simulation[:, index]).abs()
         assert difference.max() < 1e-8 * scale
 
-    # the rotated orography differs from the W92 cone placed at the rotated summit
+    # the rotated orography is the Gaussian placed at the rotated summit
     summit_lon, summit_lat = rotate_point(
         1.5 * math.pi, math.pi / 6, alpha, beta, gamma
     )
-    cone = mountain_orography(
+    mountain = mountain_orography(
         dynamics,
         torch.tensor([summit_lon], dtype=torch.float64),
         torch.tensor([summit_lat], dtype=torch.float64),
         parameters[3],
         parameters[4],
     )
-    assert (cone - rotated_surface).abs().max() > 1e-3 * rotated_surface.abs().max()
+    error = (mountain - rotated_surface).abs().max()
+    assert error < GAUSSIAN_ROTATION_TOLERANCE * rotated_surface.abs().max()

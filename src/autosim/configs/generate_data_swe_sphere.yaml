@@ -1,16 +1,16 @@
 # Datasets of the spherical shallow water benchmark.
-#   autosim --config-name generate_data_swe_sphere simulator=experimental/shallow_water_sphere_d1_galewsky
-# The simulator configs are shallow_water_sphere_d*.yaml (datasets) and
-# shallow_water_sphere_t*.yaml (tests) in configs/simulator/experimental.
+#   autosim --config-name generate_data_swe_sphere simulator=experimental/shallow_water_sphere_ds3_galewsky
+# The simulator configs are shallow_water_sphere_ds1_*.yaml to ds6_*.yaml in
+# configs/simulator/experimental. Dataset 6 has 32 / 4 / 4 trajectories (PlanetSWE).
 defaults:
-  - simulator: experimental/shallow_water_sphere_d1_galewsky
+  - simulator: experimental/shallow_water_sphere_ds3_galewsky
   - _self_
 
 dataset:
   output_dir: outputs/${now:%Y-%m-%d}/${hydra:runtime.choices.simulator}_${shortuuid:7}
-  n_train: 64
-  n_valid: 8
-  n_test: 8
+  n_train: 1000
+  n_valid: 100
+  n_test: 100
   ensure_exact_n: true
   # The simulator runs batch_size simulations in parallel on the GPU.
   num_workers: null
