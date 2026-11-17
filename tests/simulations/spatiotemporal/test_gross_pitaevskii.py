@@ -1,5 +1,10 @@
+import math
+from pathlib import Path
+
 import pytest
 import torch
+from hydra.utils import instantiate
+from omegaconf import OmegaConf
 
 import autosim.simulations.spatiotemporal.gross_pitaevskii as gpe_module
 from autosim.simulations.spatiotemporal import GrossPitaevskiiEquation2D
@@ -151,3 +156,205 @@ def test_artifact_validation_rejects_high_fringe_score_trajectory(
     x = sim.sample_inputs(1, random_seed=0)
     with pytest.raises(ValueError, match="fringe artifact score"):
         sim._forward(x)
+
+
+@pytest.mark.parametrize(
+    ("n", "dtype"), [(64, torch.float32), (65, torch.float32), (64, torch.float64)]
+)
+@pytest.mark.parametrize("angle", [0.0, 0.001, -0.1, math.pi])
+def test_rotation_preserves_angular_momentum_eigenstate(n, dtype, angle):
+    original_dtype = torch.get_default_dtype()
+    try:
+        torch.set_default_dtype(dtype)
+        sim = gpe_module.GPESimulator2D(N=n, L=16.0, device=torch.device("cpu"))
+        psi = ((sim.X + 1j * sim.Y) * torch.exp(-(sim.X**2 + sim.Y**2) / 2)).to(
+            torch.complex64
+        )
+        rotated = sim._apply_rotation(psi, angle)
+        expected = psi * complex(math.cos(angle), -math.sin(angle))
+        torch.testing.assert_close(rotated, expected, atol=2e-6, rtol=2e-5)
+        torch.testing.assert_close(
+            rotated.abs().square().sum(), psi.abs().square().sum(), rtol=2e-6, atol=0
+        )
+    finally:
+        torch.set_default_dtype(original_dtype)
+
+
+@pytest.mark.parametrize("dt", [0.01, 0.005, 0.0025])
+def test_rotating_harmonic_oscillator_matches_analytic_density(dt):
+    sim = gpe_module.GPESimulator2D(N=64, L=10.0, dt=dt, device=torch.device("cpu"))
+    ground = torch.exp(-(sim.X**2 + sim.Y**2) / 2).to(torch.complex64)
+    vortex = (sim.X + 1j * sim.Y) * ground
+    psi = ground + vortex
+    psi /= torch.sqrt(psi.abs().square().sum() * sim.dx**2)
+    potential = (sim.X**2 + sim.Y**2) / 2
+    omega = 0.85
+    final_time = 0.2
+    for _ in range(round(final_time / dt)):
+        psi = sim.step(psi, potential, g=0.0, Omega=omega)
+
+    # Oscillator energies are 1 and 2, with Lz eigenvalues 0 and 1.
+    # Keep the existing real-time convention H = H_osc + Omega * Lz.
+    expected = ground * complex(math.cos(final_time), -math.sin(final_time))
+    phase = (2 + omega) * final_time
+    expected += vortex * complex(math.cos(phase), -math.sin(phase))
+    expected /= torch.sqrt(expected.abs().square().sum() * sim.dx**2)
+    relative_error = torch.linalg.vector_norm(
+        psi.abs().square() - expected.abs().square()
+    )
+    relative_error /= torch.linalg.vector_norm(expected.abs().square())
+    assert relative_error < 1e-4
+
+
+@pytest.mark.parametrize(
+    ("snapshot_dt", "times"),
+    [
+        (0.005, [0.0, 0.005, 0.01, 0.015, 0.02, 0.025]),
+        (0.015, [0.0, 0.015, 0.025]),
+        (0.05, [0.0, 0.025]),
+    ],
+)
+def test_snapshots_match_requested_times(snapshot_dt, times):
+    history = gpe_module.simulate_gpe_2d(
+        {"g": 0.0},
+        n=64,
+        L=10.0,
+        T=0.025,
+        dt=0.01,
+        snapshot_dt=snapshot_dt,
+        return_timeseries=True,
+        random_seed=0,
+    )
+    assert history.shape[0] == len(times)
+    initial = torch.complex(history[0, ..., 1], history[0, ..., 2])
+    for frame, time in zip(history, times, strict=True):
+        expected = initial * complex(math.cos(time), -math.sin(time))
+        actual = torch.complex(frame[..., 1], frame[..., 2])
+        torch.testing.assert_close(actual, expected, atol=3e-6, rtol=3e-5)
+
+
+def test_final_state_stops_at_requested_time():
+    sim = gpe_module.GPESimulator2D(N=64, L=10.0, device=torch.device("cpu"))
+    initial = sim.initialize_state()
+    final = gpe_module.simulate_gpe_2d(
+        {"g": 0.0},
+        n=64,
+        L=10.0,
+        T=0.025,
+        dt=0.01,
+        random_seed=0,
+    )
+    expected = initial * complex(math.cos(0.025), -math.sin(0.025))
+    torch.testing.assert_close(
+        torch.complex(final[..., 1], final[..., 2]), expected, atol=3e-6, rtol=3e-5
+    )
+
+
+@pytest.fixture
+def prepared_state():
+    config = {"g": 0.0, "width": 1.5, "imaginary_time": True, "initial_noise": 0.0}
+    field = gpe_module.simulate_gpe_2d(
+        config,
+        n=32,
+        L=10.0,
+        T=0.04,
+        dt=0.02,
+        random_seed=0,
+    )
+    return config, field
+
+
+def test_initial_snapshot_is_prepared_state(prepared_state):
+    config, field = prepared_state
+    history = gpe_module.simulate_gpe_2d(
+        {
+            **config,
+            "imaginary_time": False,
+            "imaginary_time_steps": 2,
+            "imaginary_time_dt": 0.02,
+        },
+        n=32,
+        L=10.0,
+        T=0.01,
+        dt=0.01,
+        return_timeseries=True,
+        random_seed=0,
+    )
+    torch.testing.assert_close(history[0], field)
+
+
+@pytest.mark.parametrize("imaginary_time", [False, True])
+def test_evolution_after_preparation_uses_requested_timestep(
+    monkeypatch, prepared_state, imaginary_time
+):
+    config, field = prepared_state
+    config = {**config, "imaginary_time": imaginary_time}
+    actual = gpe_module.simulate_gpe_2d(
+        {**config, "imaginary_time_steps": 2, "imaginary_time_dt": 0.02},
+        n=32,
+        L=10.0,
+        T=0.01,
+        dt=0.01,
+        random_seed=0,
+    )
+    psi = torch.complex(field[..., 1], field[..., 2])
+    monkeypatch.setattr(
+        gpe_module.GPESimulator2D,
+        "initialize_state",
+        lambda _self, **kwargs: psi.clone(),
+    )
+    expected = gpe_module.simulate_gpe_2d(
+        config,
+        n=32,
+        L=10.0,
+        T=0.01,
+        dt=0.01,
+        random_seed=0,
+    )
+    torch.testing.assert_close(actual, expected)
+
+
+@pytest.mark.parametrize(("wx", "wy"), [(0.0, 0.0), (0.0, 1.0), (1.0, 0.0)])
+def test_unconfined_disorder_has_unwindowed_automatic_radius(wx, wy):
+    sim = gpe_module.GPESimulator2D(N=32, L=10.0, device=torch.device("cpu"))
+    config = {"wx": wx, "wy": wy, "disorder_strength": 1.0}
+    actual = gpe_module.generate_static_disorder(
+        sim.X, sim.Y, config, torch.Generator().manual_seed(42)
+    )
+    expected = gpe_module.generate_static_disorder(
+        sim.X,
+        sim.Y,
+        {**config, "disorder_radius": 1e12},
+        torch.Generator().manual_seed(42),
+    )
+    assert torch.isfinite(actual).all()
+    torch.testing.assert_close(actual, expected)
+
+
+def test_laser_only_config_bypasses_wavefunction_rotation(monkeypatch):
+    config_path = Path(gpe_module.__file__).parents[2] / (
+        "configs/simulator/spatiotemporal/gpe/laser_only_wake.yaml"
+    )
+    config = OmegaConf.load(config_path)
+    config.parameters_range.imaginary_time_steps = [2, 2]
+    sim = instantiate(
+        config,
+        n=32,
+        T=0.025,
+        snapshot_dt=0.01,
+        skip_nt=0,
+        artifact_validation_enabled=False,
+        log_level="error",
+    )
+
+    def unexpected_rotation(*args, **kwargs):
+        pytest.fail("Laser-only configuration must not rotate the wavefunction")
+
+    monkeypatch.setattr(
+        gpe_module.GPESimulator2D, "_apply_rotation", unexpected_rotation
+    )
+    result = sim.forward_samples_spatiotemporal(1, random_seed=42, ensure_exact_n=True)
+    data = result["data"]
+    assert data.shape == (1, 3, 32, 32, 3)
+    norms = data[..., 0].sum(dim=(-1, -2)) * (sim.L / sim.n) ** 2
+    torch.testing.assert_close(norms, torch.ones_like(norms))

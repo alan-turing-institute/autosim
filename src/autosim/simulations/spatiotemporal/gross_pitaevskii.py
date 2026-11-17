@@ -5,7 +5,6 @@ from collections.abc import Callable
 from typing import Any, ClassVar, Literal
 
 import torch
-import torch.nn.functional as F
 
 from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
@@ -141,7 +140,8 @@ def _generate_speckle_field(
     """Generate a spatially windowed speckle disorder field.
 
     Sums random-phase sine waves at multiple spatial frequencies then windows
-    the result with a Gaussian envelope centred on the trap.
+    the result with a Gaussian envelope centred on the trap. An automatic radius
+    with zero harmonic confinement uses the unwindowed, infinite-radius limit.
     """
     freqs = [1.5, 3.1, 5.8]
     V = torch.zeros_like(X)
@@ -151,6 +151,8 @@ def _generate_speckle_field(
         V += torch.sin(f * X + phase_x) * torch.cos(f * Y + phase_y)
     V = disorder_strength * (V / len(freqs))
     if disorder_radius <= 0.0:
+        if wx * wy == 0.0:
+            return V
         disorder_radius = 2.0 / math.sqrt(wx * wy)
     r2 = X**2 + Y**2
     return V * torch.exp(-r2 / (2.0 * disorder_radius**2))
@@ -196,30 +198,28 @@ class GPESimulator2D:
         )
         self.N = N
         self.L = L
-        self.dt = dt
         self.dx = L / N
 
         # 1. Setup Spatial Grid
-        x = (torch.arange(N, device=self.device) - N // 2) * self.dx
-        y = (torch.arange(N, device=self.device) - N // 2) * self.dx
+        # Match the complex64 wavefunction regardless of the global default dtype.
+        x = (
+            torch.arange(N, device=self.device, dtype=torch.float32) - N // 2
+        ) * self.dx
+        y = (
+            torch.arange(N, device=self.device, dtype=torch.float32) - N // 2
+        ) * self.dx
         self.X, self.Y = torch.meshgrid(x, y, indexing="ij")
 
         # 2. Setup Momentum (k) Grid for the Kinetic Energy step
-        kx = torch.fft.fftfreq(N, d=self.dx, device=self.device) * 2 * math.pi
-        ky = torch.fft.fftfreq(N, d=self.dx, device=self.device) * 2 * math.pi
+        kx = torch.fft.fftfreq(N, d=self.dx, device=self.device, dtype=torch.float32)
+        ky = torch.fft.fftfreq(N, d=self.dx, device=self.device, dtype=torch.float32)
+        kx = kx * 2 * math.pi
+        ky = ky * 2 * math.pi
         KX, KY = torch.meshgrid(kx, ky, indexing="ij")
 
         # Kinetic Energy Operator in momentum space
-        kinetic_energy = 0.5 * (KX**2 + KY**2)
-        self.exp_K = (
-            torch.exp(-1j * kinetic_energy * self.dt)
-            .to(self.device)
-            .to(torch.complex64)
-        )
-        # exp_K_it: imaginary-time kinetic propagator exp(-k²/2 * dt)
-        self.exp_K_it = (
-            torch.exp(-kinetic_energy * self.dt).to(self.device).to(torch.complex64)
-        )
+        self._kinetic_energy = 0.5 * (KX**2 + KY**2)
+        self._set_timestep(dt)
 
         # Anti-aliasing mask (Orszag 2/3 rule) to eliminate high-freq grid artifacts
         # We zero out the highest third of the momentum spectrum.
@@ -233,56 +233,48 @@ class GPESimulator2D:
         self.KX = KX.to(torch.complex64)
         self.KY = KY.to(torch.complex64)
 
-        # Cache for the rotation sampling grid (recomputed only when angle changes)
+        # Cache the Fourier shift factors for a repeated rotation sub-step.
         self._cached_rot_angle: float | None = None
-        self._cached_rot_grid: torch.Tensor | None = None
+        self._cached_rot_shears: tuple[torch.Tensor, torch.Tensor] | None = None
+
+    def _set_timestep(self, dt: float) -> None:
+        """Update both kinetic propagators when changing the integration step."""
+        if not math.isfinite(dt) or dt <= 0:
+            msg = "dt must be finite and positive"
+            raise ValueError(msg)
+        self.dt = dt
+        self.exp_K = torch.exp(-1j * self._kinetic_energy * dt).to(torch.complex64)
+        self.exp_K_it = torch.exp(-self._kinetic_energy * dt).to(torch.complex64)
 
     def _apply_rotation(self, psi: torch.Tensor, angle: float) -> torch.Tensor:
-        """Rotate the wavefunction by `angle` radians via bicubic interpolation.
+        r"""Apply :math:`\exp(-i\,\mathrm{angle}\,L_z)` via three Fourier shears.
 
-        Implements exp(i * angle * Lz) as a coordinate rotation
-        psi'(r) = psi(R_{-angle} r).
-        Unlike a forward-Euler Lz step this is exactly norm-preserving.  The sampling
-        grid depends only on `angle` and the fixed spatial grid, so it is cached and
-        recomputed only when the angle changes.
+        The coordinate pullback is ``psi'(r) = psi(R_{-angle} r)``. Each shear
+        uses a periodic Fourier shift and preserves the discrete norm up to FFT
+        roundoff. As with the kinetic step, the wavefunction should be negligible
+        at the domain boundary for an isolated trapped condensate.
         """
-        if self._cached_rot_angle != angle:
-            cos_a, sin_a = math.cos(angle), math.sin(angle)
+        angle = math.remainder(angle, 2.0 * math.pi)
+        if angle == 0.0:
+            return psi
 
-            # Pullback: source coordinates under R_{-angle}
-            xs_src = cos_a * self.X + sin_a * self.Y
-            ys_src = -sin_a * self.X + cos_a * self.Y
+        # Keep tan(angle/2) bounded, including rotations near pi.
+        substeps = max(1, math.ceil(abs(angle) / (math.pi / 2.0)))
+        sub_angle = angle / substeps
+        if self._cached_rot_angle != sub_angle:
+            # R_{-a} = S_x(tan(a/2)) S_y(-sin(a)) S_x(tan(a/2)).
+            shear_x = torch.exp(1j * math.tan(sub_angle / 2.0) * self.KX.real * self.Y)
+            shear_y = torch.exp(-1j * math.sin(sub_angle) * self.KY.real * self.X)
+            self._cached_rot_shears = (shear_x, shear_y)
+            self._cached_rot_angle = sub_angle
 
-            # Normalize to grid_sample coordinates.
-            # With align_corners=False pixel i -> (2i+1)/N - 1,
-            # so physical x -> 2x/L + 1/N.
-            # This avoids the 1-pixel translation bias on even-sized grids.
-            inv_L = 2.0 / self.L
-            offset = 1.0 / self.N
-            xs_norm = (xs_src * inv_L + offset).clamp(-1.0, 1.0)
-            ys_norm = (ys_src * inv_L + offset).clamp(-1.0, 1.0)
-
-            # grid_sample: grid[..., 0] = W (col = Y), grid[..., 1] = H (row = X)
-            self._cached_rot_grid = torch.stack([ys_norm, xs_norm], dim=-1).unsqueeze(0)
-            self._cached_rot_angle = angle
-
-        assert self._cached_rot_grid is not None
-        grid = self._cached_rot_grid
-        psi_r = F.grid_sample(
-            psi.real.unsqueeze(0).unsqueeze(0).float(),
-            grid,
-            mode="bicubic",
-            padding_mode="zeros",
-            align_corners=False,
-        ).squeeze()
-        psi_i = F.grid_sample(
-            psi.imag.unsqueeze(0).unsqueeze(0).float(),
-            grid,
-            mode="bicubic",
-            padding_mode="zeros",
-            align_corners=False,
-        ).squeeze()
-        return torch.complex(psi_r, psi_i).to(torch.complex64)
+        assert self._cached_rot_shears is not None
+        shear_x, shear_y = self._cached_rot_shears
+        for _ in range(substeps):
+            psi = torch.fft.ifft(torch.fft.fft(psi, dim=0) * shear_x, dim=0)
+            psi = torch.fft.ifft(torch.fft.fft(psi, dim=1) * shear_y, dim=1)
+            psi = torch.fft.ifft(torch.fft.fft(psi, dim=0) * shear_x, dim=0)
+        return psi.to(torch.complex64)
 
     def _apply_V_half(
         self, psi: torch.Tensor, V: torch.Tensor, g: float, half_dt: complex
@@ -316,10 +308,8 @@ class GPESimulator2D:
             \end{aligned}
 
         :math:`\exp(\alpha L_z)` is approximated to first order as
-        :math:`I + \alpha L_z`; with the small sub-step
-        :math:`\alpha = \Omega\,\Delta t / 2 \approx 5 \times 10^{-4}`, the
-        truncation error is negligible and the caller's renormalisation keeps
-        the norm bounded.
+        :math:`I + \alpha L_z`. Its accuracy depends on the step size and
+        populated angular-momentum modes; the caller renormalises the result.
         """
         psi_hat = torch.fft.fftn(psi)
         dpsi_dx = torch.fft.ifftn(1j * self.KX * psi_hat)
@@ -352,7 +342,9 @@ class GPESimulator2D:
 
         Real-time uses half_dt = dt/2 (phase evolution).
         Imaginary-time uses half_dt = -i*dt/2 (amplitude decay toward ground state).
-        In both cases the rotation is the same real coordinate rotation exp(i*angle*Lz).
+        Real-time rotation uses exp(-i*Omega*dt/2*Lz), preserving the existing
+        positive-angle coordinate rotation. Imaginary-time preparation uses
+        exp(+Omega*dt/2*Lz), favouring positive-angular-momentum modes.
         """
         # Effective half time-step
         half_dt: complex = (-1j if imaginary_time else 1.0) * self.dt / 2.0
@@ -362,7 +354,7 @@ class GPESimulator2D:
         psi = self._apply_V_half(psi, V, g, half_dt)
 
         # 2. Rotation half-step
-        # Real time:      exp(i Ω dt/2 Lz) — unitary coordinate rotation
+        # Real time:      exp(-i Ω dt/2 Lz) — unitary coordinate rotation
         # Imaginary time: exp(Ω dτ/2 Lz)  — non-unitary amplifier, required for
         #                 vortex nucleation (a coordinate rotation only shifts phases
         #                 and cannot change the density toward a vortex lattice).
@@ -406,7 +398,12 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
     random_seed: int | None = None,
     device: torch.device | None = None,
 ) -> torch.Tensor:
-    """Simulate the Gross-Pitaevskii Equation in 2D."""
+    """Simulate the Gross-Pitaevskii Equation in 2D.
+
+    ``dt`` is the maximum integration step. Shorter steps land exactly on
+    snapshot times and ``T``. Time series include the prepared state at t=0
+    and the final state at ``T``, even when it is not a regular snapshot time.
+    """
     if n <= 0:
         msg = "n must be positive"
         raise ValueError(msg)
@@ -469,9 +466,7 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
             simulator.X, simulator.Y, config, rng
         )
 
-    history_density = []
-    history_real = []
-    history_imag = []
+    history = []
 
     def _snapshot(p) -> torch.Tensor:
         density = torch.abs(p) ** 2
@@ -480,14 +475,6 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
         return torch.stack([density, real, imag], dim=-1)
 
     with torch.no_grad():
-        next_snapshot_t = float(snapshot_dt)
-        last_snapshot_t = 0.0
-
-        if return_timeseries:
-            history_density.append(torch.abs(psi) ** 2)
-            history_real.append(psi.real)
-            history_imag.append(psi.imag)
-
         t = 0.0
 
         Omega = float(config.get("Omega", 0.0))
@@ -503,13 +490,7 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
 
         if imaginary_time_steps > 0:
             imaginary_time_dt = float(config.get("imaginary_time_dt", dt))
-            if imaginary_time_dt != dt:
-                simulator.dt = imaginary_time_dt
-                # Recompute imaginary-time kinetic propagator with new dt
-                kin_E = 0.5 * (simulator.KX.real**2 + simulator.KY.real**2)
-                simulator.exp_K_it = torch.exp(-kin_E * simulator.dt).to(
-                    torch.complex64
-                )
+            simulator._set_timestep(imaginary_time_dt)
 
             for _ in range(imaginary_time_steps):
                 V_init = generate_complex_potential(
@@ -522,12 +503,23 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
                 )
                 psi = simulator.step(psi, V_init, g, Omega=Omega, imaginary_time=True)
 
-            if imaginary_time_dt != dt:
-                # Restore original real-time dt (real-time exp_K was untouched)
-                simulator.dt = dt
+            simulator._set_timestep(dt)
 
-        while t < T - 1e-12:
-            t_mid = t + 0.5 * dt
+        if return_timeseries:
+            history.append(_snapshot(psi))
+
+        snapshot_index = 1
+        while t < T:
+            target_t = min(T, snapshot_index * snapshot_dt) if return_timeseries else T
+            remaining = target_t - t
+            step_dt = min(dt, remaining)
+            # Avoid replacing a full step with a roundoff-sized correction at
+            # aligned snapshot boundaries, and keep the propagator cache reusable.
+            if math.isclose(step_dt, dt, rel_tol=1e-10):
+                step_dt = dt
+            if simulator.dt != step_dt:
+                simulator._set_timestep(step_dt)
+            t_mid = t + 0.5 * step_dt
             V = generate_complex_potential(
                 simulator.X,
                 simulator.Y,
@@ -539,27 +531,17 @@ def simulate_gpe_2d(  # noqa: PLR0912, PLR0915
             psi = simulator.step(
                 psi, V, g, Omega=real_time_Omega, imaginary_time=imaginary_time
             )
-            t += dt
-
-            if return_timeseries:
-                while next_snapshot_t <= t + 1e-12:
-                    history_density.append(torch.abs(psi) ** 2)
-                    history_real.append(psi.real)
-                    history_imag.append(psi.imag)
-                    last_snapshot_t = next_snapshot_t
-                    next_snapshot_t += snapshot_dt
-
-        if return_timeseries and T - last_snapshot_t > 1e-9:
-            history_density.append(torch.abs(psi) ** 2)
-            history_real.append(psi.real)
-            history_imag.append(psi.imag)
+            if math.isclose(step_dt, remaining, rel_tol=1e-10):
+                t = target_t
+                if return_timeseries:
+                    history.append(_snapshot(psi))
+                    snapshot_index += 1
+            else:
+                t += step_dt
 
     if return_timeseries:
-        densities = torch.stack(history_density, dim=0)
-        real_parts = torch.stack(history_real, dim=0)
-        imag_parts = torch.stack(history_imag, dim=0)
         # return shape: (T, X, Y, Channels)
-        return torch.stack([densities, real_parts, imag_parts], dim=-1)
+        return torch.stack(history, dim=0)
 
     return _snapshot(psi)
 
@@ -573,7 +555,13 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
 
         i\partial_t \psi =
         \left[-\frac{1}{2}\nabla^2 + V(x, y, t) + g|\psi|^2
-        - \Omega L_z\right]\psi.
+        + \Omega L_z\right]\psi.
+
+    Positive ``Omega`` rotates the real-time density counterclockwise.
+    Imaginary-time preparation retains the convention :math:`H-\Omega L_z`
+    to favour positive angular momentum. With ``exact_trap_rotation=True``,
+    real-time evolution instead rotates the potential without an explicit
+    angular-momentum term.
 
     The returned channels are density, real part, and imaginary part:
     :math:`[|\psi|^2, \operatorname{Re}(\psi), \operatorname{Im}(\psi)]`.
@@ -588,7 +576,7 @@ class GrossPitaevskiiEquation2D(SpatioTemporalSimulator):
         "ws_V0": 100.0,
         "disorder_strength": 0.0,
         "disorder_time_dependent": False,
-        "disorder_radius": 0.0,  # 0.0 -> auto (2/sqrt(wx*wy))
+        "disorder_radius": 0.0,  # Auto harmonic radius; unwindowed if wx*wy == 0
         "spoon_strength": 0.0,
         "spoon_radius": 2.0,
         "spoon_speed": 1.0,
