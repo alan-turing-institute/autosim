@@ -1,0 +1,861 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>autosim.experimental.simulations.kuramoto_sivashinsky_1d &#8212; AutoSim: simulation data generation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=7f8ff830"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/experimental/kuramoto_sivashinsky_1d';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="autosim.experimental.simulations.lattice_boltzmann" href="lattice_boltzmann.html" />
+    <link rel="prev" title="autosim.experimental.simulations.hydrodynamics_2d" href="hydrodynamics_2d.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/AS.png" class="logo__image only-light" alt="AutoSim: simulation data generation - Home"/>
+    <img src="../../_static/AS.png" class="logo__image only-dark pst-js-only" alt="AutoSim: simulation data generation - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    Welcome to AutoSim
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/visualize.html">Visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/stratified.html">Stratified sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/synthetic.html">Synthetic performance datasets</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../index.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 has-children"><a class="reference internal" href="../core/index.html">Core Modules</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../core/cli.html">autosim.cli</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core/device.html">autosim.device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core/logging.html">autosim.logging</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core/types.html">autosim.types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core/utils.html">autosim.utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core/validation.html">autosim.validation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../simulations/index.html">Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/base.html">autosim.simulations.base</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../simulations/spatiotemporal/index.html">Spatiotemporal Simulations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/advection_diffusion.html">autosim.simulations.spatiotemporal.advection_diffusion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/advection_diffusion_multichannel.html">autosim.simulations.spatiotemporal.advection_diffusion_multichannel</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/gray_scott.html">autosim.simulations.spatiotemporal.gray_scott</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/gross_pitaevskii.html">autosim.simulations.spatiotemporal.gross_pitaevskii</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/navier_stokes_conditioned.html">autosim.simulations.spatiotemporal.navier_stokes_conditioned</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../simulations/spatiotemporal/reaction_diffusion.html">autosim.simulations.spatiotemporal.reaction_diffusion</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/double_pendulum.html">autosim.simulations.double_pendulum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/epidemic.html">autosim.simulations.epidemic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/flow_problem.html">autosim.simulations.flow_problem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/projectile.html">autosim.simulations.projectile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../simulations/seir.html">autosim.simulations.seir</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="index.html">Experimental Simulations</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="burgers_1d.html">autosim.experimental.simulations.burgers_1d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="compressible_fluid.html">autosim.experimental.simulations.compressible_fluid</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hydrodynamics_2d.html">autosim.experimental.simulations.hydrodynamics_2d</a></li>
+<li class="toctree-l3 current active"><a class="current reference internal" href="#">autosim.experimental.simulations.kuramoto_sivashinsky_1d</a></li>
+<li class="toctree-l3"><a class="reference internal" href="lattice_boltzmann.html">autosim.experimental.simulations.lattice_boltzmann</a></li>
+<li class="toctree-l3"><a class="reference internal" href="shallow_water.html">autosim.experimental.simulations.shallow_water</a></li>
+<li class="toctree-l3"><a class="reference internal" href="shallow_water_1d.html">autosim.experimental.simulations.shallow_water_1d</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/alan-turing-institute/autosim/issues/new?title=Issue%20on%20page%20%2Freference/experimental/kuramoto_sivashinsky_1d.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/reference/experimental/kuramoto_sivashinsky_1d.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>autosim.experimental.simulations.kuramoto_sivashinsky_1d</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#governing-equation-and-regimes">Governing equation and regimes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#generate-a-dataset">Generate a dataset</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chaos-screening-and-its-limits">Chaos screening and its limits</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#evolve-and-diagnose-an-explicit-initial-field">Evolve and diagnose an explicit initial field</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#numerical-method">Numerical method</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-autosim.experimental.simulations.kuramoto_sivashinsky_1d">API reference</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.simulate_kuramoto_sivashinsky_1d"><code class="docutils literal notranslate"><span class="pre">simulate_kuramoto_sivashinsky_1d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.estimate_ks_lyapunov"><code class="docutils literal notranslate"><span class="pre">estimate_ks_lyapunov()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D"><code class="docutils literal notranslate"><span class="pre">KuramotoSivashinsky1D</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.sample_initial_conditions"><code class="docutils literal notranslate"><span class="pre">KuramotoSivashinsky1D.sample_initial_conditions()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.rollout"><code class="docutils literal notranslate"><span class="pre">KuramotoSivashinsky1D.rollout()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.warmup_state"><code class="docutils literal notranslate"><span class="pre">KuramotoSivashinsky1D.warmup_state()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="autosim-experimental-simulations-kuramoto-sivashinsky-1d">
+<h1>autosim.experimental.simulations.kuramoto_sivashinsky_1d<a class="headerlink" href="#autosim-experimental-simulations-kuramoto-sivashinsky-1d" title="Link to this heading">#</a></h1>
+<section id="governing-equation-and-regimes">
+<h2>Governing equation and regimes<a class="headerlink" href="#governing-equation-and-regimes" title="Link to this heading">#</a></h2>
+<p>The deterministic periodic Kuramoto-Sivashinsky (KS) equation is</p>
+<div class="math notranslate nohighlight">
+\[\partial_t u + \partial_x\!\left(\frac{u^2}{2}\right)
+    + \partial_{xx}u + \nu\,\partial_{xxxx}u = 0,
+\qquad x\in[0,L),\quad \nu&gt;0.\]</div>
+<p>The initial field specifies <span class="math notranslate nohighlight">\(u(x,0)=u_0(x)\)</span>. The field and its derivatives
+are periodic. There is no external forcing or process noise. Here <code class="docutils literal notranslate"><span class="pre">nu</span></code> is
+the coefficient of fourth-order dissipation, with a different meaning from
+Burgers viscosity. The standard nondimensional equation uses <code class="docutils literal notranslate"><span class="pre">nu=1</span></code>.</p>
+<p>The Fourier linear growth rate is <span class="math notranslate nohighlight">\(k^2-\nu k^4\)</span>: long wavelengths are
+unstable and short wavelengths are damped. Nonlinear advection couples the
+modes. Their balance can sustain chaotic evolution, and the spatial mean is
+conserved. When <span class="math notranslate nohighlight">\(L&lt;2\pi\sqrt{\nu}\)</span>, all nonconstant modes are linearly
+stable and the energy of the mean-subtracted field decreases.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">L=22,</span> <span class="pre">nu=1</span></code> case targets the established chaotic benchmark of
+<a class="reference external" href="https://arxiv.org/abs/0709.2944">Cvitanovic, Davidchack and Siminos (2010)</a>. This is a model of instability and
+spatiotemporal chaos; it complements the nonlinear fluid transients of
+Burgers and shallow water. Changing <code class="docutils literal notranslate"><span class="pre">nu</span></code> changes the effective domain
+size <code class="docutils literal notranslate"><span class="pre">L/sqrt(nu)</span></code> and the time scale, so wider parameter ranges require
+fresh regime checks.</p>
+</section>
+<section id="generate-a-dataset">
+<h2>Generate a dataset<a class="headerlink" href="#generate-a-dataset" title="Link to this heading">#</a></h2>
+<p>The reference preset records evolution from raw sampled initial fields,
+without warm-up or chaos screening:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">uv run autosim simulator=experimental/kuramoto_sivashinsky_1d \</span>
+<span class="go">  dataset.n_train=4 dataset.n_valid=1 dataset.n_test=1 seed=7</span>
+</pre></div>
+</div>
+<p>The chaotic preset uses <code class="docutils literal notranslate"><span class="pre">L=22</span></code>, <code class="docutils literal notranslate"><span class="pre">nu=1</span></code>, <code class="docutils literal notranslate"><span class="pre">nx=128</span></code> and <code class="docutils literal notranslate"><span class="pre">dt_max=0.1</span></code>.
+It warms each field for 100 time units, checks activity and estimates
+perturbation growth over 200 time units, then records a 100-unit forecast:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">uv run autosim simulator=experimental/kuramoto_sivashinsky_1d_chaotic \</span>
+<span class="go">  dataset.n_train=4 dataset.n_valid=1 dataset.n_test=1 seed=7</span>
+</pre></div>
+</div>
+<p>The stable control uses <code class="docutils literal notranslate"><span class="pre">L=5</span></code> and records relaxation from the initial field:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">uv run autosim simulator=experimental/kuramoto_sivashinsky_1d_stable \</span>
+<span class="go">  dataset.n_train=4 dataset.n_valid=1 dataset.n_test=1 seed=7</span>
+</pre></div>
+</div>
+<p>All presets sample generic zero-mean eight-mode Fourier fields with coefficient
+decay <code class="docutils literal notranslate"><span class="pre">k^-1.5</span></code> and peak amplitudes in <code class="docutils literal notranslate"><span class="pre">[0.5,</span> <span class="pre">1.0]</span></code>. Both sine and cosine
+coefficients are drawn, avoiding an imposed reflection-symmetric subspace.
+These are dataset choices; coefficients remain fixed at the standard value.</p>
+<p>Each split’s <code class="docutils literal notranslate"><span class="pre">data.pt</span></code> includes <code class="docutils literal notranslate"><span class="pre">data</span></code> shaped <code class="docutils literal notranslate"><span class="pre">[batch,</span> <span class="pre">time,</span> <span class="pre">nx,</span> <span class="pre">1,</span> <span class="pre">1]</span></code>,
+channel <code class="docutils literal notranslate"><span class="pre">u</span></code>, coordinates <code class="docutils literal notranslate"><span class="pre">x</span></code> and <code class="docutils literal notranslate"><span class="pre">times</span></code> with batch axes, and
+<code class="docutils literal notranslate"><span class="pre">constant_scalars</span></code> containing fourth-order dissipation <code class="docutils literal notranslate"><span class="pre">nu</span></code>.
+The first frame is the actual forecast initial field. With warm-up enabled,
+recorded time zero is the end of warm-up. <code class="docutils literal notranslate"><span class="pre">seed_fields</span></code> retains the raw
+sampled fields, shaped <code class="docutils literal notranslate"><span class="pre">[batch,</span> <span class="pre">nx,</span> <span class="pre">1]</span></code>, and <code class="docutils literal notranslate"><span class="pre">warmup_times</span></code> records the
+duration for each sample. The CLI automatically saves space-time PNGs under
+<code class="docutils literal notranslate"><span class="pre">examples/&lt;split&gt;/batch_&lt;index&gt;.png</span></code>.</p>
+</section>
+<section id="chaos-screening-and-its-limits">
+<h2>Chaos screening and its limits<a class="headerlink" href="#chaos-screening-and-its-limits" title="Link to this heading">#</a></h2>
+<p>The chaotic preset accepts a sample only if both checks pass:</p>
+<ul class="simple">
+<li><p>The RMS change of its warmed field after one time unit exceeds <code class="docutils literal notranslate"><span class="pre">1e-6</span></code>.
+This rejects quiescent states, including unstable equilibria whose
+perturbations can grow without the reference trajectory being chaotic.</p></li>
+<li><p>Its estimated largest Lyapunov exponent exceeds <code class="docutils literal notranslate"><span class="pre">0.01</span></code> per time unit.
+Float64 paired trajectories are perturbed at RMS distance <code class="docutils literal notranslate"><span class="pre">1e-7</span></code>;
+the perturbation is renormalized every time unit and logarithmic growth
+rates are averaged over the validation window.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">activity_estimates</span></code> and <code class="docutils literal notranslate"><span class="pre">lyapunov_estimates</span></code> retain these diagnostics,
+each shaped <code class="docutils literal notranslate"><span class="pre">[batch,</span> <span class="pre">1]</span></code>. Failed checks raise with the sample index; no
+sample is silently replaced. Redraw explicitly to obtain a different sample.
+Setting <code class="docutils literal notranslate"><span class="pre">chaos_validation_time=0</span></code> disables screening.</p>
+<p>These are finite-time acceptance criteria, not a proof of asymptotic chaos
+for every sample. Longer windows, several initial fields, perturbation-size
+checks, and spatial/time refinement are needed when changing the preset.
+Chaotic trajectories can temporarily contract, and regular parameter windows
+exist: complexity or positive growth over a short transient is insufficient.
+See <a class="reference external" href="https://arxiv.org/abs/1902.09651">Edson et al.’s Lyapunov-spectrum study</a>.</p>
+</section>
+<section id="evolve-and-diagnose-an-explicit-initial-field">
+<h2>Evolve and diagnose an explicit initial field<a class="headerlink" href="#evolve-and-diagnose-an-explicit-initial-field" title="Link to this heading">#</a></h2>
+<p>Sampling, warm-up, direct rollout and chaos diagnostics are separate:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">autosim.experimental.simulations</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">KuramotoSivashinsky1D</span><span class="p">,</span>
+    <span class="n">estimate_ks_lyapunov</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">autosim.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_spatiotemporal_1d</span>
+
+<span class="n">sim</span> <span class="o">=</span> <span class="n">KuramotoSivashinsky1D</span><span class="p">(</span><span class="n">warmup_time</span><span class="o">=</span><span class="mf">100.0</span><span class="p">)</span>
+<span class="n">raw</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">sample_initial_conditions</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+<span class="n">initial_state</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">warmup_state</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="n">trajectory</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">rollout</span><span class="p">(</span><span class="n">initial_state</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="n">exponent</span> <span class="o">=</span> <span class="n">estimate_ks_lyapunov</span><span class="p">(</span>
+    <span class="n">initial_state</span><span class="p">,</span> <span class="n">nu</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">L</span><span class="p">,</span> <span class="n">warmup_time</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="mf">200.0</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">figure</span> <span class="o">=</span> <span class="n">plot_spatiotemporal_1d</span><span class="p">(</span>
+    <span class="n">trajectory</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">times</span><span class="p">,</span>
+    <span class="n">channel_names</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">output_names</span><span class="p">,</span> <span class="n">save_path</span><span class="o">=</span><span class="s2">&quot;kuramoto_sivashinsky.png&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">rollout</span></code> always starts with the supplied field and applies neither warm-up
+nor screening. Legacy <code class="docutils literal notranslate"><span class="pre">forward(parameters)</span></code> likewise evolves the supplied
+constructor reference field, or the sampler’s seed-zero raw field. Dataset
+warm-up and screening apply to <code class="docutils literal notranslate"><span class="pre">forward_samples_spatiotemporal</span></code>.</p>
+</section>
+<section id="numerical-method">
+<h2>Numerical method<a class="headerlink" href="#numerical-method" title="Link to this heading">#</a></h2>
+<p>The solver uses Fourier differentiation, two-thirds-dealiased conservative
+advection and fourth-order exponential time differencing Runge-Kutta (ETDRK4).
+Contour evaluation avoids cancellation near zero eigenvalues, following
+<a class="reference external" href="https://people.maths.ox.ac.uk/trefethen/tda05.pdf">Kassam and Trefethen’s KS example</a>. This integrates the stiff
+linear term exponentially. <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> must still resolve nonlinear dynamics;
+<code class="docutils literal notranslate"><span class="pre">dt_save</span></code> independently controls saved output times. Fourier modes above the
+dealiasing cutoff evolve linearly. Input float32/float64 precision, device,
+leading batch axes and state gradients are retained; diagnostics use float64.</p>
+<p>Check convergence over short forecasts and compare statistics and diagnostic
+growth over long runs. Chaotic sensitivity prevents indefinite pointwise
+agreement between numerically refined trajectories.</p>
+</section>
+<section id="module-autosim.experimental.simulations.kuramoto_sivashinsky_1d">
+<span id="api-reference"></span><h2>API reference<a class="headerlink" href="#module-autosim.experimental.simulations.kuramoto_sivashinsky_1d" title="Link to this heading">#</a></h2>
+<p>Deterministic periodic Kuramoto-Sivashinsky evolution and chaos diagnostics.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="autosim.experimental.simulations.kuramoto_sivashinsky_1d.simulate_kuramoto_sivashinsky_1d">
+<span class="sig-name descname"><span class="pre">simulate_kuramoto_sivashinsky_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_state</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">L</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">22.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt_save</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/autosim/experimental/simulations/kuramoto_sivashinsky_1d.html#simulate_kuramoto_sivashinsky_1d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.simulate_kuramoto_sivashinsky_1d" title="Link to this definition">#</a></dt>
+<dd><p>Evolve <code class="docutils literal notranslate"><span class="pre">u_t</span> <span class="pre">+</span> <span class="pre">(u²/2)_x</span> <span class="pre">+</span> <span class="pre">u_xx</span> <span class="pre">+</span> <span class="pre">nu*u_xxxx</span> <span class="pre">=</span> <span class="pre">0</span></code> periodically.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>initial_state</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>) – Float32/float64 nodal fields <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">nx,</span> <span class="pre">1)</span></code> at
+<code class="docutils literal notranslate"><span class="pre">x_j=j*L/nx</span></code>. Leading batch axes are supported.</p></li>
+<li><p><strong>nu</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Positive fourth-order dissipation coefficient, shared by fields.</p></li>
+<li><p><strong>L</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Periodic domain length. The standard chaotic benchmark uses 22.</p></li>
+<li><p><strong>T</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Forecast duration, including the supplied state at time zero.</p></li>
+<li><p><strong>dt_save</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Saved-frame interval; the terminal time is always included.</p></li>
+<li><p><strong>dt_max</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Maximum internal step. Refine it to check time convergence.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Fields <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">nt,</span> <span class="pre">nx,</span> <span class="pre">1)</span></code> preserving input precision, device and
+state gradients. The supplied field is never mutated.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a></p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Uses Fourier differentiation, two-thirds-dealiased conservative
+advection and fourth-order ETDRK4 with contour-evaluated coefficients.
+The linear multiplier is <code class="docutils literal notranslate"><span class="pre">k²</span> <span class="pre">-</span> <span class="pre">nu*k⁴</span></code>: long wavelengths grow while
+short wavelengths decay. The spatial mean is conserved. Modes above
+the dealiasing cutoff evolve linearly. There is no noise or forcing.
+The stiff linear term is integrated exponentially; <code class="docutils literal notranslate"><span class="pre">dt_max</span></code> still
+needs to resolve nonlinear evolution. No warm-up is applied here.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="autosim.experimental.simulations.kuramoto_sivashinsky_1d.estimate_ks_lyapunov">
+<span class="sig-name descname"><span class="pre">estimate_ks_lyapunov</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_state</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">L</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">22.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">renormalize_interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">perturbation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-07</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/autosim/experimental/simulations/kuramoto_sivashinsky_1d.html#estimate_ks_lyapunov"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.estimate_ks_lyapunov" title="Link to this definition">#</a></dt>
+<dd><p>Estimate the largest Lyapunov exponent using renormalized trajectories.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>initial_state</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>) – Float64 field <code class="docutils literal notranslate"><span class="pre">(...,</span> <span class="pre">nx,</span> <span class="pre">1)</span></code>. Perturbations have zero
+spatial mean so both trajectories conserve the same mean.</p></li>
+<li><p><strong>nu</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Fourth-order dissipation coefficient.</p></li>
+<li><p><strong>L</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Domain length.</p></li>
+<li><p><strong>T</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Positive duration over which logarithmic growth is accumulated.</p></li>
+<li><p><strong>warmup_time</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Non-negative deterministic warm-up before perturbing.</p></li>
+<li><p><strong>dt_max</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Maximum internal ETDRK4 step.</p></li>
+<li><p><strong>renormalize_interval</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Positive time between perturbation resets.</p></li>
+<li><p><strong>perturbation</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>) – Positive initial/reset RMS distance between trajectories.</p></li>
+<li><p><strong>random_seed</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>) – Local seed for the initial perturbation direction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A float64 tensor with the input’s leading batch shape, in inverse
+simulation time units. An unbatched field gives a scalar tensor.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a></p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This is a finite-time estimate, not a proof of asymptotic chaos.
+Check longer windows, multiple seeds, perturbation sizes and numerical
+refinement. Positive growth at an unstable equilibrium alone is not
+evidence of a chaotic attractor. Float64 is required to resolve the
+small separations. No stochastic forcing is added to either rollout.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">KuramotoSivashinsky1D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parameters_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_timeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'progress_bar'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">L</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">22.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt_save</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_condition_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chaos_validation_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lyapunov_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activity_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/autosim/experimental/simulations/kuramoto_sivashinsky_1d.html#KuramotoSivashinsky1D"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Deterministic1DSimulator</span></code></p>
+<p>KS datasets with explicit initial fields and optional chaos screening.</p>
+<p><code class="docutils literal notranslate"><span class="pre">sample_initial_conditions</span></code> draws generic zero-mean Fourier fields,
+independently of <code class="docutils literal notranslate"><span class="pre">parameters_range={&quot;nu&quot;:</span> <span class="pre">(...)}</span></code>. <code class="docutils literal notranslate"><span class="pre">rollout</span></code> evolves
+those supplied fields directly. Dataset generation can first apply
+<code class="docutils literal notranslate"><span class="pre">warmup_time</span></code> and then a finite-time Lyapunov acceptance criterion.
+The recorded first frame is the actual post-warm-up forecast state; raw
+sampled fields and warm-up durations are retained in payload metadata.</p>
+<p>Standard coefficients <code class="docutils literal notranslate"><span class="pre">nu=1</span></code> and <code class="docutils literal notranslate"><span class="pre">L=22</span></code> target the chaotic benchmark
+of Cvitanovic, Davidchack and Siminos (2010):
+<a class="reference external" href="https://arxiv.org/abs/0709.2944">https://arxiv.org/abs/0709.2944</a>. <code class="docutils literal notranslate"><span class="pre">L</span> <span class="pre">&lt;</span> <span class="pre">2*pi*sqrt(nu)</span></code> gives a stable control.
+Passing a finite-time criterion does not prove every output is chaotic.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>parameters_range</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#tuple" title="(in Python v3.15)"><em>tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a><em>]</em><em>] </em><em>| </em><em>None</em>)</p></li>
+<li><p><strong>output_names</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a><em>] </em><em>| </em><em>None</em>)</p></li>
+<li><p><strong>return_timeseries</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><em>bool</em></a>)</p></li>
+<li><p><strong>log_level</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)"><em>str</em></a>)</p></li>
+<li><p><strong>nx</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>L</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>T</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>dt_save</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>nu</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>dt_max</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>initial_condition_kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>initial_state</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>torch.Tensor</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>warmup_time</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>chaos_validation_time</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>lyapunov_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+<li><p><strong>activity_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.sample_initial_conditions">
+<span class="sig-name descname"><span class="pre">sample_initial_conditions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/autosim/experimental/simulations/kuramoto_sivashinsky_1d.html#KuramotoSivashinsky1D.sample_initial_conditions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.sample_initial_conditions" title="Link to this definition">#</a></dt>
+<dd><p>Sample unburned zero-mean nodal fields, independently of nu.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a>)</p></li>
+<li><p><strong>random_seed</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.15)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.rollout">
+<span class="sig-name descname"><span class="pre">rollout</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_state</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/autosim/experimental/simulations/kuramoto_sivashinsky_1d.html#KuramotoSivashinsky1D.rollout"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.rollout" title="Link to this definition">#</a></dt>
+<dd><p>Evolve supplied fields directly; dataset warm-up/screening is separate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>initial_state</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>nu</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.warmup_state">
+<span class="sig-name descname"><span class="pre">warmup_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">initial_state</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/autosim/experimental/simulations/kuramoto_sivashinsky_1d.html#KuramotoSivashinsky1D.warmup_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.warmup_state" title="Link to this definition">#</a></dt>
+<dd><p>Return the field after the configured deterministic warm-up.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>initial_state</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a>)</p></li>
+<li><p><strong>nu</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#float" title="(in Python v3.15)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.15)"><em>Tensor</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./reference/experimental"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="hydrodynamics_2d.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">autosim.experimental.simulations.hydrodynamics_2d</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="lattice_boltzmann.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">autosim.experimental.simulations.lattice_boltzmann</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#governing-equation-and-regimes">Governing equation and regimes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#generate-a-dataset">Generate a dataset</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chaos-screening-and-its-limits">Chaos screening and its limits</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#evolve-and-diagnose-an-explicit-initial-field">Evolve and diagnose an explicit initial field</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#numerical-method">Numerical method</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-autosim.experimental.simulations.kuramoto_sivashinsky_1d">API reference</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.simulate_kuramoto_sivashinsky_1d"><code class="docutils literal notranslate"><span class="pre">simulate_kuramoto_sivashinsky_1d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.estimate_ks_lyapunov"><code class="docutils literal notranslate"><span class="pre">estimate_ks_lyapunov()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D"><code class="docutils literal notranslate"><span class="pre">KuramotoSivashinsky1D</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.sample_initial_conditions"><code class="docutils literal notranslate"><span class="pre">KuramotoSivashinsky1D.sample_initial_conditions()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.rollout"><code class="docutils literal notranslate"><span class="pre">KuramotoSivashinsky1D.rollout()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#autosim.experimental.simulations.kuramoto_sivashinsky_1d.KuramotoSivashinsky1D.warmup_state"><code class="docutils literal notranslate"><span class="pre">KuramotoSivashinsky1D.warmup_state()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By The Alan Turing Institute
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Copyright &copy; 2026
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
