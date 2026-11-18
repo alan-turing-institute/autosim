@@ -3,9 +3,10 @@
 # Phase 1 (imaginary_time_steps): converges to a rotating vortex-array ground state
 # in a circular Woods-Saxon box. In circular geometry, vortices arrange on concentric
 # rings; the interior can approximate triangular Abrikosov ordering.
-# Phase 2 (T real-time steps): free evolution from the prepared state. The array
-# co-rotates with the trap at about Omega; residual noise can excite slow
-# Tkachenko-like lattice modes.
+# Phase 2 (duration T): evolve with H0 + Omega Lz after preparing with H0 - Omega Lz.
+# This sign change means the prepared array need not be stationary in the
+# simulation frame, even in a static circular trap. Preparation errors can also
+# excite collective modes.
 #
 # Regime: moderate-to-fast rotation (Omega in [0.65, 1.25]) and strong
 # interactions (g in [100, 800]) produce multi-vortex rotating states.
