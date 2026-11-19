@@ -1,0 +1,571 @@
+r"""Time integration of a batch of shallow water simulations on the sphere.
+
+One solver step applies, in this order:
+
+1. the Adams-Bashforth 3 step of the conservative dynamics, with the linear damping
+   (hyperdiffusion, drag, relaxation) as an integrating factor;
+2. the forcing increments, added to the state by operator splitting, in the order:
+   kinetic-energy forcing, SPPT (the physics increment of step 1 times a random
+   pattern), The Well's periodic height forcing.
+
+The forcing increments are added after the damping of their own step, so they are
+damped from the next step on, with the rest of the state. They never enter the
+history of the Adams-Bashforth scheme: inside the history the weights 23/12, -16/12
+and 5/12 would turn a random increment into a different random process. The
+tendencies of the history are those of the states that the simulation went through,
+forcing included.
+
+**Energy budget.** The energy of ``dynamics.total_energy`` is evaluated between these
+operations, so every term is the exact energy difference across one operation and
+the terms add up to the change of the total energy. The state before the damping is
+recovered from the state after it, which leaves the arithmetic of the time step
+unchanged. The columns of the budget are ``ENERGY_BUDGET_NAMES``.
+"""
+
+from __future__ import annotations
+
+import torch
+
+from autosim.types import TensorLike
+
+from .diagnostics import global_integral
+from .dynamics import (
+    SphereShallowWaterDynamics,
+    adams_bashforth_step,
+    increment_to_fields,
+    spectral_to_fields,
+    step_damping_factors,
+    total_energy,
+)
+from .forcing import (
+    FORCING_TYPES,
+    ForcingSettings,
+    PeriodicForcingSettings,
+    SpptSettings,
+    advance_pattern,
+    autoregressive_parameter,
+    complex_noise,
+    dissipation_taper,
+    global_dissipation_rate,
+    kinetic_forcing_increment,
+    local_dissipation_rate,
+    no_forcing,
+    periodic_forcing_increment,
+    physics_increment,
+    sppt_increment,
+    sppt_noise_amplitudes,
+    sppt_pattern_on_grid,
+    stationary_pattern,
+    unit_rate_amplitudes,
+)
+
+# Columns of the energy budget of one saved interval. The names of the planar
+# simulator are kept where the quantity is the same.
+ENERGY_BUDGET_NAMES = (
+    "total_energy",  # at the start of the interval [m^3/s^2]
+    "deterministic_energy_change",  # conservative step: its energy error
+    "hyperviscous_energy_change",  # hyperdiffusion
+    "drag_energy_change",  # linear drag
+    "relaxation_energy_change",  # Newtonian relaxation of the height
+    "forcing_energy_change",  # work of the kinetic forcing increments
+    "sppt_energy_change",  # work of the SPPT increments
+    "periodic_energy_change",  # work of The Well's periodic height forcing
+    "effective_forcing_energy_rate",  # mean rate of the kinetic forcing [m^2/s^3]
+)
+# Energy changes of the processes: the columns between the energy and the rate
+N_ENERGY_CHANGES = len(ENERGY_BUDGET_NAMES) - 2
+
+
+def backscatter_energy_rate(
+    dynamics: SphereShallowWaterDynamics,
+    forcing: ForcingSettings,
+    undamped_state: TensorLike,
+    hyperdiffusion: TensorLike,
+    drag: TensorLike | None,
+    taper: TensorLike,
+) -> TensorLike:
+    """Energy rate of the kinetic forcing with the backscatter of the dissipation.
+
+    rate = base rate + backscatter fraction x dissipation of kinetic energy in this
+    step. The dissipation is that of the hyperdiffusion, plus that of the drag when
+    ``forcing.backscatter_include_drag`` is set. In "global" mode it is its global
+    mean, and the rate is one value per simulation. In "local" mode it is a smoothed
+    field, and the rate is a field (B09 eq. 13).
+
+    Args:
+        dynamics: Fixed operators and time step.
+        forcing: Settings of the forcing.
+        undamped_state: State before the damping of this step, (B, 3, L, L).
+        hyperdiffusion: Factor of the hyperdiffusion for one step, (L, L).
+        drag: Factor of the drag for one step, (B,), or None without drag.
+        taper: Spectral filter of the local dissipation, (L, 1).
+
+    Returns:
+        Energy rate [m^2/s^3], shape (B,) or (B, *grid.shape).
+    """
+    batch = undamped_state.shape[0]
+    device = undamped_state.device
+    base_rate = forcing.energy_rate.to(device, torch.float64)
+    fraction = forcing.backscatter_fraction.to(device, torch.float64)
+
+    # Damping of each degree that counts as dissipation
+    lost = hyperdiffusion[:, :1].unsqueeze(0)  # (1, L, 1)
+    if forcing.backscatter_include_drag and drag is not None:
+        lost = lost * drag.reshape(batch, 1, 1)  # (B, L, 1)
+
+    if forcing.backscatter_mode == "global":
+        dissipation = global_dissipation_rate(dynamics, undamped_state, lost[..., 0])
+        return base_rate + fraction * dissipation
+    dissipation = local_dissipation_rate(dynamics, undamped_state, lost, taper)
+    grid_shape = (batch,) + (1,) * (dissipation.ndim - 1)
+    return base_rate.reshape(grid_shape) + fraction.reshape(grid_shape) * dissipation
+
+
+def energy_changes_of_step(
+    dynamics: SphereShallowWaterDynamics,
+    energy_before: TensorLike,
+    undamped_state: TensorLike,
+    damped_state: TensorLike,
+    increments: list[TensorLike | None],
+    hyperdiffusion: TensorLike,
+    drag: TensorLike | None,
+    has_relaxation: bool,
+    surface_geopotential: TensorLike | None,
+) -> tuple[TensorLike, TensorLike]:
+    """Energy change of each operation of one solver step.
+
+    The energy is evaluated after the conservative step (undamped state), after the
+    hyperdiffusion, after the drag, after the relaxation (damped state) and after each
+    forcing increment, added in turn. Each change is the difference across one
+    operation.
+
+    Args:
+        dynamics: Fixed operators.
+        energy_before: Energy at the start of the step, (B,).
+        undamped_state: State after the conservative step, (B, 3, L, L).
+        damped_state: State after the whole damping, (B, 3, L, L).
+        increments: Forcing increments in the order of ``ENERGY_BUDGET_NAMES``
+            (kinetic, SPPT, periodic), each (B, 3, L, L) or None when absent.
+        hyperdiffusion: Factor of the hyperdiffusion for one step, (L, L).
+        drag: Factor of the drag for one step, (B,), or None without drag.
+        has_relaxation: Whether the damping relaxes the geopotential.
+        surface_geopotential: Coefficients of g h_s, (B, L, L), or None.
+
+    Returns:
+        The changes (deterministic, hyperviscous, drag, relaxation, then one per
+        increment), shape (B, ``N_ENERGY_CHANGES``), and the energy at the end of the
+        step, (B,).
+    """
+    batch = undamped_state.shape[0]
+    energy_undamped = total_energy(dynamics, undamped_state, surface_geopotential)
+
+    after_hyperdiffusion = undamped_state.clone()
+    after_hyperdiffusion[:, 1:] = hyperdiffusion * undamped_state[:, 1:]
+    energy_hyperdiffusion = total_energy(
+        dynamics, after_hyperdiffusion, surface_geopotential
+    )
+
+    energy_drag = energy_hyperdiffusion
+    if drag is not None:
+        after_drag = after_hyperdiffusion.clone()
+        after_drag[:, 1:] = drag.reshape(batch, 1, 1, 1) * after_hyperdiffusion[:, 1:]
+        energy_drag = total_energy(dynamics, after_drag, surface_geopotential)
+
+    energy_damped = energy_drag
+    if has_relaxation:
+        energy_damped = total_energy(dynamics, damped_state, surface_geopotential)
+
+    changes = [
+        energy_undamped - energy_before,
+        energy_hyperdiffusion - energy_undamped,
+        energy_drag - energy_hyperdiffusion,
+        energy_damped - energy_drag,
+    ]
+    state = damped_state
+    energy = energy_damped
+    for increment in increments:
+        if increment is None:
+            changes.append(torch.zeros_like(energy))
+            continue
+        state = state + increment
+        energy_after = total_energy(dynamics, state, surface_geopotential)
+        changes.append(energy_after - energy)
+        energy = energy_after
+    return torch.stack(changes, dim=1), energy
+
+
+def integrate_trajectories(  # noqa: PLR0912, PLR0915
+    dynamics: SphereShallowWaterDynamics,
+    state: TensorLike,
+    n_saves: int,
+    steps_per_save: int,
+    skip_nt: int,
+    coriolis: TensorLike | None = None,
+    surface_geopotential: TensorLike | None = None,
+    drag_time: TensorLike | None = None,
+    relaxation_time: TensorLike | None = None,
+    equilibrium_geopotential: TensorLike | None = None,
+    forcing: ForcingSettings | None = None,
+    forcing_generators: list[torch.Generator] | None = None,
+    sppt: SpptSettings | None = None,
+    sppt_generators: list[torch.Generator] | None = None,
+    periodic: PeriodicForcingSettings | None = None,
+    start_time: float = 0.0,
+    return_additional_input_fields: bool = False,
+    return_energy_budget: bool = False,
+    return_forcing_state: bool = False,
+    previous_tendencies: list[TensorLike] | None = None,
+    output_dynamics: SphereShallowWaterDynamics | None = None,
+) -> dict:
+    """Advance B simulations and save h, u_phi, u_theta at regular times.
+
+    The state is saved at time 0 and after every ``steps_per_save`` steps, ``n_saves``
+    times. The first ``skip_nt`` of these snapshots are dropped.
+
+    The first saved frame is the branch point of reference ensembles: its spectral
+    state and the history of the time stepping are returned, so that other members
+    can continue from it exactly as this run does. The random patterns (kinetic
+    forcing and SPPT) are drawn anew from their stationary distribution at that
+    frame, so the forecast from it depends on the saved fields alone, and the members
+    and this run are forecasts of the same kind.
+
+    Args:
+        dynamics: Fixed operators and time step.
+        state: Initial spectral state (B, 3, L, L), float64 coefficients.
+        n_saves: Number of save intervals, T / dt_save.
+        steps_per_save: Solver steps per save interval.
+        skip_nt: Number of leading snapshots dropped (spin-up).
+        coriolis: Coriolis parameter (B, *grid.shape); None is the polar one.
+        surface_geopotential: Coefficients of g h_s, (B, L, L); None is a flat bottom.
+        drag_time: Time of the linear drag on vorticity and divergence [s], (B,).
+            None is no drag.
+        relaxation_time: Time of the relaxation of the geopotential [s], (B,). None
+            is no relaxation.
+        equilibrium_geopotential: Coefficients of the geopotential towards which the
+            state relaxes, (B, L, L). Required with ``relaxation_time``.
+        forcing: Settings of the kinetic-energy forcing; None is no forcing.
+        forcing_generators: One random generator per simulation, for the kinetic
+            forcing.
+        sppt: Settings of SPPT; None is no SPPT. Requires drag or relaxation.
+        sppt_generators: One random generator per simulation, for SPPT.
+        periodic: Settings of The Well's periodic forcing; None is no such forcing.
+        start_time: Time of the initial state [s], the phase of the periodic forcing.
+        return_additional_input_fields: Return the forcing increments summed over
+            each saved interval.
+        return_energy_budget: Return the energy budget of each saved interval.
+        return_forcing_state: Return the kinetic forcing pattern at each saved time.
+        previous_tendencies: Tendencies of the steps before the initial state, most
+            recent first, to continue a run without restarting the Adams-Bashforth
+            scheme. None starts it with an Euler step.
+        output_dynamics: Operators of the grid of the saved fields. With a lower band
+            limit than ``dynamics`` the state is truncated before it is saved
+            (coarse-graining). None saves on the grid of ``dynamics``.
+
+    Returns:
+        A dictionary with, n_frames = n_saves + 1 - skip_nt, and the grid that of
+        ``output_dynamics``:
+
+        - ``"data"``: the saved fields (B, n_frames, *grid.shape, 3), float32 on the
+          CPU;
+        - ``"final_state"``: the spectral state at the last time, (B, 3, L, L);
+        - ``"branch_state"``, ``"branch_tendencies"``: the spectral state
+          (B, 3, L, L) and the list of previous tendencies at the first saved frame;
+        - ``"additional_input_fields"`` (on request): at frame i, the increments of
+          h, u_phi, u_theta added by all the forcings between frames i and i + 1,
+          zero at the last frame, (B, n_frames, *grid.shape, 3), float32 on the CPU;
+        - ``"energy_budget"`` (on request): at frame i, the energy at frame i and the
+          terms of ``ENERGY_BUDGET_NAMES`` between frames i and i + 1, zero at the
+          last frame, (B, n_frames, len(ENERGY_BUDGET_NAMES)), float64 on the CPU;
+        - ``"forcing_state"`` (on request): the wind tendency of the kinetic forcing
+          pattern for a unit energy rate at each frame, eastward and colatitude
+          components, (B, n_frames, *grid.shape, 2), float32 on the CPU.
+    """
+    batch = state.shape[0]
+    device = state.device
+    lmax = dynamics.lmax
+    dt = dynamics.dt
+    hyperdiffusion = dynamics.step_damping[1]  # (L, L), read now: tests may change it
+
+    # --- Grid of the saved fields. Coefficients are truncated to its band limit by
+    # keeping the degrees and orders below it: [..., :output_lmax, :output_lmax].
+    if output_dynamics is None:
+        output_dynamics = dynamics
+    output_lmax = output_dynamics.lmax
+    output_surface = None
+    if surface_geopotential is not None:
+        output_surface = surface_geopotential[..., :output_lmax, :output_lmax]
+
+    # --- Linear damping of one step, per simulation when there is drag or relaxation
+    step_damping = dynamics.step_damping
+    damping_argument = None  # None keeps the arithmetic of the plain time step
+    equilibrium = None
+    drag = None
+    has_relaxation = False
+    if drag_time is not None or relaxation_time is not None:
+        no_damping_time = torch.full((batch,), torch.inf, dtype=torch.float64)
+        if drag_time is None:
+            drag_time = no_damping_time
+        if relaxation_time is None:
+            relaxation_time = no_damping_time
+        step_damping = step_damping_factors(dynamics, drag_time, relaxation_time)
+        damping_argument = step_damping
+        drag = torch.exp(-dt / drag_time.to(device, torch.float64))
+        has_relaxation = bool(torch.isfinite(relaxation_time).any())
+        if has_relaxation:
+            if equilibrium_geopotential is None:
+                msg = "relaxation_time requires equilibrium_geopotential"
+                raise ValueError(msg)
+            equilibrium = torch.zeros_like(state)
+            equilibrium[:, 0] = equilibrium_geopotential
+
+    # --- Forcing: patterns of the kinetic-energy forcing
+    if forcing is None:
+        forcing = no_forcing(batch)
+    if forcing.forcing_type not in FORCING_TYPES:
+        msg = f"forcing_type must be one of {FORCING_TYPES}"
+        raise ValueError(msg)
+    kinetic_forcing = forcing.forcing_type != "none"
+    if forcing.forcing_type != "none" and forcing_generators is None:
+        msg = "forcing requires forcing_generators"
+        raise ValueError(msg)
+    if forcing_generators is None:
+        forcing_generators = []
+    if return_forcing_state and not kinetic_forcing:
+        msg = "return_forcing_state requires forcing_type 'vortical' or 'momentum'"
+        raise ValueError(msg)
+
+    # Without kinetic forcing the patterns are empty (no pattern, P = 0)
+    alpha = torch.ones(batch, dtype=torch.float64, device=device)
+    amplitudes = torch.zeros(batch, 0, lmax, dtype=torch.float64, device=device)
+    pattern = torch.zeros(batch, 0, lmax, lmax, dtype=torch.complex128, device=device)
+    base_rate = forcing.energy_rate.to(device, torch.float64)
+    backscatter = False
+    taper = dissipation_taper(lmax, device)
+    unit_rate = torch.ones(batch, dtype=torch.float64, device=device)
+    if kinetic_forcing:
+        alpha = autoregressive_parameter(forcing.correlation_time, dt).to(device)
+        amplitudes = unit_rate_amplitudes(
+            dynamics,
+            alpha,
+            forcing.spectral_slope,
+            forcing.degree_min,
+            forcing.degree_max,
+        )  # (B, L)
+        if forcing.forcing_type == "vortical":
+            amplitudes = amplitudes.unsqueeze(1)  # (B, 1, L): streamfunction
+        else:
+            fraction = forcing.divergent_fraction.to(device, torch.float64)
+            fraction = fraction.reshape(batch, 1)
+            amplitudes = torch.stack(
+                [
+                    torch.sqrt(1 - fraction) * amplitudes,  # streamfunction
+                    torch.sqrt(fraction) * amplitudes,  # velocity potential
+                ],
+                dim=1,
+            )  # (B, 2, L)
+        noise = complex_noise(forcing_generators, amplitudes.shape[1], lmax)
+        pattern = stationary_pattern(noise, amplitudes, alpha)
+        backscatter = bool((forcing.backscatter_fraction > 0).any())
+
+    # --- SPPT: K random fields, one AR(1) process per field
+    if sppt is not None and sppt_generators is None:
+        msg = "sppt requires sppt_generators"
+        raise ValueError(msg)
+    if sppt_generators is None:
+        sppt_generators = []
+    n_sppt = 0
+    sppt_alpha = torch.ones(batch, 0, dtype=torch.float64, device=device)
+    sppt_amplitudes = torch.zeros(batch, 0, lmax, dtype=torch.float64, device=device)
+    sppt_pattern = torch.zeros(
+        batch, 0, lmax, lmax, dtype=torch.complex128, device=device
+    )
+    if sppt is not None:
+        if damping_argument is None:
+            msg = "sppt requires drag or relaxation, the physics that it perturbs"
+            raise ValueError(msg)
+        n_sppt = len(sppt.amplitudes)
+        times = torch.tensor(sppt.correlation_times, dtype=torch.float64)
+        field_alpha = autoregressive_parameter(times, dt).to(device)  # (K,)
+        sppt_amplitudes = sppt_noise_amplitudes(dynamics, sppt, field_alpha)
+        sppt_amplitudes = sppt_amplitudes.expand(batch, n_sppt, lmax)
+        sppt_alpha = field_alpha.expand(batch, n_sppt)
+        noise = complex_noise(sppt_generators, n_sppt, lmax)
+        sppt_pattern = stationary_pattern(noise, sppt_amplitudes, sppt_alpha)
+
+    # --- Time loop
+    tendencies_history: list[TensorLike] = []
+    if previous_tendencies is not None:
+        tendencies_history = list(previous_tendencies)
+
+    # Branch point: the first saved frame (time 0 when no snapshot is dropped)
+    branch_state = state
+    branch_tendencies = list(tendencies_history)
+
+    frames = []
+    increment_frames = []
+    budget_frames = []
+    pattern_frames = []
+    if skip_nt == 0:
+        truncated = state[..., :output_lmax, :output_lmax]
+        fields = spectral_to_fields(output_dynamics, truncated, output_surface)
+        frames.append(fields.float().cpu())
+        if return_forcing_state:
+            tendency = kinetic_forcing_increment(dynamics, pattern, unit_rate) / dt
+            truncated = tendency[..., :output_lmax, :output_lmax]
+            pattern_fields = increment_to_fields(output_dynamics, truncated)[..., 1:]
+            pattern_frames.append(pattern_fields.float().cpu())
+    energy = torch.zeros(batch, dtype=torch.float64, device=device)
+    if return_energy_budget:
+        energy = total_energy(dynamics, state, surface_geopotential)
+
+    # The state before the damping, when the budget, the backscatter or SPPT need it
+    needs_undamped = return_energy_budget or backscatter or sppt is not None
+    undamped_state = state
+    step = 0
+    for save in range(1, n_saves + 1):
+        increments_since_save = torch.zeros_like(state)
+        changes_since_save = torch.zeros(
+            batch, N_ENERGY_CHANGES, dtype=torch.float64, device=device
+        )
+        rate_since_save = torch.zeros(batch, dtype=torch.float64, device=device)
+        energy_at_save = energy
+
+        for _ in range(steps_per_save):
+            time = start_time + step * dt
+            step += 1
+
+            # 1. Conservative dynamics and linear damping
+            damped_state, tendencies_history = adams_bashforth_step(
+                dynamics,
+                state,
+                tendencies_history,
+                coriolis,
+                surface_geopotential,
+                damping_argument,
+                equilibrium,
+            )
+            # State before the damping, from damped = s_eq + E (undamped - s_eq)
+            if needs_undamped:
+                if equilibrium is None:
+                    undamped_state = damped_state / step_damping
+                else:
+                    departure = (damped_state - equilibrium) / step_damping
+                    undamped_state = equilibrium + departure
+
+            # 2. Forcing increments, added by operator splitting
+            kinetic_increment = None
+            if kinetic_forcing:
+                energy_rate = base_rate
+                if backscatter:
+                    energy_rate = backscatter_energy_rate(
+                        dynamics, forcing, undamped_state, hyperdiffusion, drag, taper
+                    )
+                kinetic_increment = kinetic_forcing_increment(
+                    dynamics, pattern, energy_rate
+                )
+                noise = complex_noise(forcing_generators, amplitudes.shape[1], lmax)
+                pattern = advance_pattern(pattern, noise, amplitudes, alpha)
+                if energy_rate.ndim == 1:
+                    rate_since_save += energy_rate
+                else:
+                    rate_since_save += global_integral(
+                        energy_rate, dynamics.quad_weights
+                    ) / (4 * torch.pi)
+
+            sppt_step_increment = None
+            if sppt is not None:
+                physics = physics_increment(
+                    undamped_state, damped_state, hyperdiffusion
+                )
+                pattern_grid = sppt_pattern_on_grid(dynamics, sppt_pattern, sppt.clip)
+                sppt_step_increment = sppt_increment(dynamics, pattern_grid, physics)
+                noise = complex_noise(sppt_generators, n_sppt, lmax)
+                sppt_pattern = advance_pattern(
+                    sppt_pattern, noise, sppt_amplitudes, sppt_alpha
+                )
+
+            periodic_step_increment = None
+            if periodic is not None:
+                periodic_step_increment = periodic_forcing_increment(
+                    dynamics, periodic, time, batch
+                )
+
+            step_increments = [
+                kinetic_increment,
+                sppt_step_increment,
+                periodic_step_increment,
+            ]
+            state = damped_state
+            for increment in step_increments:
+                if increment is not None:
+                    state = state + increment
+                    increments_since_save += increment
+
+            if return_energy_budget:
+                changes, energy = energy_changes_of_step(
+                    dynamics,
+                    energy,
+                    undamped_state,
+                    damped_state,
+                    step_increments,
+                    hyperdiffusion,
+                    drag,
+                    has_relaxation,
+                    surface_geopotential,
+                )
+                changes_since_save += changes
+
+        # Branch point at the first saved frame: the patterns are drawn anew
+        if save == skip_nt:
+            branch_state = state
+            branch_tendencies = list(tendencies_history)
+            if kinetic_forcing:
+                noise = complex_noise(forcing_generators, amplitudes.shape[1], lmax)
+                pattern = stationary_pattern(noise, amplitudes, alpha)
+            if sppt is not None:
+                noise = complex_noise(sppt_generators, n_sppt, lmax)
+                sppt_pattern = stationary_pattern(noise, sppt_amplitudes, sppt_alpha)
+
+        # Outputs of the interval that ends here, attached to the frame at its start
+        if save - 1 >= skip_nt:
+            if return_additional_input_fields:
+                truncated = increments_since_save[..., :output_lmax, :output_lmax]
+                fields = increment_to_fields(output_dynamics, truncated)
+                increment_frames.append(fields.float().cpu())
+            if return_energy_budget:
+                row = torch.cat(
+                    [
+                        energy_at_save.reshape(batch, 1),
+                        changes_since_save,
+                        (rate_since_save / steps_per_save).reshape(batch, 1),
+                    ],
+                    dim=1,
+                )
+                budget_frames.append(row.cpu())
+        if save >= skip_nt:
+            truncated = state[..., :output_lmax, :output_lmax]
+            fields = spectral_to_fields(output_dynamics, truncated, output_surface)
+            frames.append(fields.float().cpu())
+            if return_forcing_state:
+                tendency = kinetic_forcing_increment(dynamics, pattern, unit_rate) / dt
+                truncated = tendency[..., :output_lmax, :output_lmax]
+                pattern_fields = increment_to_fields(output_dynamics, truncated)
+                pattern_frames.append(pattern_fields[..., 1:].float().cpu())
+
+    output = {
+        "data": torch.stack(frames, dim=1),
+        "final_state": state,
+        "branch_state": branch_state,
+        "branch_tendencies": branch_tendencies,
+    }
+    if return_additional_input_fields:
+        increment_frames.append(torch.zeros_like(frames[-1]))  # last frame
+        output["additional_input_fields"] = torch.stack(increment_frames, dim=1)
+    if return_energy_budget:
+        last_row = torch.zeros(batch, len(ENERGY_BUDGET_NAMES), dtype=torch.float64)
+        last_row[:, 0] = energy.cpu()
+        budget_frames.append(last_row)
+        output["energy_budget"] = torch.stack(budget_frames, dim=1)
+    if return_forcing_state:
+        output["forcing_state"] = torch.stack(pattern_frames, dim=1)
+    return output
