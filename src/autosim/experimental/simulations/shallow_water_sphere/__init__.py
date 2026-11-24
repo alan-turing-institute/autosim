@@ -136,7 +136,6 @@ from .forcing import (
     unit_rate_amplitudes,
 )
 from .initial_conditions import (
-    ERA5_OROGRAPHY_EXPONENT,
     ERA5_RANGES,
     GALEWSKY_RANGES,
     MOUNTAIN_RANGES,
@@ -178,7 +177,6 @@ from .simulator import (
 
 __all__ = [
     "ENERGY_BUDGET_NAMES",
-    "ERA5_OROGRAPHY_EXPONENT",
     "ERA5_RANGES",
     "GALEWSKY_RANGES",
     "INITIAL_CONDITIONS",

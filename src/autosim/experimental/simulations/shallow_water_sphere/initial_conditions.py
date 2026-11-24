@@ -60,8 +60,6 @@ MOUNTAIN_RANGES: dict[str, tuple[float, float]] = {
 ERA5_RANGES: dict[str, tuple[float, float]] = {
     "era5_time": (0.0, float(ERA5_STEP_HOURS * (ERA5_TIMES - 1))),
 }
-# Exponent of the orography compression of The Well (PlanetSWE, gen_ics.ipynb)
-ERA5_OROGRAPHY_EXPONENT = 15 / 16
 
 
 def balanced_geopotential(
