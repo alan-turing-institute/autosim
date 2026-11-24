@@ -894,7 +894,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                     low_equilibrium = equilibrium[..., : low.lmax, : low.lmax]
                 # The forced degrees stop at the band limit of the baseline
                 low_skebs = None
-                if skebs is not None:
+                if skebs is not None and skebs.degree_min <= low.lmax - 1:
                     low_skebs = self.skebs_forcing(
                         rows,
                         low,
