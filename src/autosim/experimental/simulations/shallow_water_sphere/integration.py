@@ -265,6 +265,7 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
 
     def pattern_frame() -> TensorLike:
         """Wind tendency of the SKEBS pattern for a unit rate, on the output grid."""
+        assert skebs_forcing is not None  # return_forcing_state requires skebs
         tendency = skebs_forcing.unit_tendency()[..., :output_lmax, :output_lmax]
         return increment_to_fields(output_dynamics, tendency)[..., 1:].float().cpu()
 

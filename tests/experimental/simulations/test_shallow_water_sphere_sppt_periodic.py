@@ -378,6 +378,6 @@ def test_invalid_periodic_and_sppt_settings_raise():
     with pytest.raises(ValueError, match="amplitude"):
         PeriodicForcingSettings(amplitude=-1.0)
     with pytest.raises(ValueError, match="same length"):
-        SpptSettings([0.5, 0.2], [500.0e3], [6.0])
+        SpptSettings((0.5, 0.2), (500.0e3,), (6.0,))
     with pytest.raises(ValueError, match="positive"):
-        SpptSettings([0.5], [0.0], [6.0])
+        SpptSettings((0.5,), (0.0,), (6.0,))

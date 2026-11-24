@@ -218,7 +218,7 @@ def test_climatology_is_the_relaxation_target(monkeypatch):
         ),
     )
     rows = sim.sample_inputs(1, random_seed=0)
-    state, coriolis, surface = sim.initial_problem(rows, [])
+    _, coriolis, surface = sim.initial_problem(rows, [])
     _, relaxation_time, equilibrium = sim.damping_settings(rows, coriolis, surface)
     assert relaxation_time is not None
     assert equilibrium is not None

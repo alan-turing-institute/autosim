@@ -656,6 +656,7 @@ class SkebsForcing:
         lost = step.hyperdiffusion[:, :1].unsqueeze(0)  # (1, L, 1): damping per degree
         with_drag = lost if step.drag is None else lost * step.drag.reshape(batch, 1, 1)
         if self.global_on:
+            assert self.global_fraction is not None  # global_on implies it
             damping = with_drag if self.global_include_drag else lost
             fraction = self.global_fraction.to(device, torch.float64)
             dissipation = global_dissipation_rate(
@@ -663,6 +664,7 @@ class SkebsForcing:
             )
             rate = rate + fraction * dissipation
         if self.local_on:
+            assert self.local_fraction is not None  # local_on implies it
             damping = with_drag if self.local_include_drag else lost
             fraction = self.local_fraction.to(device, torch.float64)
             dissipation = local_dissipation_rate(

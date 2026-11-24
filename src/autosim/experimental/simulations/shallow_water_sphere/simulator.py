@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from typing import overload
 
 import numpy as np
 import torch
@@ -471,6 +472,16 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             shape = (self.n_frames, *output_shape, 3)
             self.row_layout.append(("baseline", shape))
 
+    @overload
+    def sampled_or_fixed(
+        self, rows: TensorLike, name: str, value: float
+    ) -> TensorLike: ...
+
+    @overload
+    def sampled_or_fixed(
+        self, rows: TensorLike, name: str, value: float | None
+    ) -> TensorLike | None: ...
+
     def sampled_or_fixed(
         self, rows: TensorLike, name: str, value: float | None
     ) -> TensorLike | None:
@@ -526,6 +537,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         """
         if self.skebs is None:
             return None
+        assert self.skebs_degree_max is not None  # set with skebs in __init__
         correlation_hours = self.sampled_or_fixed(
             rows, "skebs.correlation_time", self.skebs.correlation_time
         )
@@ -601,6 +613,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         if relaxation_time is not None and (
             self.damping.relaxation_target == "era5_climatology"
         ):
+            assert self.era5 is not None  # __init__ requires the era5 family
             hours = rows[:, self.get_parameter_idx("era5_time")]
             climatology = load_era5_climatology(
                 hours, self.era5.climatology_store, self.era5.level
@@ -651,6 +664,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             The spectral state (B, 3, L, L), None (the polar Coriolis parameter) and
             the coefficients of the surface geopotential (B, L, L).
         """
+        assert self.era5 is not None  # set by __init__ for the era5 family
         hours = rows[:, self.get_parameter_idx("era5_time")]
         fields = load_era5_fields(hours, self.era5.store, self.era5.level)
         if self.era5_source is None:
