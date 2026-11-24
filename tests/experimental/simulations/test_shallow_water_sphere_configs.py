@@ -20,9 +20,9 @@ from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E40
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 CONFIG_DIR = files("autosim") / "configs"
 DATASET_CONFIGS = [
-    "shallow_water_sphere_ds1_williamson3",
-    "shallow_water_sphere_ds2_shamir_paldor",
-    "shallow_water_sphere_ds3_galewsky",
+    "shallow_water_sphere_ds1_galewsky",
+    "shallow_water_sphere_ds2_galewsky_large",
+    "shallow_water_sphere_ds3_galewsky_small",
     "shallow_water_sphere_ds4_mountain",
 ]
 # Configs of the "era5" family, which read the WeatherBench2 store
@@ -58,7 +58,11 @@ def test_dataset_config_runs_at_a_small_size(name):
         config.output_nlat = 16
         config.output_nlon = 32
     if config.get("forcing_degree_max") is not None:
-        config.forcing_degree_max = 10
+        # the forced band scaled with the band limit, from 256 to 22
+        lowest = max(1, round(config.get("forcing_degree_min", 1) * 22 / 256))
+        highest = min(21, round(config.forcing_degree_max * 22 / 256))
+        config.forcing_degree_min = lowest
+        config.forcing_degree_max = max(lowest, highest)
     if config.get("reference_members", 0) > 0:
         config.reference_members = 2
 

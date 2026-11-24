@@ -1,4 +1,4 @@
-# Dataset 5: ERA5 states at 500 hPa over the smoothed orography of the Earth (W92
+# Dataset 5: ERA5 states at 500 hPa over the orography of the Earth (W92
 # case 7, from the WeatherBench2 copy of ERA5), relaxed towards the ERA5 climatology
 # and forced by the vortical forcing (SKEBS) and SPPT: weather with uncertain physics.
 # A single layer has no baroclinic instability or moisture, so the runs are not ERA5
@@ -18,22 +18,22 @@ dt_save: 6.0
 skip_nt: 0
 courant: 0.4
 # Level from which the saved h is measured, and depth of the time-step estimate, close
-# to the largest balanced fluid depth (about 6.1 km with the smoothed orography).
+# to the largest balanced fluid depth.
 mean_depth: 6000.0
 batch_size: 8
 device: cuda
 # The orography and the Coriolis parameter are returned in constant_fields.
 return_constant_fields: true
-# Orography smoothed with exp(-(l/28)^4); dates with a balanced depth below 300 m are
-# rejected and drawn again.
-era5_orography_degree: 28
-era5_min_depth: 300.0
+# Orography compressed as in The Well's PlanetSWE (gen_ics.ipynb at aac88c0):
+# sign(h_s)|h_s|^(15/16), shifted so that its minimum is 0.
+era5_orography_exponent: 0.9375
+era5_orography_shift: true
 # Relaxation of the height in 1 day towards the 1990-2019 ERA5 climatology of the
 # 500 hPa height at the day of year and hour of the start date, and a drag of 100 days.
 relaxation_time: 24.0
 relaxation_target: era5_climatology
 drag_time: 2400.0
-# Vortical forcing (SKEBS) and SPPT as in ds3.
+# Vortical forcing (SKEBS) and SPPT as in ds1.
 forcing_type: vortical
 forcing_energy_rate: 1.0e-5
 forcing_correlation_time: 6.0

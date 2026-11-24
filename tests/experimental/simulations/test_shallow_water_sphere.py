@@ -11,7 +11,7 @@ th = pytest.importorskip("torch_harmonics")
 if not hasattr(th, "as_grid"):
     pytest.skip("torch-harmonics without grid descriptors", allow_module_level=True)
 
-from torch_harmonics.examples.shallow_water_equations import (  # noqa: E402
+from torch_harmonics.examples.shallow_water_equations import (  # noqa: E402  # pyright: ignore[reportMissingImports]
     ShallowWaterSolver,
 )
 

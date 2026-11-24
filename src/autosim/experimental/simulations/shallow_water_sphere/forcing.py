@@ -9,8 +9,7 @@ Three forcings, which can be combined:
 
 Kinetic-energy backscatter forcing follows Berner, Shutts, Leutbecher and Palmer
 (2009, J. Atmos. Sci. 66, 603-626, "B09" below). A streamfunction pattern
-:math:`\psi'` (and, for a divergent part, a velocity-potential pattern
-:math:`\chi'`) is expanded in spherical harmonics, and each coefficient follows the
+:math:`\psi'` is expanded in spherical harmonics, and each coefficient follows the
 first-order autoregressive process of B09 eq. (2),
 
 .. math::
@@ -21,7 +20,7 @@ first-order autoregressive process of B09 eq. (2),
 with :math:`\alpha = \Delta t / \tau` for a decorrelation time :math:`\tau`
 (:math:`\alpha = 1` is white noise) and :math:`\epsilon` a complex Gaussian noise of
 unit variance. The pattern is an increment per step: the vorticity gains
-:math:`\nabla^2\psi'` and the divergence :math:`\nabla^2\chi'` after each solver step.
+:math:`\nabla^2\psi'` after each solver step.
 
 **Energy norm.** The amplitude :math:`b` is set from the rate at which a free random
 walk of the increments gains kinetic energy per unit mass, the global mean of
@@ -63,9 +62,8 @@ from autosim.types import TensorLike
 from .diagnostics import degree_power
 from .dynamics import SphereShallowWaterDynamics
 
-# Values of forcing_type: no forcing, a streamfunction pattern, or a streamfunction
-# and a velocity-potential pattern
-FORCING_TYPES = ("none", "vortical", "momentum")
+# Values of forcing_type: no forcing, or a streamfunction pattern
+FORCING_TYPES = ("none", "vortical")
 
 
 @dataclass
@@ -73,14 +71,12 @@ class ForcingSettings:
     """Settings of the stochastic forcing of one batch of B simulations.
 
     Attributes:
-        forcing_type: "none", "vortical" or "momentum".
+        forcing_type: "none" or "vortical".
         energy_rate: Base energy rate of the kinetic-energy forcing [m^2/s^3], (B,).
         correlation_time: Decorrelation time of the pattern [s], (B,); 0 is white.
         spectral_slope: Exponent p of the noise amplitude g_l = b l^p, (B,).
         degree_min: Lowest forced degree.
         degree_max: Highest forced degree.
-        divergent_fraction: Fraction of the energy rate given to the divergent
-            pattern, (B,); 0 for "vortical".
         backscatter_fraction: Fraction of the diagnosed dissipation added to the
             energy rate, (B,).
         backscatter_mode: "global" or "local".
@@ -93,7 +89,6 @@ class ForcingSettings:
     spectral_slope: TensorLike
     degree_min: int
     degree_max: int
-    divergent_fraction: TensorLike
     backscatter_fraction: TensorLike
     backscatter_mode: str
     backscatter_include_drag: bool
@@ -109,7 +104,6 @@ def no_forcing(batch: int) -> ForcingSettings:
         spectral_slope=zeros,
         degree_min=1,
         degree_max=1,
-        divergent_fraction=zeros,
         backscatter_fraction=zeros,
         backscatter_mode="global",
         backscatter_include_drag=False,
@@ -362,16 +356,15 @@ def kinetic_forcing_increment(
 ) -> TensorLike:
     r"""Increment of the state from the patterns, for one step.
 
-    The patterns hold :math:`\psi'` (index 0) and, when present, :math:`\chi'`
-    (index 1) for a unit energy rate. They are multiplied by the square root of the
-    energy rate, then the vorticity gains :math:`\nabla^2\psi'` and the divergence
-    :math:`\nabla^2\chi'`. A rate of shape (B,) multiplies the coefficients. A rate
+    The pattern holds :math:`\psi'` for a unit energy rate. It is multiplied by the
+    square root of the energy rate, then the vorticity gains :math:`\nabla^2\psi'`.
+    A rate of shape (B,) multiplies the coefficients. A rate
     on the grid, (B, \*grid.shape), multiplies the patterns in grid space, as in B09
     eq. (13).
 
     Args:
         dynamics: Fixed operators.
-        pattern: Pattern coefficients (B, P, L, L), P = 1 or 2.
+        pattern: Pattern coefficients (B, 1, L, L).
         energy_rate: Energy rate [m^2/s^3], shape (B,) or (B, *grid.shape).
 
     Returns:
@@ -395,8 +388,6 @@ def kinetic_forcing_increment(
         device=pattern.device,
     )
     increment[:, 1] = dynamics.laplacian * scaled[:, 0]
-    if pattern.shape[1] == 2:
-        increment[:, 2] = dynamics.laplacian * scaled[:, 1]
     return increment
 
 

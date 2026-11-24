@@ -24,7 +24,7 @@ device: cuda
 return_constant_fields: true
 # Local backscatter (Berner et al. 2009, eq. 13): the energy rate is a fraction of the
 # kinetic energy removed by the hyperdiffusion, as a smoothed field; the pattern has
-# the decorrelation time and slope of ds3.
+# the decorrelation time and slope of ds1.
 forcing_type: vortical
 forcing_energy_rate: 0.0
 forcing_correlation_time: 6.0

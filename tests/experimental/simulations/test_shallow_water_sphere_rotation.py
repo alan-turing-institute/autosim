@@ -15,12 +15,12 @@ from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E40
     SphereShallowWaterDynamics,
     adams_bashforth_step,
     coriolis_parameter,
+    galewsky_initial_condition,
     mountain_initial_condition,
     mountain_orography,
     rotate_coefficients,
     rotate_fields,
     rotate_point,
-    shamir_paldor_initial_condition,
     spectral_to_fields,
     wigner_d_matrix,
 )
@@ -288,16 +288,20 @@ def test_rotated_problem_matches_rotated_simulation():
     round-off amplified by 12 h of integration.
     """
     alpha, beta, gamma = ANGLES
-    depth = 5.0e4 / GRAVITY  # gH of the published wave of Shamir and Paldor (2016)
-    dynamics, steps_per_hour = _dynamics(43, 64, 128, depth)
+    dynamics, steps_per_hour = _dynamics(43, 64, 128, 1.0e4)
     assert dynamics.exact_products
     one = torch.ones(1, dtype=torch.float64)
-    state = shamir_paldor_initial_condition(
+    # The Galewsky jet and its bump: the bump radiates gravity waves and the flow
+    # moves within 12 h
+    state = galewsky_initial_condition(
         dynamics,
-        wave_type=one,  # eastward inertia-gravity wave
-        zonal_wavenumber=10 * one,
-        mode_number=5 * one,
-        wave_amplitude=5 * one,
+        jet_speed=80 * one,
+        height_perturbation=120 * one,
+        perturbation_lon=0 * one,
+        perturbation_lat=math.pi / 4 * one,
+        noise_amplitude=0.0,
+        noise_lmax=1,
+        device=DEVICE,
     )
     steps = 12 * steps_per_hour
 
@@ -313,8 +317,9 @@ def test_rotated_problem_matches_rotated_simulation():
     )
     simulated_rotation = _advance(dynamics, rotated_state, steps, coriolis)
 
-    # the wave has moved, so the comparison is not trivially satisfied
-    assert (simulated - state)[:, 0].abs().max() > 1e-2 * state[:, 0, 1:].abs().max()
+    # the flow has moved (by 3e-3 of the largest height coefficient, that of the
+    # balanced jet), so the comparison is not trivially satisfied
+    assert (simulated - state)[:, 0].abs().max() > 1e-3 * state[:, 0, 1:].abs().max()
     for index in range(3):
         scale = rotated_simulation[:, index].abs().max()
         difference = (simulated_rotation[:, index] - rotated_simulation[:, index]).abs()

@@ -1,6 +1,8 @@
-# Dataset 3: barotropically unstable jet of Galewsky et al. (2004), relaxed back
-# towards the jet, with the vortical forcing (SKEBS) and SPPT. The relaxation rebuilds
-# the jet as fast as the instability breaks it, so both stochastic forcings act.
+# Dataset 3: the Galewsky jet of dataset 1, with the vortical forcing (SKEBS)
+# restricted to the degrees 60 to 255 (small scales) and without SPPT, so that the
+# spread of a forecast enters at those scales. From a frame of the developed flow
+# (day 1), 86 to 100 per cent of the spread of two members stays in the band up to
+# 24 h (pilot at L = 86); later the turbulence carries it to the jet scales.
 # Requires the "spherical" extra and a GPU; leave dataset.num_workers unset.
 _target_: autosim.experimental.simulations.SphericalShallowWater
 log_level: progress_bar
@@ -36,12 +38,9 @@ forcing_type: vortical
 forcing_energy_rate: 1.0e-5
 forcing_correlation_time: 6.0
 forcing_spectral_slope: -1.27
-# SPPT: the three scales of ECMWF's operational scheme (Leutbecher et al. 2017,
-# Table 1): standard deviation, correlation length [m] and decorrelation time [h].
-sppt_amplitudes: [0.52, 0.18, 0.06]
-sppt_length_scales: [500.0e3, 1000.0e3, 2000.0e3]
-sppt_correlation_times: [6.0, 72.0, 720.0]
-sppt_clip: 1.0
+# Restricted to the degrees 60 to 255: the small-scale band.
+forcing_degree_min: 60
+forcing_degree_max: 255
 # Ranges around the published case (80 m/s, 120 m, longitude free, latitude pi/4).
 parameters_range:
   jet_speed: [60.0, 100.0]

@@ -16,12 +16,12 @@ from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E40
     Era5Fields,
     SphereShallowWaterDynamics,
     SphericalShallowWater,
+    compress_orography,
     era5_hours,
     era5_initial_condition,
     era5_source_dynamics,
     era5_time_index,
     load_era5_fields,
-    orography_filter,
     shallow_water_tendencies,
 )
 from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E402
@@ -102,7 +102,7 @@ def test_regridded_wind_keeps_its_vorticity():
     dynamics = _dynamics()
     fields = _synthetic_fields()
     source = era5_source_dynamics(dynamics, fields)
-    state, surface, valid = era5_initial_condition(dynamics, source, fields)
+    state, surface = era5_initial_condition(dynamics, source, fields)
 
     tilt = 0.7
     latitude = dynamics.latitude.unsqueeze(0)
@@ -122,8 +122,7 @@ def test_balance_removes_the_divergence_and_keeps_the_mean_free_surface():
     dynamics = _dynamics()
     fields = _synthetic_fields(mountain=1500.0)
     source = era5_source_dynamics(dynamics, fields)
-    state, surface, valid = era5_initial_condition(dynamics, source, fields)
-    assert valid.all()
+    state, surface = era5_initial_condition(dynamics, source, fields)
     assert state[:, 2].abs().max() == 0.0
 
     # the global mean of the free surface is that of the fields
@@ -140,30 +139,33 @@ def test_balance_removes_the_divergence_and_keeps_the_mean_free_surface():
     assert tendency[:, 2].abs().max() < 1e-10 * unbalanced_tendency[:, 2].abs().max()
 
 
-def test_orography_above_the_free_surface_is_rejected():
-    dynamics = _dynamics()
-    source = era5_source_dynamics(dynamics, _synthetic_fields())
-    _, _, valid = era5_initial_condition(dynamics, source, _synthetic_fields())
-    assert valid.all()
-    deep = _synthetic_fields(mountain=8000.0)
-    _, _, valid = era5_initial_condition(dynamics, source, deep)
-    assert not valid.any()
-    # a shallower mountain passes the check, and a higher threshold rejects it
-    _, _, valid = era5_initial_condition(dynamics, source, _synthetic_fields(1500.0))
-    assert valid.all()
-    _, _, valid = era5_initial_condition(
-        dynamics, source, _synthetic_fields(1500.0), min_depth=6000.0
+def test_compressed_orography_is_that_of_the_well():
+    """sign(h)|h|^(15/16), then shifted to a minimum of 0, as PlanetSWE."""
+    height = torch.tensor([[-400.0, 0.0, 1000.0, 5859.0]], dtype=torch.float64)
+    geopotential = GRAVITY * height
+    unchanged = compress_orography(geopotential, GRAVITY)
+    torch.testing.assert_close(unchanged, geopotential, rtol=1e-15, atol=0.0)
+    compressed = compress_orography(geopotential, GRAVITY, 15 / 16) / GRAVITY
+    expected = torch.sign(height) * height.abs() ** (15 / 16)
+    torch.testing.assert_close(compressed, expected, rtol=1e-12, atol=1e-12)
+    assert compressed.max().item() == pytest.approx(3406.7, abs=0.1)  # Tibet
+    shifted = compress_orography(geopotential, GRAVITY, 15 / 16, shift=True) / GRAVITY
+    torch.testing.assert_close(
+        shifted, expected - expected.min(), rtol=1e-12, atol=1e-9
     )
-    assert not valid.any()
+    assert shifted.min().item() == 0.0
 
 
-def test_orography_filter():
-    """exp(-(l/28)^4): 1 at l = 0, 1/e at l = 28, and the same weights at every L."""
-    weights = orography_filter(86)[:, 0]
-    assert weights[0].item() == 1.0
-    assert weights[28].item() == pytest.approx(math.exp(-1.0), rel=1e-12)
-    assert weights[56].item() == pytest.approx(math.exp(-16.0), rel=1e-12)
-    torch.testing.assert_close(orography_filter(256)[:86, 0], weights)
+def test_initial_condition_uses_the_compressed_orography():
+    dynamics = _dynamics()
+    fields = _synthetic_fields(mountain=1500.0)
+    source = era5_source_dynamics(dynamics, fields)
+    _, surface = era5_initial_condition(dynamics, source, fields, 15 / 16, True)
+    compressed = compress_orography(
+        fields.surface_geopotential.to(DEVICE, torch.float64), GRAVITY, 15 / 16, True
+    )
+    expected = torch.tril(source.to_coefficients(compressed.expand(2, -1, -1)))
+    torch.testing.assert_close(surface, expected, rtol=1e-12, atol=1e-9)
 
 
 def test_fields_on_another_grid_raise():
@@ -203,20 +205,8 @@ def _era5_simulator(monkeypatch, mountain, batch, **options):
     )
 
 
-def test_rejected_dates_are_dropped(monkeypatch):
-    """A date whose balanced depth is below era5_min_depth gives no simulation."""
-    sim = _era5_simulator(monkeypatch, 1500.0, 2, era5_min_depth=0.0)
-    y, x = sim.forward_batch(sim.sample_inputs(2, random_seed=0), random_seed=0)
-    assert y.shape[0] == 2
-    assert torch.isfinite(y).all()
-    sim = _era5_simulator(monkeypatch, 1500.0, 2, era5_min_depth=6000.0)
-    y, x = sim.forward_batch(sim.sample_inputs(2, random_seed=0), random_seed=0)
-    assert y.shape[0] == 0
-    assert x.shape[0] == 0
-
-
 def test_climatology_is_the_relaxation_target(monkeypatch):
-    """The equilibrium is the analysed climatology minus the filtered orography."""
+    """The equilibrium is the analysed climatology minus the orography."""
 
     def fake_climatology(hours, _store, _level):
         return _synthetic_fields(batch=hours.shape[0]).geopotential * 1.01
@@ -235,6 +225,8 @@ def test_climatology_is_the_relaxation_target(monkeypatch):
     _, relaxation_time, equilibrium = sim.damping_settings(rows, coriolis, surface)
     assert relaxation_time is not None
     assert equilibrium is not None
+    assert surface is not None
+    assert sim.era5_source is not None
     expected_free = sim.era5_source.to_coefficients(
         fake_climatology(torch.zeros(1), "", 500).to(DEVICE)
     )

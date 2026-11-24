@@ -13,12 +13,12 @@ latitudes from 90 to -90 degrees, longitudes from 0), with the surface geopotent
 ``era5_initial_condition`` analyses these fields on the equiangular grid of the store
 (poles included), keeps the degrees below the band limit of the solver, and applies
 the balance step of ``balance_state``. W92 case 7 has no orography. With the Earth's
-orography the fluid depth :math:`z/g - h_s` must stay positive. The truncated
-orography of Tibet and the Karakoram reaches 5652 m at lmax = 86 (5978 m at lmax = 43,
-through Gibbs oscillations), which gave a negative depth on two of six test dates, so
-the orography is smoothed with ``orography_filter``, :math:`\exp[-(l/28)^4]`: its
-highest peak is then 5125 m, and the thinnest layer over the six dates 515 m. A
-snapshot whose balanced depth stays below a threshold is flagged as invalid.
+orography the fluid depth :math:`z/g - h_s` must stay positive, while the ground of
+Tibet (5859 m on the 0.25 degree grid) nearly reaches the 500 hPa surface. As in the
+PlanetSWE dataset of The Well (Ohana et al. 2024; ``gen_ics.ipynb`` at commit aac88c0
+of PolymathicAI/the_well), the orography can be compressed,
+:math:`h_s \to \operatorname{sign}(h_s)|h_s|^p` with :math:`p = 15/16`, and shifted so
+that its minimum is 0 (``compress_orography``).
 
 ``load_era5_climatology`` reads the 1990-2019 climatology of WeatherBench2 (store
 ``ERA5_CLIMATOLOGY_STORE``, dimensions hour, dayofyear, level, latitude, longitude,
@@ -44,9 +44,8 @@ ERA5_STORE = "gs://weatherbench2/datasets/era5/1959-2023_01_10-wb13-6h-1440x721.
 ERA5_CLIMATOLOGY_STORE = (
     "gs://weatherbench2/datasets/era5-hourly-climatology/1990-2019_6h_1440x721.zarr"
 )
-# Degree of the orography filter exp(-(l/28)^4), and the smallest accepted fluid depth
-ERA5_OROGRAPHY_DEGREE = 28
-ERA5_MIN_DEPTH = 300.0  # m
+# Exponent of the orography compression of The Well (PlanetSWE, gen_ics.ipynb)
+ERA5_OROGRAPHY_EXPONENT = 15 / 16
 ERA5_LEVEL = 500  # hPa
 ERA5_START = np.datetime64("1959-01-01T00", "h")
 ERA5_STEP_HOURS = 6
@@ -186,28 +185,6 @@ def load_era5_climatology(
     return torch.from_numpy(np.stack(fields))
 
 
-def orography_filter(
-    lmax: int,
-    degree: float = ERA5_OROGRAPHY_DEGREE,
-    device: torch.device | str | None = None,
-) -> TensorLike:
-    r"""Spectral filter :math:`\exp[-(l/l_0)^4]` of the orography, per degree.
-
-    The weights do not depend on the band limit, so the filtered orography is the
-    same at every resolution that keeps the degrees it contains.
-
-    Args:
-        lmax: Band limit L.
-        degree: l_0.
-        device: Torch device.
-
-    Returns:
-        Weights (L, 1).
-    """
-    degrees = torch.arange(lmax, dtype=torch.float64, device=device)
-    return torch.exp(-((degrees / degree) ** 4)).reshape(lmax, 1)
-
-
 def era5_source_dynamics(
     dynamics: SphereShallowWaterDynamics, fields: Era5Fields
 ) -> SphereShallowWaterDynamics:
@@ -249,37 +226,71 @@ def era5_source_dynamics(
     return source
 
 
+def compress_orography(
+    surface_geopotential: TensorLike,
+    gravity: float,
+    exponent: float = 1.0,
+    shift: bool = False,
+) -> TensorLike:
+    r"""Compressed orography of The Well's PlanetSWE, on the grid of the fields.
+
+    The height :math:`h_s = \Phi_s / g` [m] becomes
+    :math:`\operatorname{sign}(h_s)|h_s|^p`, and with ``shift`` the result is shifted
+    so that its minimum is 0 (``gen_ics.ipynb`` of PolymathicAI/the_well at aac88c0).
+    With :math:`p = 15/16` the 5859 m of Tibet become 3407 m. ``exponent=1`` and
+    ``shift=False`` leave the orography unchanged.
+
+    Args:
+        surface_geopotential: g h_s on the grid of the fields [m^2/s^2].
+        gravity: g [m/s^2].
+        exponent: p.
+        shift: Shift the compressed orography so that its minimum is 0.
+
+    Returns:
+        The surface geopotential of the compressed orography, same shape.
+    """
+    height = surface_geopotential / gravity
+    height = torch.sign(height) * height.abs() ** exponent
+    if shift:
+        height = height - height.min()
+    return gravity * height
+
+
 def era5_initial_condition(
     dynamics: SphereShallowWaterDynamics,
     source: SphereShallowWaterDynamics,
     fields: Era5Fields,
-    orography_degree: float = ERA5_OROGRAPHY_DEGREE,
-    min_depth: float = ERA5_MIN_DEPTH,
-) -> tuple[TensorLike, TensorLike, TensorLike]:
+    orography_exponent: float = 1.0,
+    orography_shift: bool = False,
+) -> tuple[TensorLike, TensorLike]:
     """Balanced spectral state and orography from ERA5 fields, W92 case 7.
 
     The fields are analysed on their grid (``source``) and the degrees below the band
-    limit kept. The orography is smoothed with ``orography_filter``. The fluid depth is
-    the free surface minus the orography. The balance step removes the divergence and
-    puts the free surface in nonlinear balance with the vorticity, with the global
-    mean of the analysed free surface.
+    limit kept. The orography is first compressed with ``compress_orography``. The
+    fluid depth is the free surface minus the orography. The balance
+    step removes the divergence and puts the free surface in nonlinear balance with
+    the vorticity, with the global mean of the analysed free surface.
 
     Args:
         dynamics: Operators of the solver.
         source: Operators on the grid of the fields (``era5_source_dynamics``).
         fields: ERA5 fields of B times.
-        orography_degree: Degree l_0 of the orography filter.
-        min_depth: Smallest accepted fluid depth of the balanced state [m].
+        orography_exponent: Exponent p of ``compress_orography``.
+        orography_shift: Shift of ``compress_orography``.
 
     Returns:
-        The spectral state (B, 3, L, L), the coefficients of the filtered surface
-        geopotential g h_s, shape (B, L, L), and whether each balanced state keeps a
-        fluid depth of at least ``min_depth`` everywhere, shape (B,), bool.
+        The spectral state (B, 3, L, L) and the coefficients of the surface
+        geopotential g h_s, shape (B, L, L).
     """
     device = source.laplacian.device
     batch = fields.geopotential.shape[0]
     geopotential = fields.geopotential.to(device, torch.float64)
-    surface = fields.surface_geopotential.to(device, torch.float64)
+    surface = compress_orography(
+        fields.surface_geopotential.to(device, torch.float64),
+        dynamics.gravity,
+        orography_exponent,
+        orography_shift,
+    )
     wind = torch.stack(
         [
             fields.eastward.to(device, torch.float64),
@@ -290,17 +301,13 @@ def era5_initial_condition(
 
     free_surface = source.to_coefficients(geopotential)
     surface_geopotential = source.to_coefficients(surface.expand(batch, *surface.shape))
-    surface_filter = orography_filter(dynamics.lmax, orography_degree, device)
-    surface_geopotential = torch.tril(surface_filter * surface_geopotential)
+    surface_geopotential = torch.tril(surface_geopotential)
     vorticity, divergence = source.vorticity_divergence(wind)
     state = torch.stack(
         [free_surface - surface_geopotential, vorticity, divergence], dim=1
     )
     state = balance_state(dynamics, torch.tril(state), None, surface_geopotential)
-
-    depth = dynamics.to_grid(state[:, 0]) / dynamics.gravity
-    minimum = depth.amin(dim=tuple(range(1, depth.ndim)))
-    return state, surface_geopotential, minimum >= min_depth
+    return state, surface_geopotential
 
 
 def era5_hours(date: str) -> float:

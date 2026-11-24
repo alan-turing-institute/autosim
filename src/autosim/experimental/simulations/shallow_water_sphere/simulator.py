@@ -19,8 +19,6 @@ from .dynamics import (
 from .era5 import (
     ERA5_CLIMATOLOGY_STORE,
     ERA5_LEVEL,
-    ERA5_MIN_DEPTH,
-    ERA5_OROGRAPHY_DEGREE,
     ERA5_RANGES,
     ERA5_STEP_HOURS,
     ERA5_STORE,
@@ -40,21 +38,15 @@ from .forcing import (
 from .initial_conditions import (
     GALEWSKY_RANGES,
     MOUNTAIN_RANGES,
-    WILLIAMSON3_RANGES,
     balanced_geopotential,
     galewsky_initial_condition,
     mountain_initial_condition,
-    tilted_pole_coriolis,
-    williamson3_initial_condition,
     zonal_jet,
 )
 from .integration import ENERGY_BUDGET_NAMES, integrate_trajectories
-from .shamir_paldor import SHAMIR_PALDOR_RANGES, shamir_paldor_initial_condition
 
 INITIAL_CONDITIONS = (
     "galewsky",
-    "williamson3",
-    "shamir_paldor",
     "mountain",
     "era5",
 )
@@ -64,8 +56,6 @@ RELAXATION_TARGETS = ("jet", "era5_climatology")
 # Default sampling ranges of each family; their keys are the required parameters.
 DEFAULT_PARAMETER_RANGES: dict[str, dict[str, tuple[float, float]]] = {
     "galewsky": GALEWSKY_RANGES,
-    "williamson3": WILLIAMSON3_RANGES,
-    "shamir_paldor": SHAMIR_PALDOR_RANGES,
     "mountain": MOUNTAIN_RANGES,
     "era5": ERA5_RANGES,
 }
@@ -79,7 +69,6 @@ SAMPLED_SCALARS = (
     "forcing_energy_rate",
     "forcing_correlation_time",
     "forcing_spectral_slope",
-    "forcing_divergent_fraction",
     "forcing_backscatter_fraction",
 )
 
@@ -135,22 +124,13 @@ class SphericalShallowWater(SpatioTemporalSimulator):
     - ``"galewsky"``: barotropically unstable jet with a height bump and a small
       height noise (Galewsky et al. 2004). Parameters ``jet_speed``,
       ``height_perturbation_m``, ``perturbation_lon``, ``perturbation_lat``.
-    - ``"williamson3"``: steady zonal jet with compact support about an axis tilted
-      by ``tilt``, with the Coriolis parameter of the same axis (W92 case 3).
-      Parameters ``flow_speed``, ``tilt``.
-    - ``"shamir_paldor"``: one Rossby or inertia-gravity wave of Shamir and Paldor
-      (2016) at the rest depth ``mean_depth``. Parameters ``wave_type`` (0 Rossby,
-      1 eastward, 2 westward inertia-gravity), ``zonal_wavenumber``, ``mode_number``
-      (all three rounded to the nearest integer; the rounded values are returned in
-      ``constant_scalars``) and ``wave_amplitude``, the largest wind speed [m/s].
     - ``"mountain"``: zonal flow over an isolated Gaussian mountain (W92 case 5 with
       the mountain of DCMIP-2008). Parameters ``flow_speed``, ``mountain_height``,
       ``mountain_width``, ``mountain_lon``, ``mountain_lat``.
     - ``"era5"``: the ERA5 state at 500 hPa over the Earth's orography, after a
       balance step (W92 case 7), read from the WeatherBench2 store ``era5_store``.
-      The orography is smoothed (``era5_orography_degree``), and a date whose
-      balanced depth falls below ``era5_min_depth`` is rejected: its row is dropped,
-      and ``ensure_exact_n`` draws another date.
+      The orography can be compressed as in The Well's PlanetSWE
+      (``era5_orography_exponent``, ``era5_orography_shift``).
       Parameter ``era5_time``, hours since 1959-01-01T00, rounded to the 6-hourly
       times of the store; the rounded value is returned in ``constant_scalars``.
 
@@ -167,9 +147,8 @@ class SphericalShallowWater(SpatioTemporalSimulator):
       and linear drag on the vorticity and the divergence. With both, the flow
       reaches a statistically steady state with a jet and eddies.
     - Stochastic kinetic-energy forcing, ``forcing_type``: ``"vortical"``
-      (streamfunction pattern, Berner et al. 2009) or ``"momentum"`` (the same with a
-      divergent part). The energy rate can include a backscatter of the diagnosed
-      dissipation, global or local.
+      (streamfunction pattern, Berner et al. 2009). The energy rate can include a
+      backscatter of the diagnosed dissipation, global or local.
     - Stochastically perturbed physics tendencies, ``sppt_amplitudes``: the increment
       of the drag and the relaxation multiplied by a random pattern (ECMWF's SPPT).
     - The daily and yearly height forcing of The Well's planetswe,
@@ -206,8 +185,8 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         device: Torch device.
         initial_condition: Family of the initial condition, see above.
         rotation_axis: Longitude and latitude [rad] of the rotation pole, for the
-            Coriolis parameter. None is the geographic pole. ``"williamson3"`` sets
-            the axis from its tilt, and ``"era5"`` uses the geographic pole.
+            Coriolis parameter. None is the geographic pole. ``"era5"`` uses the
+            geographic pole.
         return_constant_fields: Return the Coriolis parameter f [1/s] and the
             orography h_s [m] on the grid as ``constant_fields``, shape
             ``(n, *grid.shape, 2)``. An emulator needs them as inputs: a rotated
@@ -225,9 +204,9 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             year and hour of the start date, minus the orography, held fixed.
         drag_time: Time of the linear drag on vorticity and divergence [hours]. None
             is no drag.
-        forcing_type: "none", "vortical" or "momentum".
+        forcing_type: "none" or "vortical".
         forcing_energy_rate: Kinetic energy per unit mass injected per unit time by
-            "vortical" and "momentum" forcing [m^2/s^3]: the growth rate of the
+            the "vortical" forcing [m^2/s^3]: the growth rate of the
             global mean of |u|^2 / 2 under a free random walk of the increments.
         forcing_correlation_time: Decorrelation time of the forcing pattern [hours].
             Zero is white noise.
@@ -235,8 +214,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             kinetic-energy spectrum of the forcing follows l^(2p+3).
         forcing_degree_min: Lowest forced degree.
         forcing_degree_max: Highest forced degree. None is L - 1.
-        forcing_divergent_fraction: Fraction of the energy rate of "momentum"
-            forcing given to the divergent part.
         forcing_backscatter_fraction: Fraction of the diagnosed kinetic-energy
             dissipation of the hyperdiffusion added to the energy rate. Zero keeps
             the fixed rate.
@@ -259,8 +236,10 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         periodic_forcing_year: Period of the latitude of its centre [hours].
         era5_store: WeatherBench2 zarr store of ``"era5"``.
         era5_level: Pressure level of ``"era5"`` [hPa].
-        era5_orography_degree: Degree l_0 of the orography filter exp(-(l/l_0)^4).
-        era5_min_depth: Smallest accepted balanced fluid depth of ``"era5"`` [m].
+        era5_orography_exponent: Exponent p of the orography compression
+            sign(h_s)|h_s|^p of ``"era5"`` (The Well: 15/16); 1 is no compression.
+        era5_orography_shift: Shift the compressed orography of ``"era5"`` so that
+            its minimum is 0, as The Well.
         era5_climatology_store: WeatherBench2 climatology store, for
             ``relaxation_target="era5_climatology"``.
         return_periodic_forcing: Return, as ``periodic_forcing``, The Well's height
@@ -331,7 +310,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         forcing_spectral_slope: float = -1.27,
         forcing_degree_min: int = 1,
         forcing_degree_max: int | None = None,
-        forcing_divergent_fraction: float = 0.5,
         forcing_backscatter_fraction: float = 0.0,
         forcing_backscatter_mode: str = "global",
         backscatter_include_drag: bool = False,
@@ -346,8 +324,8 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         periodic_forcing_year: float = 1008.0,
         era5_store: str = ERA5_STORE,
         era5_level: int = ERA5_LEVEL,
-        era5_orography_degree: float = ERA5_OROGRAPHY_DEGREE,
-        era5_min_depth: float = ERA5_MIN_DEPTH,
+        era5_orography_exponent: float = 1.0,
+        era5_orography_shift: bool = False,
         era5_climatology_store: str = ERA5_CLIMATOLOGY_STORE,
         return_periodic_forcing: bool = False,
         return_additional_input_fields: bool = False,
@@ -376,16 +354,13 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             msg = "forcing_backscatter_fraction must be non-negative"
             raise ValueError(msg)
         if forcing_backscatter_fraction > 0 and not kinetic_forcing:
-            msg = "backscatter requires forcing_type 'vortical' or 'momentum'"
+            msg = "backscatter requires forcing_type 'vortical'"
             raise ValueError(msg)
         if return_forcing_state and not kinetic_forcing:
-            msg = "return_forcing_state requires forcing_type 'vortical' or 'momentum'"
+            msg = "return_forcing_state requires forcing_type 'vortical'"
             raise ValueError(msg)
         if forcing_energy_rate < 0 or forcing_correlation_time < 0:
             msg = "forcing_energy_rate and forcing_correlation_time must be >= 0"
-            raise ValueError(msg)
-        if not 0 <= forcing_divergent_fraction <= 1:
-            msg = "forcing_divergent_fraction must be between 0 and 1"
             raise ValueError(msg)
         if reference_members < 0:
             msg = "reference_members must be non-negative"
@@ -452,9 +427,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         if relaxation_target == "era5_climatology" and initial_condition != "era5":
             msg = "relaxation_target='era5_climatology' needs initial_condition='era5'"
             raise ValueError(msg)
-        if era5_orography_degree <= 0:
-            msg = "era5_orography_degree must be positive"
-            raise ValueError(msg)
         if output_lmax is not None and output_lmax > lmax:
             msg = "output_lmax must not exceed lmax"
             raise ValueError(msg)
@@ -466,7 +438,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         if not 1 <= forcing_degree_min <= forcing_degree_max <= lmax - 1:
             msg = "forcing degrees must satisfy 1 <= min <= max <= lmax - 1"
             raise ValueError(msg)
-        if initial_condition in ("williamson3", "era5") and rotation_axis is not None:
+        if initial_condition == "era5" and rotation_axis is not None:
             msg = f"initial_condition='{initial_condition}' sets its own rotation axis"
             raise ValueError(msg)
         if parameters_range is None:
@@ -517,7 +489,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         self.forcing_spectral_slope = forcing_spectral_slope
         self.forcing_degree_min = forcing_degree_min
         self.forcing_degree_max = forcing_degree_max
-        self.forcing_divergent_fraction = forcing_divergent_fraction
         self.forcing_backscatter_fraction = forcing_backscatter_fraction
         self.forcing_backscatter_mode = forcing_backscatter_mode
         self.backscatter_include_drag = backscatter_include_drag
@@ -528,8 +499,8 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         self.periodic = periodic
         self.era5_store = era5_store
         self.era5_level = era5_level
-        self.era5_orography_degree = era5_orography_degree
-        self.era5_min_depth = era5_min_depth
+        self.era5_orography_exponent = era5_orography_exponent
+        self.era5_orography_shift = era5_orography_shift
         self.era5_climatology_store = era5_climatology_store
         self.relaxation_target = relaxation_target
         self.return_periodic_forcing = return_periodic_forcing
@@ -655,11 +626,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         spectral_slope = self.sampled_or_fixed(
             rows, "forcing_spectral_slope", self.forcing_spectral_slope
         )
-        divergent_fraction = self.sampled_or_fixed(
-            rows, "forcing_divergent_fraction", self.forcing_divergent_fraction
-        )
-        if self.forcing_type == "vortical":
-            divergent_fraction = torch.zeros_like(divergent_fraction)
         backscatter_fraction = self.sampled_or_fixed(
             rows, "forcing_backscatter_fraction", self.forcing_backscatter_fraction
         )
@@ -670,7 +636,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             spectral_slope=spectral_slope,
             degree_min=self.forcing_degree_min,
             degree_max=self.forcing_degree_max,
-            divergent_fraction=divergent_fraction,
             backscatter_fraction=backscatter_fraction,
             backscatter_mode=self.forcing_backscatter_mode,
             backscatter_include_drag=self.backscatter_include_drag,
@@ -762,28 +727,19 @@ class SphericalShallowWater(SpatioTemporalSimulator):
 
         Returns:
             The spectral state (B, 3, L, L), None (the polar Coriolis parameter) and
-            the coefficients of the surface geopotential (B, L, L). The state of a
-            rejected date (balanced depth below ``era5_min_depth``) is NaN, so its row
-            is dropped.
+            the coefficients of the surface geopotential (B, L, L).
         """
         hours = rows[:, self.get_parameter_idx("era5_time")]
         fields = load_era5_fields(hours, self.era5_store, self.era5_level)
         if self.era5_source is None:
             self.era5_source = era5_source_dynamics(self.dynamics, fields)
-        state, surface_geopotential, valid = era5_initial_condition(
+        state, surface_geopotential = era5_initial_condition(
             self.dynamics,
             self.era5_source,
             fields,
-            self.era5_orography_degree,
-            self.era5_min_depth,
+            self.era5_orography_exponent,
+            self.era5_orography_shift,
         )
-        if not valid.all():
-            self.logger.warning(
-                "Rejected %d ERA5 date(s) with a fluid depth below %.0f m",
-                int((~valid).sum()),
-                self.era5_min_depth,
-            )
-            state[~valid] = torch.nan
         return state, None, surface_geopotential
 
     def initial_problem(
@@ -821,22 +777,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 noise_lmax=self.noise_lmax,
                 device=self.device,
                 generators=noise_generators,
-            )
-        elif self.initial_condition == "williamson3":
-            tilt = rows[:, self.get_parameter_idx("tilt")]
-            state = williamson3_initial_condition(
-                self.dynamics,
-                flow_speed=rows[:, self.get_parameter_idx("flow_speed")],
-                tilt=tilt,
-            )
-            coriolis = tilted_pole_coriolis(self.dynamics, tilt)  # W92 eq. (96)
-        elif self.initial_condition == "shamir_paldor":
-            state = shamir_paldor_initial_condition(
-                self.dynamics,
-                wave_type=rows[:, self.get_parameter_idx("wave_type")],
-                zonal_wavenumber=rows[:, self.get_parameter_idx("zonal_wavenumber")],
-                mode_number=rows[:, self.get_parameter_idx("mode_number")],
-                wave_amplitude=rows[:, self.get_parameter_idx("wave_amplitude")],
             )
         elif self.initial_condition == "era5":
             state, coriolis, surface_geopotential = self.era5_problem(rows)
@@ -949,10 +889,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             entropy = random_seed
 
         x = x.clone()
-        if self.initial_condition == "shamir_paldor":
-            for name in ("wave_type", "zonal_wavenumber", "mode_number"):
-                column = self.get_parameter_idx(name)
-                x[:, column] = x[:, column].round()  # integer parameters
         if self.initial_condition == "era5":
             column = self.get_parameter_idx("era5_time")
             index = era5_time_index(x[:, column])  # the times of the store

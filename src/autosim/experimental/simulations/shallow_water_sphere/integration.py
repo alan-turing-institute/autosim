@@ -331,7 +331,7 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
     if forcing_generators is None:
         forcing_generators = []
     if return_forcing_state and not kinetic_forcing:
-        msg = "return_forcing_state requires forcing_type 'vortical' or 'momentum'"
+        msg = "return_forcing_state requires forcing_type 'vortical'"
         raise ValueError(msg)
 
     # Without kinetic forcing the patterns are empty (no pattern, P = 0)
@@ -351,18 +351,7 @@ def integrate_trajectories(  # noqa: PLR0912, PLR0915
             forcing.degree_min,
             forcing.degree_max,
         )  # (B, L)
-        if forcing.forcing_type == "vortical":
-            amplitudes = amplitudes.unsqueeze(1)  # (B, 1, L): streamfunction
-        else:
-            fraction = forcing.divergent_fraction.to(device, torch.float64)
-            fraction = fraction.reshape(batch, 1)
-            amplitudes = torch.stack(
-                [
-                    torch.sqrt(1 - fraction) * amplitudes,  # streamfunction
-                    torch.sqrt(fraction) * amplitudes,  # velocity potential
-                ],
-                dim=1,
-            )  # (B, 2, L)
+        amplitudes = amplitudes.unsqueeze(1)  # (B, 1, L): streamfunction
         noise = complex_noise(forcing_generators, amplitudes.shape[1], lmax)
         pattern = stationary_pattern(noise, amplitudes, alpha)
         backscatter = bool((forcing.backscatter_fraction > 0).any())

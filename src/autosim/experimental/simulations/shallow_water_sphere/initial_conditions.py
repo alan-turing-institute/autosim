@@ -17,19 +17,13 @@ import torch
 
 from autosim.types import TensorLike
 
-from .dynamics import SphereShallowWaterDynamics, coriolis_parameter
+from .dynamics import SphereShallowWaterDynamics
 
 GALEWSKY_RANGES: dict[str, tuple[float, float]] = {
     "jet_speed": (60.0, 100.0),  # u_max [m/s], paper: 80
     "height_perturbation_m": (60.0, 180.0),  # bump amplitude [m], paper: 120
     "perturbation_lon": (0.0, 2 * math.pi),  # bump longitude [rad], paper: 0
     "perturbation_lat": (math.pi / 5, math.pi / 3),  # bump latitude [rad], paper: pi/4
-}
-
-# W92 case 3, steady zonal jet with compact support about an axis tilted by alpha.
-WILLIAMSON3_RANGES: dict[str, tuple[float, float]] = {
-    "flow_speed": (20.0, 40.0),  # u_0 [m/s], W92: 2 pi a / 12 days = 38.61
-    "tilt": (0.0, math.pi / 2),  # alpha [rad], W92: 0 and pi/3
 }
 
 # W92 case 5, zonal flow over an isolated mountain, with the Gaussian mountain of
@@ -235,125 +229,6 @@ def galewsky_initial_condition(
     noise[:, :, 0] = noise[:, :, 0].real.clone()
     scale = gravity * noise_amplitude * math.sqrt(4 * math.pi / (k * (k + 1)))
     geopotential[:, :k, :k] += scale * noise.to(device)
-
-    state = torch.stack([geopotential, vorticity, divergence], dim=1)
-    return torch.tril(state)  # keep m <= l
-
-
-def tilted_pole_coriolis(
-    dynamics: SphereShallowWaterDynamics, tilt: TensorLike
-) -> TensorLike:
-    r"""Coriolis parameter of W92 eq. (96), for the rotation axis tilted by alpha.
-
-    :math:`f = 2\Omega(-\cos\lambda\cos\theta\sin\alpha + \sin\theta\cos\alpha)`: the
-    rotation pole at longitude :math:`\pi` and latitude :math:`\pi/2 - \alpha`.
-
-    Args:
-        dynamics: Fixed operators.
-        tilt: Angle alpha [rad], shape (B,).
-
-    Returns:
-        f on the grid [1/s], shape (B, *grid.shape).
-    """
-    # In float64: a pole misplaced by the float32 rounding of pi (1e-7 rad) unbalances
-    # a steady flow at the 1e-8 level.
-    axis_lon = torch.full(tilt.shape, math.pi, dtype=torch.float64)
-    axis_lat = math.pi / 2 - tilt.to(torch.float64)
-    return coriolis_parameter(dynamics, axis_lon, axis_lat)
-
-
-def williamson3_initial_condition(
-    dynamics: SphereShallowWaterDynamics, flow_speed: TensorLike, tilt: TensorLike
-) -> TensorLike:
-    r"""Steady zonal jet with compact support about a tilted axis, W92 case 3.
-
-    In the coordinates :math:`(\lambda', \theta')` whose pole is the rotation pole,
-    tilted by :math:`\alpha` from the geographic pole (W92 eq. 108,
-    :math:`\sin\theta' = \sin\theta\cos\alpha - \cos\theta\cos\lambda\sin\alpha`), the
-    wind is zonal (W92 eqs. 101 to 103):
-
-    .. math::
-
-        u' = u_0\, b(x)\, b(x_e - x)\, e^{4/x_e}, \qquad
-        x = x_e \frac{\theta' - \theta_b}{\theta_e - \theta_b}, \qquad
-        b(x) = e^{-1/x} \text{ for } x > 0, \ 0 \text{ otherwise},
-
-    with :math:`\theta_b = -\pi/6`, :math:`\theta_e = \pi/2` and :math:`x_e = 0.3`; its
-    maximum is :math:`u_0`. The flow about the unit vector :math:`\mathbf{n}` of the
-    rotation pole is :math:`u'\,(\mathbf{n}\times\hat{\mathbf{r}})/\cos\theta'`, which
-    in the local east and north directions is
-
-    .. math::
-
-        u = \frac{u'}{\cos\theta'}
-            (\cos\alpha\cos\theta + \sin\alpha\sin\theta\cos\lambda), \qquad
-        v = -\frac{u'}{\cos\theta'}\sin\alpha\sin\lambda.
-
-    The Coriolis parameter uses the same axis (``tilted_pole_coriolis``, W92 eq. 96).
-    The height is the one in nonlinear balance with the wind as represented with
-    degrees l < L (``balanced_geopotential``), as W92 (p. 19) suggests, in place of
-    the quadrature of W92 eq. (115). Its constant follows W92: :math:`h = h_0` where
-    the wind is zero, on the cap :math:`\theta' < \theta_b`; the represented height
-    has mean :math:`h_0` over that cap. :math:`h_0` is ``mean_depth``. W92 uses
-    :math:`u_0 = 2\pi a / 12` days, :math:`g h_0 = 2.94\times10^4` m^2/s^2 and
-    :math:`\alpha = 0` and :math:`\pi/3`.
-
-    Args:
-        dynamics: Fixed operators.
-        flow_speed: Maximum speed u_0 of the jet [m/s], shape (B,).
-        tilt: Angle alpha between the rotation axis and the geographic pole [rad],
-            shape (B,).
-
-    Returns:
-        Spectral state (B, 3, L, L).
-    """
-    latitude = dynamics.latitude.unsqueeze(0)
-    longitude = dynamics.longitude.unsqueeze(0)
-    grid_dims = tuple(range(-len(dynamics.grid.shape), 0))
-    parameter_shape = (flow_speed.shape[0],) + (1,) * len(dynamics.grid.shape)
-    u0 = flow_speed.to(latitude.device, torch.float64).reshape(parameter_shape)
-    alpha = tilt.to(latitude.device, torch.float64).reshape(parameter_shape)
-
-    # Latitude theta' from the rotation pole, W92 eq. (108)
-    tilted_sine = torch.sin(latitude) * torch.cos(alpha) - torch.cos(
-        latitude
-    ) * torch.cos(longitude) * torch.sin(alpha)
-    tilted_latitude = torch.asin(tilted_sine.clamp(-1.0, 1.0))
-
-    # Jet speed u'(theta'), W92 eqs. (101) to (103). It is zero at both rotated poles,
-    # where cos(theta') vanishes.
-    theta_b = -math.pi / 6
-    theta_e = math.pi / 2
-    x_e = 0.3
-    x = x_e * (tilted_latitude - theta_b) / (theta_e - theta_b)
-    inside = (x > 0) & (x < x_e)
-    safe_x = torch.where(inside, x, x_e / 2)
-    speed = torch.where(
-        inside, u0 * torch.exp(4 / x_e - 1 / safe_x - 1 / (x_e - safe_x)), 0.0
-    )
-    tilted_cosine = torch.cos(tilted_latitude)
-    speed_over_cosine = torch.where(
-        inside, speed / torch.where(inside, tilted_cosine, 1.0), 0.0
-    )
-
-    # Wind of the flow about the rotation pole, in the local east and north directions
-    eastward = speed_over_cosine * (
-        torch.cos(alpha) * torch.cos(latitude)
-        + torch.sin(alpha) * torch.sin(latitude) * torch.cos(longitude)
-    )
-    northward = -speed_over_cosine * torch.sin(alpha) * torch.sin(longitude)
-    wind = torch.stack([eastward, northward], dim=1)
-    vorticity, divergence = dynamics.vorticity_divergence(wind)
-
-    # Height in nonlinear balance with the represented wind, h = h_0 on the cap
-    coriolis = tilted_pole_coriolis(dynamics, tilt)
-    geopotential = balanced_geopotential(dynamics, vorticity, divergence, coriolis)
-    cap_weights = dynamics.quad_weights * (tilted_latitude < theta_b)
-    cap_mean = (dynamics.to_grid(geopotential) * cap_weights).sum(
-        dim=grid_dims
-    ) / cap_weights.sum(dim=grid_dims)
-    target = dynamics.gravity * dynamics.mean_depth
-    geopotential[:, 0, 0] += math.sqrt(4 * math.pi) * (target - cap_mean)
 
     state = torch.stack([geopotential, vorticity, divergence], dim=1)
     return torch.tril(state)  # keep m <= l

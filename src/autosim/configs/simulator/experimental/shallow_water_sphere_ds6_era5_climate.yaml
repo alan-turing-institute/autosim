@@ -1,5 +1,5 @@
 # Dataset 6: the protocol of PlanetSWE (The Well, Ohana et al. 2024) with this solver:
-# ERA5 states at 500 hPa over the smoothed orography, forced by The Well's daily and
+# ERA5 states at 500 hPa over the Earth's orography, forced by The Well's daily and
 # yearly height source, with the hyperdiffusion as the only other process. The forcing
 # F(t) is a known input of the emulator, saved as periodic_forcing.
 # 40 trajectories as PlanetSWE: generate with dataset.n_train=32 dataset.n_valid=4
@@ -23,8 +23,10 @@ mean_depth: 6000.0
 batch_size: 8
 device: cuda
 return_constant_fields: true
-era5_orography_degree: 28
-era5_min_depth: 300.0
+# Orography compressed as in The Well's PlanetSWE (gen_ics.ipynb at aac88c0):
+# sign(h_s)|h_s|^(15/16), shifted so that its minimum is 0.
+era5_orography_exponent: 0.9375
+era5_orography_shift: true
 # The forcing of gen_SWE_from_ic_file.py in PolymathicAI/the_well at commit aac88c0,
 # which generated the released PlanetSWE files: 2 m per hour, width 2 pi / 3, maximum
 # declination 0.4 rad, a day of 24 h and a year of 1008 h, the centre moving eastward.

@@ -90,7 +90,6 @@ def _settings(batch, **changes):
         "spectral_slope": zeros - 1.27,
         "degree_min": 1,
         "degree_max": LMAX - 1,
-        "divergent_fraction": zeros,
         "backscatter_fraction": zeros,
         "backscatter_mode": "global",
         "backscatter_include_drag": False,
@@ -116,23 +115,14 @@ def _small_simulator(**overrides) -> SphericalShallowWater:
     return SphericalShallowWater(**(options | overrides))
 
 
-def _random_walk(dynamics, batch, n_steps, tau_steps, slope, divergent):
+def _random_walk(dynamics, batch, n_steps, tau_steps, slope):
     """Sum of n_steps forcing increments at unit rate, and their mean spectrum."""
     correlation_time = torch.full((batch,), tau_steps * dynamics.dt)
     alpha = autoregressive_parameter(correlation_time, dynamics.dt).to(DEVICE)
     amplitudes = unit_rate_amplitudes(
         dynamics, alpha, torch.full((batch,), slope), 1, dynamics.lmax - 1
     )
-    if divergent > 0:
-        amplitudes = torch.stack(
-            [
-                math.sqrt(1 - divergent) * amplitudes,
-                math.sqrt(divergent) * amplitudes,
-            ],
-            dim=1,
-        )
-    else:
-        amplitudes = amplitudes.unsqueeze(1)
+    amplitudes = amplitudes.unsqueeze(1)
     n_patterns = amplitudes.shape[1]
     generators = _generators(batch)
     lmax = dynamics.lmax
@@ -230,10 +220,8 @@ def test_pattern_statistics_match_the_ar1_definition():
     assert lag_product / variance == pytest.approx(1 - 0.2, abs=0.01)
 
 
-@pytest.mark.parametrize(
-    ("tau_steps", "divergent"), [(0, 0.0), (8, 0.0), (8, 0.5), (0, 1.0)]
-)
-def test_injected_energy_rate_matches_the_target(tau_steps, divergent):
+@pytest.mark.parametrize("tau_steps", [0, 8])
+def test_injected_energy_rate_matches_the_target(tau_steps):
     """Kinetic energy gained by a free random walk of the increments, per unit time.
 
     The target is 1 m^2/s^3. A walk of n steps that starts from the stationary
@@ -245,7 +233,7 @@ def test_injected_energy_rate_matches_the_target(tau_steps, divergent):
     dynamics = _dynamics()
     batch = 64
     n_steps = 400
-    walk, _, alpha = _random_walk(dynamics, batch, n_steps, tau_steps, -1.27, divergent)
+    walk, _, alpha = _random_walk(dynamics, batch, n_steps, tau_steps, -1.27)
     energy = kinetic_energy_spectrum(walk, RADIUS).sum(dim=(1, 2))
     measured = energy.mean().item() / (n_steps * DT)
     standard_error = energy.std().item() / (n_steps * DT) / math.sqrt(batch)
@@ -257,10 +245,6 @@ def test_injected_energy_rate_matches_the_target(tau_steps, divergent):
         expected = alpha / (2 - alpha) * (1 + 2 * rho / (1 - rho) * finite_walk)
     assert abs(measured - expected) < 4 * standard_error + 0.01
 
-    divergent_energy = kinetic_energy_spectrum(walk, RADIUS)[:, 1].sum(dim=1)
-    share = (divergent_energy.sum() / energy.sum()).item()
-    assert share == pytest.approx(divergent, abs=0.05)
-
 
 @pytest.mark.parametrize("slope", [-1.27, 0.5])
 def test_forcing_spectrum_follows_the_power_law(slope):
@@ -271,7 +255,7 @@ def test_forcing_spectrum_follows_the_power_law(slope):
     upper half of the band is within 0.1 of 2p + 3.
     """
     dynamics = _dynamics(lmax=43, nlat=64, nlon=128)
-    _, spectrum, _ = _random_walk(dynamics, 64, 100, 0, slope, 0.0)
+    _, spectrum, _ = _random_walk(dynamics, 64, 100, 0, slope)
     degree = torch.arange(43, dtype=torch.float64, device=DEVICE)
     exact = degree * (degree + 1) * (2 * degree + 1) * degree ** (2 * slope)
     exact[0] = 0.0
@@ -503,7 +487,7 @@ def test_seed_reproduces_the_forcing_and_another_seed_changes_it():
 
 def test_forcing_of_a_simulation_does_not_depend_on_the_batch_size():
     options = {
-        "forcing_type": "momentum",
+        "forcing_type": "vortical",
         "forcing_energy_rate": 1e-4,
         "forcing_correlation_time": 1.0,
         "return_additional_input_fields": True,
@@ -584,9 +568,8 @@ def test_energy_budget_closes_in_double_precision():
     batch = 3
     forcing = _settings(
         batch,
-        forcing_type="momentum",
+        forcing_type="vortical",
         correlation_time=torch.full((batch,), 3600.0, dtype=torch.float64),
-        divergent_fraction=torch.full((batch,), 0.5, dtype=torch.float64),
         backscatter_fraction=torch.full((batch,), 0.5, dtype=torch.float64),
     )
     equilibrium = _rest_state(batch)[:, 0]
@@ -756,8 +739,6 @@ def test_invalid_forcing_settings_raise():
         _small_simulator(forcing_type="none", return_forcing_state=True)
     with pytest.raises(ValueError, match="must be >= 0"):
         _small_simulator(forcing_type="vortical", forcing_energy_rate=-1.0)
-    with pytest.raises(ValueError, match="between 0 and 1"):
-        _small_simulator(forcing_type="momentum", forcing_divergent_fraction=1.5)
     with pytest.raises(ValueError, match="forcing degrees"):
         _small_simulator(forcing_type="vortical", forcing_degree_max=LMAX)
     with pytest.raises(ValueError, match="unknown keys"):

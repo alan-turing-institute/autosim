@@ -18,13 +18,9 @@ from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E40
     adams_bashforth_step,
     coriolis_parameter,
     fields_to_spectral,
-    height_error_norms,
     mountain_initial_condition,
-    rotate_coefficients,
     shallow_water_tendencies,
     spectral_to_fields,
-    tilted_pole_coriolis,
-    williamson3_initial_condition,
 )
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -32,20 +28,8 @@ RADIUS = 6.37122e6
 OMEGA = 7.292e-5
 GRAVITY = 9.80616
 
-# Published values of W92 case 3; the tilts are those of the T1 dataset, with pi/3 of
-# W92's convergence study
-W3_FLOW_SPEED = 2 * math.pi * RADIUS / (12 * 86400)
-W3_MEAN_DEPTH = 2.94e4 / GRAVITY
-W3_TILTS = [0.0, 0.05, math.pi / 3, math.pi / 2 - 0.05, math.pi / 2]
 # Gaussian mountain of DCMIP-2008: half-width 1500 km
 MOUNTAIN_WIDTH = 1.5e6 / RADIUS
-
-# Tolerances of the W92 case 3 tests, each about ten times the measured value given in
-# the docstring of its test
-CAP_TOLERANCE = 5e-8
-STEADY_TOLERANCE = 1e-10
-ROTATION_TOLERANCE = 5e-10
-CONVERGENCE_FACTOR = 50.0
 
 # Parameters of each family at the published values (equal bounds)
 PUBLISHED_RANGES = {
@@ -54,16 +38,6 @@ PUBLISHED_RANGES = {
         "height_perturbation_m": (120.0, 120.0),
         "perturbation_lon": (0.0, 0.0),
         "perturbation_lat": (math.pi / 4, math.pi / 4),
-    },
-    "williamson3": {
-        "flow_speed": (W3_FLOW_SPEED, W3_FLOW_SPEED),
-        "tilt": (math.pi / 3, math.pi / 3),
-    },
-    "shamir_paldor": {
-        "wave_type": (1.0, 1.0),
-        "zonal_wavenumber": (10.0, 10.0),
-        "mode_number": (5.0, 5.0),
-        "wave_amplitude": (5.0, 5.0),
     },
     "mountain": {
         "flow_speed": (20.0, 20.0),
@@ -79,8 +53,6 @@ GENERATED_FAMILIES = list(PUBLISHED_RANGES)
 
 PUBLISHED_MEAN_DEPTH = {
     "galewsky": 1.0e4,
-    "williamson3": W3_MEAN_DEPTH,
-    "shamir_paldor": 5.0e4 / GRAVITY,
     "mountain": 5960.0,
 }
 
@@ -119,19 +91,6 @@ def _advance(dynamics, state, steps, coriolis=None, surface_geopotential=None):
             dynamics, state, previous, coriolis, surface_geopotential
         )
     return state
-
-
-def _williamson3(dynamics, tilt):
-    """State and Coriolis parameter of W92 case 3 for one tilt, in float64."""
-    flow_speed = torch.tensor([W3_FLOW_SPEED], dtype=torch.float64)
-    alpha = torch.tensor([tilt], dtype=torch.float64)
-    state = williamson3_initial_condition(dynamics, flow_speed, alpha)
-    return state, tilted_pole_coriolis(dynamics, alpha)
-
-
-def _height(dynamics, state):
-    """Height of the free surface [m] on the grid of a W92 case 3 state."""
-    return spectral_to_fields(dynamics, state)[..., 0] + W3_MEAN_DEPTH
 
 
 # ---------------------------------------------------------------------------
@@ -182,17 +141,16 @@ def test_invalid_initial_condition_raises():
 
 
 def test_missing_family_parameter_raises():
-    with pytest.raises(ValueError, match="tilt"):
+    with pytest.raises(ValueError, match="height_perturbation_m"):
         _small_simulator(
-            initial_condition="williamson3",
-            parameters_range={"flow_speed": (20.0, 40.0)},
+            initial_condition="galewsky",
+            parameters_range={"jet_speed": (60.0, 100.0)},
         )
 
 
-@pytest.mark.parametrize("family", ["williamson3", "era5"])
-def test_family_with_its_own_axis_rejects_a_rotation_axis(family):
+def test_era5_rejects_a_rotation_axis():
     with pytest.raises(ValueError, match="rotation axis"):
-        _small_simulator(initial_condition=family, rotation_axis=(0.0, 1.0))
+        _small_simulator(initial_condition="era5", rotation_axis=(0.0, 1.0))
 
 
 def test_noise_of_a_simulation_does_not_depend_on_the_batch_size():
@@ -335,104 +293,6 @@ def test_fields_to_spectral_inverts_spectral_to_fields():
 
 
 # ---------------------------------------------------------------------------
-# Published cases
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("tilt", W3_TILTS)
-def test_williamson3_has_the_published_jet_and_height(tilt):
-    """W92 case 3: no divergence, a maximum speed u_0, and h = h_0 south of the jet.
-
-    The represented height has mean h_0 over the cap theta' < -pi/6, where the wind
-    of W92 is zero; it departs from h_0 there only by the ringing of the truncated jet
-    (measured: at most 4.8e-9 of h_0 at lmax = 43).
-    """
-    dynamics, _ = _dynamics(43, 64, 128, W3_MEAN_DEPTH)
-    state, _ = _williamson3(dynamics, tilt)
-    # the sampled tilted jet aliases into a divergence of 2.7e-12 of the vorticity
-    assert state[:, 2].abs().max() < 1e-10 * state[:, 1].abs().max()
-    speed = dynamics.wind(state[:, 1], state[:, 2]).norm(dim=1)
-    assert speed.max().item() == pytest.approx(W3_FLOW_SPEED, rel=1e-2)
-
-    latitude = dynamics.latitude
-    longitude = dynamics.longitude
-    tilted_sine = torch.sin(latitude) * math.cos(tilt) - torch.cos(
-        latitude
-    ) * torch.cos(longitude) * math.sin(tilt)
-    cap = tilted_sine < math.sin(-math.pi / 6)
-    height = _height(dynamics, state)[0]
-    weights = dynamics.quad_weights * cap
-    cap_mean = (height * weights).sum() / weights.sum()
-    assert cap_mean.item() == pytest.approx(W3_MEAN_DEPTH, rel=1e-12)
-    assert (height[cap] - W3_MEAN_DEPTH).abs().max() < CAP_TOLERANCE * W3_MEAN_DEPTH
-
-
-@pytest.mark.parametrize("tilt", W3_TILTS)
-def test_williamson3_is_steady_for_every_tilt(tilt):
-    """W92 case 3 at lmax = 43 without hyperdiffusion: steady for one day.
-
-    The height is in discrete balance with the represented jet, and the jet is zonal
-    about the axis of the Coriolis parameter. The change after one day is at the level
-    of round-off and of the aliasing of the sampled jet (measured over the five tilts:
-    at most 3e-14 for the height and 5e-12 for the vorticity).
-    """
-    dynamics, steps_per_hour = _dynamics(43, 64, 128, W3_MEAN_DEPTH)
-    dynamics.step_damping = torch.ones_like(dynamics.step_damping)
-    state, coriolis = _williamson3(dynamics, tilt)
-    later = _advance(dynamics, state, 24 * steps_per_hour, coriolis)
-    for index in range(2):
-        change = (later[:, index] - state[:, index]).abs().max()
-        assert change < STEADY_TOLERANCE * state[:, index].abs().max()
-
-
-@pytest.mark.parametrize("tilt", [0.05, 0.7, math.pi / 2])
-def test_tilted_williamson3_is_the_rotated_untilted_one(tilt):
-    """W92 case 3 at tilt alpha is the case at tilt 0 turned by beta = -alpha.
-
-    The two are built independently: the tilted jet from W92's rotated coordinates,
-    the other by rotating the coefficients. They agree to the aliasing of the sampled
-    jet (measured: at most 1.2e-11 for the height and 3.5e-11 for the vorticity). The
-    Coriolis parameter of the tilted axis is the rotated polar one to round-off
-    (measured: 4e-14).
-    """
-    dynamics, _ = _dynamics(43, 64, 128, W3_MEAN_DEPTH)
-    untilted, _ = _williamson3(dynamics, 0.0)
-    tilted, coriolis = _williamson3(dynamics, tilt)
-    rotated = rotate_coefficients(untilted, 0.0, -tilt, 0.0)
-    for index in range(2):
-        error = (rotated[:, index] - tilted[:, index]).abs().max()
-        assert error < ROTATION_TOLERANCE * tilted[:, index].abs().max()
-
-    polar = dynamics.to_coefficients(dynamics.coriolis.unsqueeze(0))
-    expected = dynamics.to_coefficients(coriolis)
-    error = (rotate_coefficients(polar, 0.0, -tilt, 0.0) - expected).abs().max()
-    assert error < 1e-12 * expected.abs().max()
-
-
-@pytest.mark.slow
-def test_williamson3_error_decreases_with_the_resolution():
-    """Convergence study of W92 case 3 at alpha = pi/3: l2(h) at 5 days.
-
-    Without damping the state is steady (previous tests), so the error is the damping
-    of the jet by the hyperdiffusion, which acts on higher degrees as the resolution
-    increases. Measured l2(h): 5.3e-4, 3.2e-6 and 1.2e-8 at lmax = 22, 43 and 86, a
-    factor of at least 160 per doubling.
-    """
-    errors = []
-    for lmax, nlat, nlon in [(22, 32, 64), (43, 64, 128), (86, 128, 256)]:
-        dynamics, steps_per_hour = _dynamics(lmax, nlat, nlon, W3_MEAN_DEPTH)
-        state, coriolis = _williamson3(dynamics, math.pi / 3)
-        height = _height(dynamics, state)
-        state = _advance(dynamics, state, 5 * 24 * steps_per_hour, coriolis)
-        _, l2, _ = height_error_norms(
-            _height(dynamics, state), height, dynamics.quad_weights
-        )
-        errors.append(l2.item())
-    assert errors[1] < errors[0] / CONVERGENCE_FACTOR
-    assert errors[2] < errors[1] / CONVERGENCE_FACTOR
-
-
-# ---------------------------------------------------------------------------
 # Grids
 # ---------------------------------------------------------------------------
 
@@ -458,47 +318,3 @@ def test_family_runs_on_every_grid(family, grid_name):
     assert payload["data"].shape == (2, 3, *sim.grid.shape, 3)
     assert payload["constant_fields"].shape == (2, *sim.grid.shape, 2)
     assert torch.isfinite(payload["data"]).all()
-
-
-def _williamson3_after_six_hours(grid_name, sht_iterations):
-    """Spectral state of W92 case 3 (tilt 0.05) after 6 h through the simulator."""
-    sim = _small_simulator(
-        lmax=24,
-        initial_condition="williamson3",
-        parameters_range={
-            "flow_speed": (W3_FLOW_SPEED, W3_FLOW_SPEED),
-            "tilt": (0.05, 0.05),
-        },
-        mean_depth=W3_MEAN_DEPTH,
-        sht_iterations=sht_iterations,
-        batch_size=1,
-        **GRIDS[grid_name],
-    )
-    data = sim.forward_samples_spatiotemporal(n=1, random_seed=0)["data"]
-    return fields_to_spectral(sim.dynamics, data[:, -1])
-
-
-@pytest.mark.parametrize(
-    ("grid_name", "sht_iterations", "tolerance"),
-    [
-        # Exact quadrature: the difference is the float32 rounding of the saved
-        # frames (measured: 2e-8).
-        ("equiangular", 0, 2e-7),
-        # HEALPix has no exact quadrature. The analysis of torch-harmonics is
-        # approximate there (measured: 9e-4 on the vorticity), and 3 Jacobi
-        # iterations bring it to 2.3e-6.
-        ("healpix", 0, 1e-2),
-        ("healpix", 3, 3e-5),
-    ],
-)
-def test_williamson3_agrees_on_every_grid(grid_name, sht_iterations, tolerance):
-    """W92 case 3 after 6 h on each grid equals the run on the Gauss-Legendre grid.
-
-    The spectral state does not depend on the grid where the products are formed, as
-    long as they are exact, so the coefficients of the saved frames are compared.
-    """
-    reference = _williamson3_after_six_hours("legendre-gauss", 0)
-    state = _williamson3_after_six_hours(grid_name, sht_iterations)
-    for index in range(2):
-        error = (state[:, index] - reference[:, index]).abs().max()
-        assert error < tolerance * reference[:, index].abs().max()

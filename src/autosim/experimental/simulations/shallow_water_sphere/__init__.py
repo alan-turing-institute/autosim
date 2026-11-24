@@ -35,8 +35,7 @@ from the next step on and never enters the history of the Adams-Bashforth scheme
 :math:`\psi'` whose coefficients follow the AR(1) process of Berner et al. (2009),
 :math:`\psi'(t+\Delta t) = (1-\alpha)\,\psi'(t) + g_l\sqrt{\alpha}\,\epsilon(t)` with
 :math:`g_l = b\,l^p` and :math:`\alpha = \Delta t/\tau`, and
-:math:`F_\zeta\,\Delta t = \nabla^2\psi'`. ``"momentum"`` adds a velocity-potential
-pattern, :math:`F_\delta\,\Delta t = \nabla^2\chi'`. The amplitude :math:`b` follows
+:math:`F_\zeta\,\Delta t = \nabla^2\psi'`. The amplitude :math:`b` follows
 from the energy rate :math:`\varepsilon` (kinetic energy per unit mass and time
 gained by a free random walk of the increments):
 :math:`b^2 = 8\pi a^2 \alpha\,\varepsilon\,\Delta t / \Gamma`,
@@ -77,8 +76,7 @@ Modules:
 
 - ``dynamics``: operators, tendencies, time step, energy, conversion to and from
   saved fields;
-- ``initial_conditions``: one function per family (Galewsky jet, W92 cases 3 and 5);
-- ``shamir_paldor``: Rossby and inertia-gravity waves of Shamir and Paldor (2016);
+- ``initial_conditions``: one function per family (Galewsky jet, W92 case 5);
 - ``era5``: initial states from ERA5 at 500 hPa (W92 case 7), from WeatherBench2;
 - ``forcing``: kinetic-energy forcing and backscatter, SPPT, periodic forcing;
 - ``integration``: the time loop of a batch and its energy budget;
@@ -120,16 +118,17 @@ from .dynamics import (
 )
 from .era5 import (
     ERA5_CLIMATOLOGY_STORE,
+    ERA5_OROGRAPHY_EXPONENT,
     ERA5_RANGES,
     ERA5_STORE,
     Era5Fields,
+    compress_orography,
     era5_hours,
     era5_initial_condition,
     era5_source_dynamics,
     era5_time_index,
     load_era5_climatology,
     load_era5_fields,
-    orography_filter,
 )
 from .forcing import (
     ForcingSettings,
@@ -154,15 +153,12 @@ from .forcing import (
 from .initial_conditions import (
     GALEWSKY_RANGES,
     MOUNTAIN_RANGES,
-    WILLIAMSON3_RANGES,
     balance_state,
     balanced_geopotential,
     galewsky_initial_condition,
     mountain_initial_condition,
     mountain_orography,
     solid_body_zonal_flow,
-    tilted_pole_coriolis,
-    williamson3_initial_condition,
     zonal_jet,
 )
 from .integration import ENERGY_BUDGET_NAMES, integrate_trajectories
@@ -171,15 +167,6 @@ from .rotation import (
     rotate_fields,
     rotate_point,
     wigner_d_matrix,
-)
-from .shamir_paldor import (
-    SHAMIR_PALDOR_RANGES,
-    WAVE_TYPES,
-    gegenbauer,
-    meridional_structure,
-    phase_speeds,
-    shamir_paldor_initial_condition,
-    wave_phase_speed,
 )
 from .simulator import (
     FORCING_TYPES,
@@ -192,6 +179,7 @@ from .simulator import (
 __all__ = [
     "ENERGY_BUDGET_NAMES",
     "ERA5_CLIMATOLOGY_STORE",
+    "ERA5_OROGRAPHY_EXPONENT",
     "ERA5_RANGES",
     "ERA5_STORE",
     "FORCING_TYPES",
@@ -199,9 +187,6 @@ __all__ = [
     "INITIAL_CONDITIONS",
     "MOUNTAIN_RANGES",
     "SAMPLED_SCALARS",
-    "SHAMIR_PALDOR_RANGES",
-    "WAVE_TYPES",
-    "WILLIAMSON3_RANGES",
     "Era5Fields",
     "ForcingSettings",
     "PeriodicForcingSettings",
@@ -214,6 +199,7 @@ __all__ = [
     "balance_state",
     "balanced_geopotential",
     "complex_noise",
+    "compress_orography",
     "coriolis_parameter",
     "degree_power",
     "dissipation_taper",
@@ -223,7 +209,6 @@ __all__ = [
     "era5_time_index",
     "fields_to_spectral",
     "galewsky_initial_condition",
-    "gegenbauer",
     "global_dissipation_rate",
     "global_integral",
     "height_error_norms",
@@ -237,21 +222,17 @@ __all__ = [
     "load_era5_fields",
     "local_dissipation_rate",
     "make_grid",
-    "meridional_structure",
     "mountain_initial_condition",
     "mountain_orography",
     "non_zonal_energy",
-    "orography_filter",
     "periodic_forcing_increment",
     "periodic_height_forcing",
-    "phase_speeds",
     "physics_increment",
     "rotate_coefficients",
     "rotate_fields",
     "rotate_point",
     "sample_generators",
     "shallow_water_tendencies",
-    "shamir_paldor_initial_condition",
     "solid_body_zonal_flow",
     "spectral_to_fields",
     "sppt_increment",
@@ -259,12 +240,9 @@ __all__ = [
     "sppt_pattern_on_grid",
     "stationary_pattern",
     "step_damping_factors",
-    "tilted_pole_coriolis",
     "total_energy",
     "unit_rate_amplitudes",
-    "wave_phase_speed",
     "wigner_d_matrix",
-    "williamson3_initial_condition",
     "wind_error_norms",
     "zonal_jet",
 ]
