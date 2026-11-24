@@ -119,7 +119,21 @@ def rotate_fields(
     """Rotate saved frames h, u_phi, u_theta, the wind as a spin-1 field.
 
     The frames are converted to the geopotential of the free surface, the vorticity
-    and the divergence, which are scalars; these are rotated and converted back.
+    and the divergence, which are scalars; these are rotated and converted back. The
+    rotation is exact for band-limited fields, because a rotation does not mix the
+    degrees of a spherical-harmonic expansion. Rotating the maps of u_phi and u_theta
+    as two scalars would be wrong: the components are measured along the local east
+    and south directions, which the rotation turns from point to point.
+
+    The shallow water equations commute with rotations once the rotation pole of the
+    Coriolis parameter and the orography are rotated with the state. The tests use
+    this function to check that property of the solver: simulating a rotated problem
+    equals rotating the simulation, to 1e-9 after 12 h
+    (``test_rotated_problem_matches_rotated_simulation``). The same check applies to
+    an emulator: rotating its input frames and its constant fields
+    (``return_constant_fields``) by R must rotate its forecast by R if the emulator is
+    SO(3)-equivariant. ``rotate_point`` gives the rotated pole and mountain summit,
+    and ``rotate_coefficients`` rotates the Coriolis parameter and the orography.
 
     Args:
         dynamics: Fixed operators of the grid of the frames.

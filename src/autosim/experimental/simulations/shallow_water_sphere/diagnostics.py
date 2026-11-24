@@ -34,6 +34,18 @@ from .dynamics import SphereShallowWaterDynamics
 def degree_power(coefficients: TensorLike) -> TensorLike:
     r"""Sum of :math:`|\hat X_l^m|^2` over all orders :math:`-l \le m \le l`.
 
+    torch-harmonics stores the orders :math:`m \ge 0` of a real field, so each stored
+    coefficient of order :math:`m > 0` counts twice, for :math:`\pm m`. The result is
+    the power of the field in each degree, the building block of every per-degree
+    quantity of the package:
+
+    - ``height_power_spectrum``: the power of the fluid depth per degree;
+    - ``kinetic_energy_spectrum``: the kinetic energy per degree, from the power of the
+      vorticity and of the divergence;
+    - ``global_dissipation_rate`` (module ``forcing``): the kinetic energy removed by
+      the hyperdiffusion in one step, which the global backscatter adds to the SKEBS
+      energy rate.
+
     Args:
         coefficients: Coefficients (..., L, L) of a real field.
 
@@ -232,6 +244,14 @@ def invariants(
     (146) reads :math:`h\,(g h + \mathbf{v}\cdot\mathbf{v}/2)`, which the equations do
     not conserve, so the conserved energy is used here. W92 eq. (144) normalises each
     invariant as :math:`(I(t) - I(0)) / I(0)`, its relative change since time 0.
+
+    The function checks the solver, outside the simulator: without forcing, drag and
+    relaxation, the mass stays at round-off and the energy and the potential enstrophy
+    decrease only through the hyperdiffusion, so their relative change measures the
+    numerical error of a run. For the Galewsky jet at L = 86 over 48 h the changes are
+    round-off for the mass, -2.8e-7 for the energy and -6.2e-5 for the potential
+    enstrophy (commit 776dec2). ``test_shallow_water_sphere_diagnostics.py`` and the
+    invariant cells of notebook 01_05 call it.
 
     Args:
         dynamics: Fixed operators.

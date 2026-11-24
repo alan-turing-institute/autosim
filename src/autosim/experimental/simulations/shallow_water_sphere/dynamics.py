@@ -389,9 +389,21 @@ def spectral_to_fields(
 ) -> TensorLike:
     """Spectral state -> h, u_phi, u_theta on the grid, shape (B, *grid.shape, 3).
 
-    h is the height of the free surface above the mean depth,
-    (Phi + g h_s) / g - mean_depth [m], which is Phi / g - mean_depth over a flat
-    bottom. u_phi is the eastward and u_theta the colatitude (southward) wind [m/s].
+    The state holds spectral coefficients of the geopotential Phi of the fluid depth,
+    of the relative vorticity zeta and of the divergence delta. The saved fields follow
+    in two steps:
+
+    - height: the coefficients of the free surface, Phi + g h_s, are synthesised on
+      the grid, and h = (Phi + g h_s) / g - mean_depth [m] is the height of the free
+      surface above the mean depth (Phi / g - mean_depth over a flat bottom);
+    - wind: the vorticity and the divergence give the streamfunction
+      psi = nabla^-2 zeta and the velocity potential chi = nabla^-2 delta, and the
+      wind is u = k x grad(psi) + grad(chi) (``SphereShallowWaterDynamics.wind``, the
+      inverse vector transform of torch-harmonics). Its components are eastward and
+      northward. u_phi is the eastward wind and u_theta = -northward the wind along the
+      colatitude (southward) [m/s].
+
+    ``fields_to_spectral`` inverts the conversion.
 
     Args:
         dynamics: Fixed operators.
