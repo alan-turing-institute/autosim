@@ -1,11 +1,15 @@
 r"""Forcing of the shallow water equations on the sphere.
 
-Three forcings, which can be combined:
+Three forcings, which can be combined, each a class that owns its random state and
+gives the increment of one solver step:
 
-- kinetic-energy forcing and backscatter (``forcing_type``), below;
-- stochastically perturbed physics tendencies (SPPT, ``SpptSettings``): the increment
-  of the drag and the relaxation multiplied by a random pattern;
-- The Well's daily and yearly height forcing (``PeriodicForcingSettings``).
+- ``SkebsForcing``: kinetic-energy backscatter (SKEBS), below, with the global and the
+  local backscatter of the dissipation;
+- ``SpptForcing``: stochastically perturbed physics tendencies (SPPT), the increment of
+  the drag and the relaxation multiplied by a random pattern;
+- ``PeriodicForcing``: The Well's daily and yearly height forcing.
+
+Their settings, in user units, are the dataclasses of module ``settings``.
 
 Kinetic-energy backscatter forcing follows Berner, Shutts, Leutbecher and Palmer
 (2009, J. Atmos. Sci. 66, 603-626, "B09" below). A streamfunction pattern
@@ -39,7 +43,7 @@ so the energy gained per step is
 summed over the forced degrees. This is B09 eq. (8) in the present convention: their
 :math:`4\pi` and :math:`\sigma_z` become :math:`8\pi` and 1 because the energy carries
 its factor one half and the noise has unit variance. The kinetic-energy spectrum of
-the forcing follows :math:`l^{2p+3}` (B09 eq. 10). ``forcing_energy_rate`` is
+the forcing follows :math:`l^{2p+3}` (B09 eq. 10). ``SkebsSettings.energy_rate`` is
 :math:`\varepsilon` [m^2/s^3].
 
 The patterns are stored for a unit energy rate. The rate that is applied multiplies
@@ -59,55 +63,9 @@ import torch
 
 from autosim.types import TensorLike
 
-from .diagnostics import degree_power
+from .diagnostics import degree_power, global_integral
 from .dynamics import SphereShallowWaterDynamics
-
-# Values of forcing_type: no forcing, or a streamfunction pattern
-FORCING_TYPES = ("none", "vortical")
-
-
-@dataclass
-class ForcingSettings:
-    """Settings of the stochastic forcing of one batch of B simulations.
-
-    Attributes:
-        forcing_type: "none" or "vortical".
-        energy_rate: Base energy rate of the kinetic-energy forcing [m^2/s^3], (B,).
-        correlation_time: Decorrelation time of the pattern [s], (B,); 0 is white.
-        spectral_slope: Exponent p of the noise amplitude g_l = b l^p, (B,).
-        degree_min: Lowest forced degree.
-        degree_max: Highest forced degree.
-        backscatter_fraction: Fraction of the diagnosed dissipation added to the
-            energy rate, (B,).
-        backscatter_mode: "global" or "local".
-        backscatter_include_drag: Whether the drag loss counts as dissipation.
-    """
-
-    forcing_type: str
-    energy_rate: TensorLike
-    correlation_time: TensorLike
-    spectral_slope: TensorLike
-    degree_min: int
-    degree_max: int
-    backscatter_fraction: TensorLike
-    backscatter_mode: str
-    backscatter_include_drag: bool
-
-
-def no_forcing(batch: int) -> ForcingSettings:
-    """Settings of B simulations without stochastic forcing."""
-    zeros = torch.zeros(batch, dtype=torch.float64)
-    return ForcingSettings(
-        forcing_type="none",
-        energy_rate=zeros,
-        correlation_time=zeros,
-        spectral_slope=zeros,
-        degree_min=1,
-        degree_max=1,
-        backscatter_fraction=zeros,
-        backscatter_mode="global",
-        backscatter_include_drag=False,
-    )
+from .settings import PeriodicForcingSettings, SpptSettings
 
 
 def autoregressive_parameter(correlation_time: TensorLike, dt: float) -> TensorLike:
@@ -124,7 +82,7 @@ def autoregressive_parameter(correlation_time: TensorLike, dt: float) -> TensorL
     """
     correlation_time = correlation_time.to(torch.float64)
     if ((correlation_time > 0) & (correlation_time < dt)).any():
-        msg = "forcing_correlation_time must be 0 or at least one solver step"
+        msg = "a correlation time must be 0 or at least one solver step"
         raise ValueError(msg)
     alpha = torch.ones_like(correlation_time)
     has_memory = correlation_time > 0
@@ -396,27 +354,6 @@ def kinetic_forcing_increment(
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class SpptSettings:
-    """Settings of the stochastically perturbed physics tendencies.
-
-    The pattern r is a sum of independent AR(1) Gaussian fields, one per scale k, and
-    is clipped to [-clip, clip] on the grid (Leutbecher et al. 2017, section 2.1).
-
-    Attributes:
-        amplitudes: Grid-point standard deviation sigma_k of each field, (K,).
-        length_scales: Correlation length L_k of each field [m], (K,).
-        correlation_times: Decorrelation time tau_k of each field [s], (K,); 0 is
-            white noise.
-        clip: Bound of the summed pattern.
-    """
-
-    amplitudes: tuple[float, ...]
-    length_scales: tuple[float, ...]
-    correlation_times: tuple[float, ...]
-    clip: float = 1.0
-
-
 def sppt_noise_amplitudes(
     dynamics: SphereShallowWaterDynamics, sppt: SpptSettings, alpha: TensorLike
 ) -> TensorLike:
@@ -536,29 +473,6 @@ def sppt_increment(
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class PeriodicForcingSettings:
-    """Settings of the daily and yearly height forcing of The Well's planetswe.
-
-    The defaults of the simulator are those of ``gen_SWE_from_ic_file.py`` in
-    PolymathicAI/the_well at commit aac88c0: 2 m per hour, width 2 pi / 3, maximum
-    declination 0.4 rad, a day of 24 h and a year of 1008 h.
-
-    Attributes:
-        amplitude: Amplitude h_f0 of the height tendency [m/s].
-        width: Width sigma of the latitude profile [rad].
-        declination: Maximum latitude of the centre [rad].
-        day: Period of the longitude of the centre [s].
-        year: Period of the latitude of the centre [s].
-    """
-
-    amplitude: float
-    width: float
-    declination: float
-    day: float
-    year: float
-
-
 def periodic_height_forcing(
     dynamics: SphereShallowWaterDynamics,
     periodic: PeriodicForcingSettings,
@@ -579,16 +493,18 @@ def periodic_height_forcing(
 
     Args:
         dynamics: Fixed operators.
-        periodic: Settings.
+        periodic: Settings, amplitude in m/hour and periods in hours.
         time: Time t since the start of the run [s].
 
     Returns:
         F on the grid [m/s], shape (*grid.shape).
     """
-    centre_lon = 2 * math.pi * time / periodic.day
-    centre_lat = periodic.declination * math.sin(2 * math.pi * time / periodic.year)
+    day, year = 3600 * periodic.day, 3600 * periodic.year
+    centre_lon = 2 * math.pi * time / day
+    centre_lat = periodic.declination * math.sin(2 * math.pi * time / year)
     return (
         periodic.amplitude
+        / 3600
         * torch.cos(dynamics.longitude - centre_lon)
         * torch.exp(-(((dynamics.latitude - centre_lat) / periodic.width) ** 2))
     )
@@ -626,3 +542,248 @@ def periodic_forcing_increment(
     )
     increment[:, 0] = dynamics.gravity * dynamics.dt * torch.tril(coefficients[0])
     return increment
+
+
+# ---------------------------------------------------------------------------
+# The forcings of one batch, each with its own random state
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class StepState:
+    """The solver step that a forcing increment follows.
+
+    Attributes:
+        time: Time at the start of the step [s].
+        undamped_state: State after the conservative step, before the damping,
+            (B, 3, L, L).
+        damped_state: State after the damping, (B, 3, L, L).
+        hyperdiffusion: Factor of the hyperdiffusion for one step, (L, L).
+        drag: Factor of the drag for one step, (B,), or None without drag.
+    """
+
+    time: float
+    undamped_state: TensorLike
+    damped_state: TensorLike
+    hyperdiffusion: TensorLike
+    drag: TensorLike | None
+
+
+class SkebsForcing:
+    """SKEBS pattern of B simulations, with its global and local backscatter.
+
+    The forcing holds the values of its batch, in SI units, with one value per
+    simulation for the fields sampled in ``parameters_range``: the simulator builds it
+    from ``SkebsSettings`` and the backscatter settings. The pattern starts from its
+    stationary distribution. Each ``increment`` uses the current pattern, then
+    advances it by one step of the AR(1) process, with one random generator per
+    simulation.
+
+    Args:
+        dynamics: Fixed operators and time step.
+        generators: One random generator per simulation.
+        energy_rate: Base energy rate [m^2/s^3], (B,).
+        correlation_time: Decorrelation time of the pattern [s], (B,); 0 is white.
+        spectral_slope: Exponent p of the noise amplitude g_l = b l^p, (B,).
+        degree_min: Lowest forced degree.
+        degree_max: Highest forced degree.
+        global_fraction: Share of the global mean dissipation added to the rate, (B,),
+            or None without global backscatter.
+        global_include_drag: Whether the drag loss counts in the global dissipation.
+        local_fraction: Share of the local dissipation added to the rate, (B,), or None
+            without local backscatter.
+        local_include_drag: Whether the drag loss counts in the local dissipation.
+    """
+
+    def __init__(
+        self,
+        dynamics: SphereShallowWaterDynamics,
+        generators: list[torch.Generator],
+        energy_rate: TensorLike,
+        correlation_time: TensorLike,
+        spectral_slope: TensorLike,
+        degree_min: int,
+        degree_max: int,
+        global_fraction: TensorLike | None = None,
+        global_include_drag: bool = False,
+        local_fraction: TensorLike | None = None,
+        local_include_drag: bool = False,
+    ) -> None:
+        """Store the values and draw the initial pattern from its stationary law."""
+        device = dynamics.laplacian.device
+        self.dynamics = dynamics
+        self.generators = generators
+        self.base_rate = energy_rate.to(device, torch.float64)
+        self.correlation_time = correlation_time
+        self.spectral_slope = spectral_slope
+        self.degree_min = degree_min
+        self.degree_max = degree_max
+        self.global_fraction = global_fraction
+        self.global_include_drag = global_include_drag
+        self.local_fraction = local_fraction
+        self.local_include_drag = local_include_drag
+
+        self.alpha = autoregressive_parameter(correlation_time, dynamics.dt).to(device)
+        self.amplitudes = unit_rate_amplitudes(
+            dynamics, self.alpha, spectral_slope, degree_min, degree_max
+        ).unsqueeze(1)  # (B, 1, L): one streamfunction pattern
+        noise = complex_noise(generators, 1, dynamics.lmax)
+        self.pattern = stationary_pattern(noise, self.amplitudes, self.alpha)
+        self.global_on = global_fraction is not None and bool(
+            (global_fraction > 0).any()
+        )
+        self.local_on = local_fraction is not None and bool((local_fraction > 0).any())
+        self.needs_undamped = self.global_on or self.local_on
+        self.taper = dissipation_taper(dynamics.lmax, device)
+        self.mean_rate = self.base_rate  # global mean rate of the last increment
+
+    def energy_rate(self, step: StepState) -> TensorLike:
+        """Energy rate of this step: base rate plus the backscatter of the dissipation.
+
+        The global backscatter adds its fraction of the global mean dissipation, one
+        value per simulation. The local backscatter adds its fraction of the smoothed
+        dissipation field (B09 eq. 13), and the rate becomes a field on the grid.
+
+        Args:
+            step: The solver step.
+
+        Returns:
+            Energy rate [m^2/s^3], shape (B,) or (B, *grid.shape).
+        """
+        device = self.base_rate.device
+        batch = self.base_rate.shape[0]
+        rate = self.base_rate
+        lost = step.hyperdiffusion[:, :1].unsqueeze(0)  # (1, L, 1): damping per degree
+        with_drag = lost if step.drag is None else lost * step.drag.reshape(batch, 1, 1)
+        if self.global_on:
+            damping = with_drag if self.global_include_drag else lost
+            fraction = self.global_fraction.to(device, torch.float64)
+            dissipation = global_dissipation_rate(
+                self.dynamics, step.undamped_state, damping[..., 0]
+            )
+            rate = rate + fraction * dissipation
+        if self.local_on:
+            damping = with_drag if self.local_include_drag else lost
+            fraction = self.local_fraction.to(device, torch.float64)
+            dissipation = local_dissipation_rate(
+                self.dynamics, step.undamped_state, damping, self.taper
+            )
+            shape = (batch,) + (1,) * (dissipation.ndim - 1)
+            rate = rate.reshape(shape) + fraction.reshape(shape) * dissipation
+        return rate
+
+    def increment(self, step: StepState) -> TensorLike:
+        """Increment of this step, then one AR(1) step of the pattern.
+
+        Args:
+            step: The solver step.
+
+        Returns:
+            Increment of the spectral state, (B, 3, L, L); only the vorticity changes.
+        """
+        rate = self.energy_rate(step)
+        increment = kinetic_forcing_increment(self.dynamics, self.pattern, rate)
+        noise = complex_noise(self.generators, 1, self.dynamics.lmax)
+        self.pattern = advance_pattern(self.pattern, noise, self.amplitudes, self.alpha)
+        if rate.ndim == 1:
+            self.mean_rate = rate
+        else:
+            self.mean_rate = global_integral(rate, self.dynamics.quad_weights) / (
+                4 * torch.pi
+            )
+        return increment
+
+    def unit_tendency(self) -> TensorLike:
+        """Tendency of the pattern for a unit energy rate, (B, 3, L, L), per second."""
+        unit = torch.ones_like(self.base_rate)
+        return kinetic_forcing_increment(self.dynamics, self.pattern, unit) / (
+            self.dynamics.dt
+        )
+
+
+class SpptForcing:
+    """SPPT pattern of B simulations: K AR(1) fields, one per scale.
+
+    The fields start from their stationary distribution. Each ``increment`` multiplies
+    the physics increment of the step by the current clipped pattern, then advances the
+    fields by one AR(1) step, with one random generator per simulation.
+
+    Args:
+        dynamics: Fixed operators and time step.
+        settings: Settings, correlation times in hours.
+        generators: One random generator per simulation.
+    """
+
+    needs_undamped = True
+
+    def __init__(
+        self,
+        dynamics: SphereShallowWaterDynamics,
+        settings: SpptSettings,
+        generators: list[torch.Generator],
+    ) -> None:
+        """Draw the initial fields from their stationary distribution."""
+        device = dynamics.laplacian.device
+        batch, lmax = len(generators), dynamics.lmax
+        self.dynamics = dynamics
+        self.settings = settings
+        self.generators = generators
+        self.n_fields = len(settings.amplitudes)
+        times = torch.tensor(
+            [3600 * value for value in settings.correlation_times], dtype=torch.float64
+        )
+        field_alpha = autoregressive_parameter(times, dynamics.dt).to(device)  # (K,)
+        amplitudes = sppt_noise_amplitudes(dynamics, settings, field_alpha)
+        self.amplitudes = amplitudes.expand(batch, self.n_fields, lmax)
+        self.alpha = field_alpha.expand(batch, self.n_fields)
+        noise = complex_noise(generators, self.n_fields, lmax)
+        self.pattern = stationary_pattern(noise, self.amplitudes, self.alpha)
+
+    def increment(self, step: StepState) -> TensorLike:
+        """Perturbation of the physics increment of this step, then one AR(1) step.
+
+        Args:
+            step: The solver step.
+
+        Returns:
+            Increment of the spectral state, (B, 3, L, L).
+        """
+        physics = physics_increment(
+            step.undamped_state, step.damped_state, step.hyperdiffusion
+        )
+        pattern_grid = sppt_pattern_on_grid(
+            self.dynamics, self.pattern, self.settings.clip
+        )
+        increment = sppt_increment(self.dynamics, pattern_grid, physics)
+        noise = complex_noise(self.generators, self.n_fields, self.dynamics.lmax)
+        self.pattern = advance_pattern(self.pattern, noise, self.amplitudes, self.alpha)
+        return increment
+
+
+class PeriodicForcing:
+    """The Well's height forcing, the same for the B simulations of a batch.
+
+    Args:
+        dynamics: Fixed operators and time step.
+        settings: Settings, amplitude in m/hour and periods in hours.
+        batch: Number of simulations B.
+    """
+
+    needs_undamped = False
+
+    def __init__(
+        self,
+        dynamics: SphereShallowWaterDynamics,
+        settings: PeriodicForcingSettings,
+        batch: int,
+    ) -> None:
+        """Store the settings."""
+        self.dynamics = dynamics
+        self.settings = settings
+        self.batch = batch
+
+    def increment(self, step: StepState) -> TensorLike:
+        """Height increment of the step that starts at ``step.time``, (B, 3, L, L)."""
+        return periodic_forcing_increment(
+            self.dynamics, self.settings, step.time, self.batch
+        )

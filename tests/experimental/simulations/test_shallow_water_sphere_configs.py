@@ -57,14 +57,13 @@ def test_dataset_config_runs_at_a_small_size(name):
         config.output_lmax = 11
         config.output_nlat = 16
         config.output_nlon = 32
-    if config.get("forcing_degree_max") is not None:
+    skebs = config.get("skebs")
+    if skebs is not None and skebs.get("degree_max") is not None:
         # the forced band scaled with the band limit, from 256 to 22
-        lowest = max(1, round(config.get("forcing_degree_min", 1) * 22 / 256))
-        highest = min(21, round(config.forcing_degree_max * 22 / 256))
-        config.forcing_degree_min = lowest
-        config.forcing_degree_max = max(lowest, highest)
-    if config.get("reference_members", 0) > 0:
-        config.reference_members = 2
+        lowest = max(1, round(skebs.get("degree_min", 1) * 22 / 256))
+        highest = min(21, round(skebs.degree_max * 22 / 256))
+        skebs.degree_min = lowest
+        skebs.degree_max = max(lowest, highest)
 
     sim = build_simulator(config)
     assert isinstance(sim, SphericalShallowWater)
@@ -74,8 +73,6 @@ def test_dataset_config_runs_at_a_small_size(name):
     assert payload["constant_fields"].shape == (2, *sim.output_grid.shape, 2)
     if config.get("output_lmax") is not None:
         assert payload["baseline"].shape == payload["data"].shape
-    if config.get("reference_members", 0) > 0:
-        assert payload["reference_ensemble"].shape[:2] == (2, 2)
     if config.get("return_periodic_forcing", False):
         shape = (2, 3, *sim.output_grid.shape, 1)
         assert payload["periodic_forcing"].shape == shape

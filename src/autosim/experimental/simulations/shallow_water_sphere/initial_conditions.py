@@ -7,6 +7,20 @@ published values give the published case.
 
 In the formulas of Williamson et al. (1992, W92) :math:`\theta` is the latitude and
 :math:`\lambda` the longitude, as in the paper.
+
+The ERA5 family is W92 case 7, which starts the shallow water equations from the
+analysed 500 mb height and wind, read from ERA5 by ``autosim.era5``. The geopotential
+``z`` at 500 hPa is the geopotential of the free surface, :math:`\Phi + g h_s`, with
+:math:`\Phi` the geopotential of the fluid depth and :math:`g h_s` the Earth's
+orography. ``era5_initial_condition`` analyses these fields on the equiangular grid of
+the store (poles included), keeps the degrees below the band limit of the solver, and
+applies the balance step of ``balance_state``. W92 case 7 has no orography. With the
+Earth's orography the fluid depth :math:`z/g - h_s` must stay positive, while the
+ground of Tibet (5859 m on the 0.25 degree grid) nearly reaches the 500 hPa surface.
+As in the PlanetSWE dataset of The Well (Ohana et al. 2024; ``gen_ics.ipynb`` at
+commit aac88c0 of PolymathicAI/the_well), the orography can be compressed,
+:math:`h_s \to \operatorname{sign}(h_s)|h_s|^p` with :math:`p = 15/16`, and shifted so
+that its minimum is 0 (``compress_orography``).
 """
 
 from __future__ import annotations
@@ -15,9 +29,10 @@ import math
 
 import torch
 
+from autosim.era5 import ERA5_STEP_HOURS, ERA5_TIMES, Era5Fields
 from autosim.types import TensorLike
 
-from .dynamics import SphereShallowWaterDynamics
+from .dynamics import SphereShallowWaterDynamics, make_grid
 
 GALEWSKY_RANGES: dict[str, tuple[float, float]] = {
     "jet_speed": (60.0, 100.0),  # u_max [m/s], paper: 80
@@ -38,6 +53,15 @@ MOUNTAIN_RANGES: dict[str, tuple[float, float]] = {
     "mountain_lon": (0.0, 2 * math.pi),  # lambda_c [rad], W92: -pi/2, i.e. 3 pi/2
     "mountain_lat": (-math.pi / 3, math.pi / 3),  # theta_c [rad], W92: pi/6
 }
+
+# era5_time: hours since autosim.era5.ERA5_START, rounded to the 6-hourly axis. W92
+# case 7 dates: 1978-12-21T00, 1979-01-09T00 and 1979-01-16T00 (see
+# autosim.era5.era5_hours).
+ERA5_RANGES: dict[str, tuple[float, float]] = {
+    "era5_time": (0.0, float(ERA5_STEP_HOURS * (ERA5_TIMES - 1))),
+}
+# Exponent of the orography compression of The Well (PlanetSWE, gen_ics.ipynb)
+ERA5_OROGRAPHY_EXPONENT = 15 / 16
 
 
 def balanced_geopotential(
@@ -93,11 +117,25 @@ def balance_state(
 ) -> TensorLike:
     """Balance step of analysed fields: no divergence, height from the vorticity.
 
-    The divergence is removed and the free surface is replaced by the one in
-    nonlinear balance with the remaining wind (``balanced_geopotential``), with the
-    global mean of the supplied free surface. W92 (p. 19) suggests a discrete balance
-    of this kind for initial states; for analysed fields (case 7) it recommends a
-    normal-mode initialisation instead, which this step replaces.
+    Analysed fields such as ERA5 at 500 hPa are not a balanced state of the shallow
+    water equations: their height and wind come from a three-dimensional atmosphere
+    and an analysis, so started as they are they emit gravity waves. This step keeps
+    the rotational wind and rebuilds the rest from it:
+
+    1. the divergence is set to zero, so the wind is the rotational wind of the
+       analysed vorticity;
+    2. the free surface is replaced by the one in nonlinear balance with that wind,
+       from the divergence equation with a steady divergence
+       (``balanced_geopotential``);
+    3. the global mean of the supplied free surface is kept (line ``free_surface[:,
+       0, 0] = ...``), so the mass of the layer is that of the analysis;
+    4. the orography, when given, is subtracted to return the geopotential of the
+       fluid depth, the variable of the state.
+
+    W92 (p. 19) suggests a discrete balance of this kind for initial states; for
+    analysed fields (case 7) it recommends a normal-mode initialisation instead,
+    which this step replaces. ``era5_initial_condition`` calls it for the ``"era5"``
+    family.
 
     Args:
         dynamics: Fixed operators.
@@ -346,6 +384,156 @@ def mountain_initial_condition(
         dynamics, mountain_lon, mountain_lat, mountain_height, mountain_width
     )
     state[:, 0] = state[:, 0] - surface_geopotential  # Phi = g * fluid depth
+    return state, surface_geopotential
+
+
+def era5_source_dynamics(
+    dynamics: SphereShallowWaterDynamics, fields: Era5Fields
+) -> SphereShallowWaterDynamics:
+    """Transforms on the grid of the ERA5 fields, at the band limit of ``dynamics``.
+
+    The WeatherBench2 store holds the ERA5 fields on a 0.25 degree equiangular grid
+    with both poles (721 latitudes from 90 to -90 degrees, 1440 longitudes from 0),
+    a different grid from the solver's. The analysis of the fields into
+    spherical-harmonic coefficients therefore needs transforms on that grid, with the
+    quadrature of that grid, truncated to the band limit L of the solver: the
+    coefficients then feed the solver directly. This function builds them with
+    torch-harmonics' equiangular grid with poles and checks that its points match
+    the latitudes and longitudes of the fields to 1e-6 rad.
+
+    ``SphericalShallowWater.era5_problem`` builds them at the first ERA5 batch and
+    keeps them, for the later batches and for the analysis of the climatology target
+    of the relaxation (``DampingSettings.relaxation_target="era5_climatology"``).
+
+    Args:
+        dynamics: Operators of the solver.
+        fields: ERA5 fields.
+
+    Returns:
+        Operators on the grid of the fields.
+    """
+    nlat, nlon = fields.geopotential.shape[-2:]
+    grid = make_grid("equiangular", nlat, nlon, None)
+    source = SphereShallowWaterDynamics(
+        grid,
+        dynamics.lmax,
+        dynamics.radius,
+        dynamics.omega,
+        dynamics.gravity,
+        dynamics.mean_depth,
+        dynamics.dt,
+        str(dynamics.laplacian.device),
+    )
+    grid_latitude = source.latitude[:, 0].cpu()
+    grid_longitude = source.longitude[0].cpu()
+    latitude_error = (grid_latitude - fields.latitude).abs().max().item()
+    longitude_error = (grid_longitude - fields.longitude).abs().max().item()
+    if latitude_error > 1e-6 or longitude_error > 1e-6:
+        msg = (
+            "the ERA5 fields are not on torch-harmonics' equiangular grid with poles "
+            f"(latitude error {latitude_error:.2e}, longitude error "
+            f"{longitude_error:.2e} rad)"
+        )
+        raise ValueError(msg)
+    return source
+
+
+def compress_orography(
+    surface_geopotential: TensorLike,
+    gravity: float,
+    exponent: float = 1.0,
+    shift: bool = False,
+) -> TensorLike:
+    r"""Compressed orography of The Well's PlanetSWE, on the grid of the fields.
+
+    The height :math:`h_s = \Phi_s / g` [m] becomes
+    :math:`\operatorname{sign}(h_s)|h_s|^p`, and with ``shift`` the result is shifted
+    so that its minimum is 0. This is the orography of the PlanetSWE dataset of The
+    Well (Ohana et al. 2024, NeurIPS Datasets and Benchmarks, arXiv:2412.00568),
+    generated by ``gen_ics.ipynb`` in ``datasets/planetswe/generation`` of
+    PolymathicAI/the_well at commit aac88c0.
+
+    The compression keeps the fluid depth positive. The ERA5 state is taken at
+    500 hPa, and the fluid depth is the height of that surface minus the orography,
+    :math:`z/g - h_s`. On the 0.25 degree grid the ground of Tibet reaches 5859 m,
+    close to the 500 hPa surface, so the depth there is small. The power
+    :math:`p = 15/16` lowers high ground most: Tibet becomes 3407 m, while a hill of
+    100 m becomes 75 m. The shift then raises the whole compressed orography by
+    minus its minimum (the ground below sea level), which lowers the fluid depth
+    everywhere by that amount; the saved free surface is unchanged. ``exponent=1``
+    and ``shift=False`` leave the orography unchanged.
+
+    The Well's solver also low-passes the orography and carries its mass flux with
+    the depth plus the mean 500 hPa height (``gen_SWE_from_ic_file.py``); this solver
+    keeps the degrees below its band limit and the flux of the fluid depth.
+
+    Args:
+        surface_geopotential: g h_s on the grid of the fields [m^2/s^2].
+        gravity: g [m/s^2].
+        exponent: p.
+        shift: Shift the compressed orography so that its minimum is 0.
+
+    Returns:
+        The surface geopotential of the compressed orography, same shape.
+    """
+    height = surface_geopotential / gravity
+    height = torch.sign(height) * height.abs() ** exponent
+    if shift:
+        height = height - height.min()
+    return gravity * height
+
+
+def era5_initial_condition(
+    dynamics: SphereShallowWaterDynamics,
+    source: SphereShallowWaterDynamics,
+    fields: Era5Fields,
+    orography_exponent: float = 1.0,
+    orography_shift: bool = False,
+) -> tuple[TensorLike, TensorLike]:
+    """Balanced spectral state and orography from ERA5 fields, W92 case 7.
+
+    The fields are analysed on their grid (``source``) and the degrees below the band
+    limit kept. The orography is first compressed with ``compress_orography``. The
+    fluid depth is the free surface minus the orography. The balance
+    step removes the divergence and puts the free surface in nonlinear balance with
+    the vorticity, with the global mean of the analysed free surface.
+
+    Args:
+        dynamics: Operators of the solver.
+        source: Operators on the grid of the fields (``era5_source_dynamics``).
+        fields: ERA5 fields of B times.
+        orography_exponent: Exponent p of ``compress_orography``.
+        orography_shift: Shift of ``compress_orography``.
+
+    Returns:
+        The spectral state (B, 3, L, L) and the coefficients of the surface
+        geopotential g h_s, shape (B, L, L).
+    """
+    device = source.laplacian.device
+    batch = fields.geopotential.shape[0]
+    geopotential = fields.geopotential.to(device, torch.float64)
+    surface = compress_orography(
+        fields.surface_geopotential.to(device, torch.float64),
+        dynamics.gravity,
+        orography_exponent,
+        orography_shift,
+    )
+    wind = torch.stack(
+        [
+            fields.eastward.to(device, torch.float64),
+            fields.northward.to(device, torch.float64),
+        ],
+        dim=1,
+    )
+
+    free_surface = source.to_coefficients(geopotential)
+    surface_geopotential = source.to_coefficients(surface.expand(batch, *surface.shape))
+    surface_geopotential = torch.tril(surface_geopotential)
+    vorticity, divergence = source.vorticity_divergence(wind)
+    state = torch.stack(
+        [free_surface - surface_geopotential, vorticity, divergence], dim=1
+    )
+    state = balance_state(dynamics, torch.tril(state), None, surface_geopotential)
     return state, surface_geopotential
 
 

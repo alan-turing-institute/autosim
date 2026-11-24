@@ -26,22 +26,29 @@ device: cuda
 return_constant_fields: true
 # Orography compressed as in The Well's PlanetSWE (gen_ics.ipynb at aac88c0):
 # sign(h_s)|h_s|^(15/16), shifted so that its minimum is 0.
-era5_orography_exponent: 0.9375
-era5_orography_shift: true
+era5:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.Era5Settings
+  orography_exponent: 0.9375
+  orography_shift: true
 # Relaxation of the height in 1 day towards the 1990-2019 ERA5 climatology of the
 # 500 hPa height at the day of year and hour of the start date, and a drag of 100 days.
-relaxation_time: 24.0
-relaxation_target: era5_climatology
-drag_time: 2400.0
+damping:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.DampingSettings
+  relaxation_time: 24.0
+  relaxation_target: era5_climatology
+  drag_time: 2400.0
 # Vortical forcing (SKEBS) and SPPT as in ds1.
-forcing_type: vortical
-forcing_energy_rate: 1.0e-5
-forcing_correlation_time: 6.0
-forcing_spectral_slope: -1.27
-sppt_amplitudes: [0.52, 0.18, 0.06]
-sppt_length_scales: [500.0e3, 1000.0e3, 2000.0e3]
-sppt_correlation_times: [6.0, 72.0, 720.0]
-sppt_clip: 1.0
+skebs:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.SkebsSettings
+  energy_rate: 1.0e-5
+  correlation_time: 6.0
+  spectral_slope: -1.27
+sppt:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.SpptSettings
+  amplitudes: [0.52, 0.18, 0.06]
+  length_scales: [500.0e3, 1000.0e3, 2000.0e3]
+  correlation_times: [6.0, 72.0, 720.0]
+  clip: 1.0
 # Hours since 1959-01-01T00, rounded to the 6-hourly times of the store: its whole
 # range, 1959-01-01T00 to 2023-01-10T18. W92 case 7 is 1978-12-21T00 = 175056 h.
 parameters_range:

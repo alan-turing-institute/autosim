@@ -1,4 +1,4 @@
-"""Tests of reference ensembles and coarse-graining on the sphere."""
+"""Tests of coarse-graining and of the physics baseline on the sphere."""
 
 from __future__ import annotations
 
@@ -26,11 +26,6 @@ FIXED_GALEWSKY = {
     "perturbation_lon": (0.0, 0.0),
     "perturbation_lat": (math.pi / 4, math.pi / 4),
 }
-FORCING = {
-    "forcing_type": "vortical",
-    "forcing_energy_rate": 1e-4,
-    "forcing_correlation_time": 6.0,
-}
 
 
 def _small_simulator(**overrides) -> SphericalShallowWater:
@@ -49,54 +44,6 @@ def _small_simulator(**overrides) -> SphericalShallowWater:
         "parameters_range": FIXED_GALEWSKY,
     }
     return SphericalShallowWater(**(options | overrides))
-
-
-# ---------------------------------------------------------------------------
-# Reference ensembles of a generated run
-# ---------------------------------------------------------------------------
-
-
-def test_reference_members_agree_with_truth_without_forcing():
-    sim = _small_simulator(reference_members=3, skip_nt=1, T=9.0)
-    payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
-    ensemble = payload["reference_ensemble"]
-    assert payload["data"].shape == (2, 3, 32, 64, 3)
-    assert ensemble.shape == (2, 3, 3, 32, 64, 3)
-    for member in range(3):
-        torch.testing.assert_close(
-            ensemble[:, member], payload["data"], rtol=1e-6, atol=1e-6
-        )
-
-
-def test_reference_members_branch_from_the_first_saved_frame():
-    sim = _small_simulator(reference_members=4, skip_nt=1, T=12.0, **FORCING)
-    payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
-    truth = payload["data"]
-    ensemble = payload["reference_ensemble"]
-    assert ensemble.shape == (2, 4, 4, 32, 64, 3)
-    for member in range(4):
-        torch.testing.assert_close(
-            ensemble[:, member, 0], truth[:, 0], rtol=0.0, atol=0.0
-        )
-    spread = ensemble.std(dim=1).mean(dim=(0, 2, 3, 4))  # per frame
-    assert spread[0] == 0.0
-    assert (spread[1:].diff() > 0).all()
-    # the truth is one more member: its distance to the ensemble mean is comparable
-    # to the spread of the members
-    error = (truth - ensemble.mean(dim=1)).abs().mean(dim=(0, 2, 3, 4))
-    assert 0.2 * spread[-1] < error[-1] < 5 * spread[-1]
-
-
-def test_truth_is_the_same_with_and_without_reference_members():
-    options = {"skip_nt": 1, "T": 9.0} | FORCING
-    alone = _small_simulator(**options).forward_samples_spatiotemporal(
-        n=2, random_seed=3
-    )
-    with_members = _small_simulator(
-        reference_members=2, **options
-    ).forward_samples_spatiotemporal(n=2, random_seed=3)
-    torch.testing.assert_close(alone["data"], with_members["data"], rtol=0.0, atol=0.0)
-    assert "reference_ensemble" not in alone
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +79,7 @@ def test_baseline_starts_from_the_truncated_state():
     torch.testing.assert_close(baseline[:, 0], data[:, 0], rtol=1e-5, atol=1e-4)
     # the low-resolution solver departs from the coarse-grained truth with time. The
     # Galewsky jet is sharp at lmax = 11, so the baseline departs within the first 3 h.
-    # From 3 h to 42 h after the branch the error then grows by a factor 1.73
+    # From 3 h to 42 h after the first saved frame the error then grows by a factor 1.73
     # (measured: 1.38 by 18 h, 1.98 by 66 h).
     error = (baseline - data).abs().mean(dim=(0, 2, 3, 4))
     assert error[0] < 1e-3

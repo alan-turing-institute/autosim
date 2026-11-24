@@ -25,12 +25,14 @@ return_constant_fields: true
 # Local backscatter (Berner et al. 2009, eq. 13): the energy rate is a fraction of the
 # kinetic energy removed by the hyperdiffusion, as a smoothed field; the pattern has
 # the decorrelation time and slope of ds1.
-forcing_type: vortical
-forcing_energy_rate: 0.0
-forcing_correlation_time: 6.0
-forcing_spectral_slope: -1.27
-forcing_backscatter_fraction: 0.2
-forcing_backscatter_mode: local
+skebs:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.SkebsSettings
+  energy_rate: 0.0
+  correlation_time: 6.0
+  spectral_slope: -1.27
+local_backscatter:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.LocalBackscatterSettings
+  fraction: 0.2
 # One orography for every simulation: the Gaussian of DCMIP-2008 (h_0 = 2000 m,
 # half-width d = 1500 km = 0.2354 rad) at the summit of W92 (longitude 3 pi/2,
 # latitude pi/6). Only the flow speed varies, around the 20 m/s of W92.

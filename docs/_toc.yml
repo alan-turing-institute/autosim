@@ -16,6 +16,7 @@ chapters:
         sections:
           - file: reference/core/cli
           - file: reference/core/device
+          - file: reference/core/era5
           - file: reference/core/logging
           - file: reference/core/types
           - file: reference/core/utils

@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
-import dataclasses
 import math
 
 import numpy as np
 import torch
 
+from autosim.era5 import (
+    ERA5_STEP_HOURS,
+    era5_time_index,
+    load_era5_climatology,
+    load_era5_fields,
+)
 from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import TensorLike
 
@@ -16,42 +21,35 @@ from .dynamics import (
     coriolis_parameter,
     make_grid,
 )
-from .era5 import (
-    ERA5_CLIMATOLOGY_STORE,
-    ERA5_LEVEL,
-    ERA5_RANGES,
-    ERA5_STEP_HOURS,
-    ERA5_STORE,
-    era5_initial_condition,
-    era5_source_dynamics,
-    era5_time_index,
-    load_era5_climatology,
-    load_era5_fields,
-)
-from .forcing import (
-    FORCING_TYPES,
-    ForcingSettings,
-    PeriodicForcingSettings,
-    SpptSettings,
-    periodic_height_forcing,
-)
+from .forcing import SkebsForcing, periodic_height_forcing
 from .initial_conditions import (
+    ERA5_RANGES,
     GALEWSKY_RANGES,
     MOUNTAIN_RANGES,
     balanced_geopotential,
+    era5_initial_condition,
+    era5_source_dynamics,
     galewsky_initial_condition,
     mountain_initial_condition,
     zonal_jet,
 )
 from .integration import ENERGY_BUDGET_NAMES, integrate_trajectories
+from .settings import (
+    SAMPLED_FIELDS,
+    DampingSettings,
+    Era5Settings,
+    GlobalBackscatterSettings,
+    LocalBackscatterSettings,
+    PeriodicForcingSettings,
+    SkebsSettings,
+    SpptSettings,
+)
 
 INITIAL_CONDITIONS = (
     "galewsky",
     "mountain",
     "era5",
 )
-BACKSCATTER_MODES = ("global", "local")
-RELAXATION_TARGETS = ("jet", "era5_climatology")
 
 # Default sampling ranges of each family; their keys are the required parameters.
 DEFAULT_PARAMETER_RANGES: dict[str, dict[str, tuple[float, float]]] = {
@@ -60,26 +58,20 @@ DEFAULT_PARAMETER_RANGES: dict[str, dict[str, tuple[float, float]]] = {
     "era5": ERA5_RANGES,
 }
 
-# Constructor arguments that can also be keys of parameters_range: they are then
-# sampled for each simulation and returned in constant_scalars.
-SAMPLED_SCALARS = (
-    "relaxation_time",
-    "relaxation_jet_speed",
-    "drag_time",
-    "forcing_energy_rate",
-    "forcing_correlation_time",
-    "forcing_spectral_slope",
-    "forcing_backscatter_fraction",
+# Settings fields that can also be keys of parameters_range, by their dotted name:
+# they are then sampled for each simulation and returned in constant_scalars.
+SAMPLED_SCALARS = tuple(
+    f"{argument}.{field}"
+    for argument, fields in SAMPLED_FIELDS.items()
+    for field in fields
 )
 
 # Independent random streams of one simulation
 INITIAL_NOISE_STREAM = 0
-FORCING_STREAM = 1
+SKEBS_STREAM = 1
 BASELINE_STREAM = 2
 SPPT_STREAM = 3
 BASELINE_SPPT_STREAM = 4
-REFERENCE_STREAM = 100  # member j of a reference ensemble uses stream 100 + j
-REFERENCE_SPPT_STREAM = 200  # and 200 + j for its SPPT pattern
 
 
 def sample_generators(
@@ -118,8 +110,9 @@ class SphericalShallowWater(SpatioTemporalSimulator):
     on HEALPix. ``h`` is the height of the free surface above ``mean_depth``.
     Simulations run ``batch_size`` at a time in parallel on ``device``.
 
-    The initial condition is one of these families, each with its own parameters in
-    ``parameters_range`` (see the ``*_RANGES`` dictionaries of ``initial_conditions``):
+    **Initial conditions.** ``initial_condition`` selects a family, each with its own
+    parameters in ``parameters_range`` (see the ``*_RANGES`` dictionaries of
+    ``initial_conditions`` and ``era5``):
 
     - ``"galewsky"``: barotropically unstable jet with a height bump and a small
       height noise (Galewsky et al. 2004). Parameters ``jet_speed``,
@@ -128,31 +121,44 @@ class SphericalShallowWater(SpatioTemporalSimulator):
       the mountain of DCMIP-2008). Parameters ``flow_speed``, ``mountain_height``,
       ``mountain_width``, ``mountain_lon``, ``mountain_lat``.
     - ``"era5"``: the ERA5 state at 500 hPa over the Earth's orography, after a
-      balance step (W92 case 7), read from the WeatherBench2 store ``era5_store``.
-      The orography can be compressed as in The Well's PlanetSWE
-      (``era5_orography_exponent``, ``era5_orography_shift``).
-      Parameter ``era5_time``, hours since 1959-01-01T00, rounded to the 6-hourly
-      times of the store; the rounded value is returned in ``constant_scalars``.
+      balance step (W92 case 7), read from the WeatherBench2 store of ``era5``
+      (``Era5Settings``, which also sets the orography compression of The Well's
+      PlanetSWE). Parameter ``era5_time``, hours since 1959-01-01T00, rounded to the
+      6-hourly times of the store; the rounded value is returned in
+      ``constant_scalars``.
 
-    The arguments listed in ``SAMPLED_SCALARS`` (drag and relaxation times, forcing
-    rate, decorrelation time, slope, fractions) can also be keys of
-    ``parameters_range``. They are then sampled for each simulation, and the
-    constructor value is not used.
+    **Physical processes.** Each process is one argument, a dataclass of module
+    ``settings``; None leaves it out. The processes can be combined, and module
+    ``integration`` gives their order within a step.
 
-    Physical processes that can be added to the conservative dynamics, alone or
-    together (module ``integration`` gives their order in a step, module ``forcing``
-    the definitions):
+    - Relaxation and drag, ``damping`` (``DampingSettings``): Newtonian relaxation of
+      the height towards the balanced height of a zonal jet or towards the ERA5
+      climatology, and linear drag on the vorticity and the divergence. With both,
+      the flow reaches a statistically steady state with a jet and eddies, the
+      forced-dissipative setting of Scott and Polvani (2007, 2008).
+    - Stochastic kinetic-energy backscatter, ``skebs`` (``SkebsSettings``): a
+      streamfunction pattern whose spherical-harmonic coefficients follow an AR(1)
+      process, scaled to a kinetic-energy injection rate (Berner et al. 2009).
+    - Backscatter of the dissipation, ``global_backscatter``
+      (``GlobalBackscatterSettings``) and ``local_backscatter``
+      (``LocalBackscatterSettings``): a share of the kinetic energy removed by the
+      hyperdiffusion added to the SKEBS energy rate, as its global mean or as a
+      smoothed field on the grid (Berner et al. 2009, section 2b and eq. 13). Both
+      need ``skebs`` and can be combined.
+    - Stochastically perturbed physics tendencies, ``sppt`` (``SpptSettings``): the
+      increment of the drag and the relaxation multiplied by 1 + r, with r a random
+      pattern (Buizza et al. 1999; Palmer et al. 2009; Leutbecher et al. 2017). Needs
+      ``damping``.
+    - Periodic height forcing, ``periodic`` (``PeriodicForcingSettings``): the daily
+      and yearly height source and sink of The Well's PlanetSWE (Ohana et al. 2024).
 
-    - Newtonian relaxation of the height towards the balanced height of a zonal jet,
-      and linear drag on the vorticity and the divergence. With both, the flow
-      reaches a statistically steady state with a jet and eddies.
-    - Stochastic kinetic-energy forcing, ``forcing_type``: ``"vortical"``
-      (streamfunction pattern, Berner et al. 2009). The energy rate can include a
-      backscatter of the diagnosed dissipation, global or local.
-    - Stochastically perturbed physics tendencies, ``sppt_amplitudes``: the increment
-      of the drag and the relaxation multiplied by a random pattern (ECMWF's SPPT).
-    - The daily and yearly height forcing of The Well's planetswe,
-      ``periodic_forcing_amplitude``.
+    **Sampled settings.** The fields listed in ``settings.SAMPLED_FIELDS`` (drag and
+    relaxation times, speed of the target jet, SKEBS rate, decorrelation time and
+    slope, backscatter fractions) can be sampled for each simulation: their dotted
+    name, ``"<argument>.<field>"`` such as ``"skebs.energy_rate"`` or
+    ``"damping.drag_time"``, is then a key of ``parameters_range``. Their argument
+    must be given, its value of that field is then not used, and the sampled values
+    are returned in ``constant_scalars``.
 
     Args:
         lmax: Spectral band limit L.
@@ -160,8 +166,9 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         nlat: Rings, for regular grids.
         nlon: Points per ring, for regular grids.
         nside: Resolution, for "healpix".
-        parameters_range: Bounds of the parameters of the family; equal bounds fix a
-            parameter. None takes the default ranges of the family.
+        parameters_range: Bounds of the parameters of the family and of the sampled
+            settings; equal bounds fix a parameter. None takes the default ranges of
+            the family.
         output_names: Channel names, default ``["h", "u_phi", "u_theta"]``.
         log_level: Logging verbosity.
         T: Total simulated time [hours].
@@ -193,55 +200,16 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             problem has a rotated f.
         sht_iterations: Jacobi iterations refining the analysis on grids without an
             exact quadrature (HEALPix), see ``SphereShallowWaterDynamics``.
-        relaxation_time: Time of the relaxation of the height towards its
-            equilibrium [hours]. None is no relaxation.
-        relaxation_jet_speed: Maximum speed [m/s] of the zonal jet that defines the
-            equilibrium height (its balanced height, profile of Galewsky et al.).
-        relaxation_jet_latitude: Latitude of that jet [rad].
-        relaxation_target: Equilibrium of the relaxation: ``"jet"``, the balanced
-            height of the jet above, or ``"era5_climatology"`` (family ``"era5"``
-            only), the ERA5 1990-2019 climatology of the free surface at the day of
-            year and hour of the start date, minus the orography, held fixed.
-        drag_time: Time of the linear drag on vorticity and divergence [hours]. None
-            is no drag.
-        forcing_type: "none" or "vortical".
-        forcing_energy_rate: Kinetic energy per unit mass injected per unit time by
-            the "vortical" forcing [m^2/s^3]: the growth rate of the
-            global mean of |u|^2 / 2 under a free random walk of the increments.
-        forcing_correlation_time: Decorrelation time of the forcing pattern [hours].
-            Zero is white noise.
-        forcing_spectral_slope: Exponent p of the noise amplitude g_l = b l^p. The
-            kinetic-energy spectrum of the forcing follows l^(2p+3).
-        forcing_degree_min: Lowest forced degree.
-        forcing_degree_max: Highest forced degree. None is L - 1.
-        forcing_backscatter_fraction: Fraction of the diagnosed kinetic-energy
-            dissipation of the hyperdiffusion added to the energy rate. Zero keeps
-            the fixed rate.
-        forcing_backscatter_mode: "global" adds the global mean of the dissipation
-            to the rate. "local" multiplies the pattern on the grid by the square
-            root of the local rate (Berner et al. 2009, eq. 13), which makes the
-            forcing depend on the flow.
-        backscatter_include_drag: Whether the loss to the drag counts as
-            dissipation in the backscatter.
-        sppt_amplitudes: Grid-point standard deviation of each field of the SPPT
-            pattern. None is no SPPT. Requires drag or relaxation.
-        sppt_length_scales: Correlation length of each field [m].
-        sppt_correlation_times: Decorrelation time of each field [hours].
-        sppt_clip: Bound of the summed pattern.
-        periodic_forcing_amplitude: Amplitude h_f0 of The Well's height forcing
-            [m/hour]. Zero is no such forcing.
-        periodic_forcing_width: Width sigma of its latitude profile [rad].
-        periodic_forcing_declination: Maximum latitude of its centre [rad].
-        periodic_forcing_day: Period of the longitude of its centre [hours].
-        periodic_forcing_year: Period of the latitude of its centre [hours].
-        era5_store: WeatherBench2 zarr store of ``"era5"``.
-        era5_level: Pressure level of ``"era5"`` [hPa].
-        era5_orography_exponent: Exponent p of the orography compression
-            sign(h_s)|h_s|^p of ``"era5"`` (The Well: 15/16); 1 is no compression.
-        era5_orography_shift: Shift the compressed orography of ``"era5"`` so that
-            its minimum is 0, as The Well.
-        era5_climatology_store: WeatherBench2 climatology store, for
-            ``relaxation_target="era5_climatology"``.
+        damping: Relaxation and drag, see above. None is neither.
+        skebs: SKEBS pattern, see above. None is no SKEBS.
+        global_backscatter: Global backscatter of the dissipation into the SKEBS
+            rate. None is none.
+        local_backscatter: Local backscatter of the dissipation into the SKEBS rate.
+            None is none.
+        sppt: SPPT, see above. None is no SPPT.
+        periodic: The Well's periodic height forcing. None is no such forcing.
+        era5: Store, level and orography of ``"era5"``. None takes the defaults of
+            ``Era5Settings`` with that family; other families reject it.
         return_periodic_forcing: Return, as ``periodic_forcing``, The Well's height
             forcing F [m/hour] at the time of each saved frame, shape
             ``(n, time, *grid.shape, 1)``: a known input of the emulator.
@@ -252,15 +220,8 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             frame and the energy change of each process until the next frame, with
             the columns ``energy_budget_names``.
         return_forcing_state: Return, as ``forcing_state``, the wind tendency of the
-            kinetic forcing pattern at each saved frame, for a unit energy rate. The
-            pattern has memory that the saved fields do not show.
-        reference_members: Number N of extra members branched from the first saved
-            frame of each simulation, with independent forcing. They are returned as
-            ``reference_ensemble``, shape ``(n, N, time, *grid.shape, 3)``. The
-            simulation itself (``data``) is one more member, the truth. At that frame
-            the random patterns of every member, the truth included, are drawn from
-            their stationary distribution, so the forecast depends on the saved
-            fields alone: its distribution is p(x_{n+1} | x_n).
+            SKEBS pattern at each saved frame, for a unit energy rate. The pattern has
+            memory that the saved fields do not show.
         output_lmax: Band limit of the saved fields, below ``lmax``: the state is
             truncated to it before it is saved (coarse-graining). None saves the
             full state on the simulation grid.
@@ -299,39 +260,17 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         rotation_axis: tuple[float, float] | None = None,
         return_constant_fields: bool = False,
         sht_iterations: int = 0,
-        relaxation_time: float | None = None,
-        relaxation_jet_speed: float = 80.0,
-        relaxation_jet_latitude: float = math.pi / 4,
-        relaxation_target: str = "jet",
-        drag_time: float | None = None,
-        forcing_type: str = "none",
-        forcing_energy_rate: float = 0.0,
-        forcing_correlation_time: float = 0.0,
-        forcing_spectral_slope: float = -1.27,
-        forcing_degree_min: int = 1,
-        forcing_degree_max: int | None = None,
-        forcing_backscatter_fraction: float = 0.0,
-        forcing_backscatter_mode: str = "global",
-        backscatter_include_drag: bool = False,
-        sppt_amplitudes: list[float] | None = None,
-        sppt_length_scales: list[float] | None = None,
-        sppt_correlation_times: list[float] | None = None,
-        sppt_clip: float = 1.0,
-        periodic_forcing_amplitude: float = 0.0,
-        periodic_forcing_width: float = 2 * math.pi / 3,
-        periodic_forcing_declination: float = 0.4,
-        periodic_forcing_day: float = 24.0,
-        periodic_forcing_year: float = 1008.0,
-        era5_store: str = ERA5_STORE,
-        era5_level: int = ERA5_LEVEL,
-        era5_orography_exponent: float = 1.0,
-        era5_orography_shift: bool = False,
-        era5_climatology_store: str = ERA5_CLIMATOLOGY_STORE,
+        damping: DampingSettings | None = None,
+        skebs: SkebsSettings | None = None,
+        global_backscatter: GlobalBackscatterSettings | None = None,
+        local_backscatter: LocalBackscatterSettings | None = None,
+        sppt: SpptSettings | None = None,
+        periodic: PeriodicForcingSettings | None = None,
+        era5: Era5Settings | None = None,
         return_periodic_forcing: bool = False,
         return_additional_input_fields: bool = False,
         return_energy_budget: bool = False,
         return_forcing_state: bool = False,
-        reference_members: int = 0,
         output_lmax: int | None = None,
         output_nlat: int | None = None,
         output_nlon: int | None = None,
@@ -343,88 +282,25 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         if initial_condition not in INITIAL_CONDITIONS:
             msg = f"initial_condition must be one of {INITIAL_CONDITIONS}"
             raise ValueError(msg)
-        if forcing_type not in FORCING_TYPES:
-            msg = f"forcing_type must be one of {FORCING_TYPES}"
+        if (global_backscatter or local_backscatter) and skebs is None:
+            msg = "global_backscatter and local_backscatter require skebs"
             raise ValueError(msg)
-        if forcing_backscatter_mode not in BACKSCATTER_MODES:
-            msg = f"forcing_backscatter_mode must be one of {BACKSCATTER_MODES}"
+        if return_forcing_state and skebs is None:
+            msg = "return_forcing_state requires skebs"
             raise ValueError(msg)
-        kinetic_forcing = forcing_type != "none"
-        if forcing_backscatter_fraction < 0:
-            msg = "forcing_backscatter_fraction must be non-negative"
-            raise ValueError(msg)
-        if forcing_backscatter_fraction > 0 and not kinetic_forcing:
-            msg = "backscatter requires forcing_type 'vortical'"
-            raise ValueError(msg)
-        if return_forcing_state and not kinetic_forcing:
-            msg = "return_forcing_state requires forcing_type 'vortical'"
-            raise ValueError(msg)
-        if forcing_energy_rate < 0 or forcing_correlation_time < 0:
-            msg = "forcing_energy_rate and forcing_correlation_time must be >= 0"
-            raise ValueError(msg)
-        if reference_members < 0:
-            msg = "reference_members must be non-negative"
-            raise ValueError(msg)
-        sppt = None
-        if sppt_amplitudes is not None:
-            sppt = SpptSettings(
-                amplitudes=tuple(float(value) for value in sppt_amplitudes),
-                length_scales=tuple(float(value) for value in sppt_length_scales or []),
-                correlation_times=tuple(
-                    3600 * float(value) for value in sppt_correlation_times or []
-                ),
-                clip=float(sppt_clip),
-            )
-            n_fields = len(sppt.amplitudes)
-            if n_fields == 0 or {
-                len(sppt.length_scales),
-                len(sppt.correlation_times),
-            } != {n_fields}:
-                msg = (
-                    "sppt_amplitudes, sppt_length_scales and sppt_correlation_times "
-                    "must have the same length, at least 1"
-                )
-                raise ValueError(msg)
-            if min(sppt.amplitudes) <= 0 or min(sppt.length_scales) <= 0:
-                msg = "sppt amplitudes and length scales must be positive"
-                raise ValueError(msg)
-            if min(sppt.correlation_times) < 0 or sppt.clip <= 0:
-                msg = "sppt correlation times must be >= 0 and sppt_clip positive"
-                raise ValueError(msg)
-            has_physics = (
-                relaxation_time is not None
-                or drag_time is not None
-                or "relaxation_time" in (parameters_range or {})
-                or "drag_time" in (parameters_range or {})
-            )
-            if not has_physics:
-                msg = "sppt requires relaxation_time or drag_time"
-                raise ValueError(msg)
-        if periodic_forcing_amplitude < 0:
-            msg = "periodic_forcing_amplitude must be non-negative"
-            raise ValueError(msg)
-        periodic = None
-        if periodic_forcing_amplitude > 0:
-            if min(periodic_forcing_width, periodic_forcing_day) <= 0:
-                msg = "periodic_forcing_width and periodic_forcing_day must be positive"
-                raise ValueError(msg)
-            if periodic_forcing_year <= 0:
-                msg = "periodic_forcing_year must be positive"
-                raise ValueError(msg)
-            periodic = PeriodicForcingSettings(
-                amplitude=periodic_forcing_amplitude / 3600,
-                width=periodic_forcing_width,
-                declination=periodic_forcing_declination,
-                day=3600 * periodic_forcing_day,
-                year=3600 * periodic_forcing_year,
-            )
         if return_periodic_forcing and periodic is None:
-            msg = "return_periodic_forcing requires periodic_forcing_amplitude > 0"
+            msg = "return_periodic_forcing requires periodic"
             raise ValueError(msg)
-        if relaxation_target not in RELAXATION_TARGETS:
-            msg = f"relaxation_target must be one of {RELAXATION_TARGETS}"
+        if era5 is not None and initial_condition != "era5":
+            msg = "era5 settings require initial_condition='era5'"
             raise ValueError(msg)
-        if relaxation_target == "era5_climatology" and initial_condition != "era5":
+        if initial_condition == "era5" and era5 is None:
+            era5 = Era5Settings()
+        if (
+            damping is not None
+            and damping.relaxation_target == "era5_climatology"
+            and initial_condition != "era5"
+        ):
             msg = "relaxation_target='era5_climatology' needs initial_condition='era5'"
             raise ValueError(msg)
         if output_lmax is not None and output_lmax > lmax:
@@ -433,14 +309,19 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         if return_baseline and output_lmax is None:
             msg = "return_baseline requires output_lmax"
             raise ValueError(msg)
-        if forcing_degree_max is None:
-            forcing_degree_max = lmax - 1
-        if not 1 <= forcing_degree_min <= forcing_degree_max <= lmax - 1:
-            msg = "forcing degrees must satisfy 1 <= min <= max <= lmax - 1"
-            raise ValueError(msg)
+        skebs_degree_max = None
+        if skebs is not None:
+            skebs_degree_max = (
+                lmax - 1 if skebs.degree_max is None else skebs.degree_max
+            )
+            if not 1 <= skebs.degree_min <= skebs_degree_max <= lmax - 1:
+                msg = "skebs degrees must satisfy 1 <= min <= max <= lmax - 1"
+                raise ValueError(msg)
         if initial_condition == "era5" and rotation_axis is not None:
             msg = f"initial_condition='{initial_condition}' sets its own rotation axis"
             raise ValueError(msg)
+
+        # Parameters of the family, then the sampled settings fields
         if parameters_range is None:
             parameters_range = dict(DEFAULT_PARAMETER_RANGES[initial_condition])
         required_parameters = list(DEFAULT_PARAMETER_RANGES[initial_condition])
@@ -462,6 +343,27 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 f"initial_condition='{initial_condition}'"
             )
             raise ValueError(msg)
+        settings_arguments = {
+            "damping": damping,
+            "skebs": skebs,
+            "global_backscatter": global_backscatter,
+            "local_backscatter": local_backscatter,
+        }
+        for name in parameters_range:
+            argument = name.split(".")[0]
+            if name in SAMPLED_SCALARS and settings_arguments[argument] is None:
+                msg = f"parameters_range samples {name!r}, which requires {argument}"
+                raise ValueError(msg)
+        if sppt is not None:
+            has_physics = damping is not None and (
+                damping.relaxation_time is not None
+                or damping.drag_time is not None
+                or "damping.relaxation_time" in parameters_range
+                or "damping.drag_time" in parameters_range
+            )
+            if not has_physics:
+                msg = "sppt requires damping with a relaxation_time or a drag_time"
+                raise ValueError(msg)
         if output_names is None:
             output_names = ["h", "u_phi", "u_theta"]
         super().__init__(parameters_range, output_names, log_level)
@@ -479,33 +381,19 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         self.initial_condition = initial_condition
         self.rotation_axis = rotation_axis
         self.return_constant_fields = return_constant_fields
-        self.relaxation_time = relaxation_time
-        self.relaxation_jet_speed = relaxation_jet_speed
-        self.relaxation_jet_latitude = relaxation_jet_latitude
-        self.drag_time = drag_time
-        self.forcing_type = forcing_type
-        self.forcing_energy_rate = forcing_energy_rate
-        self.forcing_correlation_time = forcing_correlation_time
-        self.forcing_spectral_slope = forcing_spectral_slope
-        self.forcing_degree_min = forcing_degree_min
-        self.forcing_degree_max = forcing_degree_max
-        self.forcing_backscatter_fraction = forcing_backscatter_fraction
-        self.forcing_backscatter_mode = forcing_backscatter_mode
-        self.backscatter_include_drag = backscatter_include_drag
+        self.damping = damping
+        self.skebs = skebs
+        self.skebs_degree_max = skebs_degree_max
+        self.global_backscatter = global_backscatter
+        self.local_backscatter = local_backscatter
+        self.sppt = sppt
+        self.periodic = periodic
+        self.era5 = era5
+        self.return_periodic_forcing = return_periodic_forcing
         self.return_additional_input_fields = return_additional_input_fields
         self.return_energy_budget = return_energy_budget
         self.return_forcing_state = return_forcing_state
-        self.sppt = sppt
-        self.periodic = periodic
-        self.era5_store = era5_store
-        self.era5_level = era5_level
-        self.era5_orography_exponent = era5_orography_exponent
-        self.era5_orography_shift = era5_orography_shift
-        self.era5_climatology_store = era5_climatology_store
-        self.relaxation_target = relaxation_target
-        self.return_periodic_forcing = return_periodic_forcing
         self.era5_source: SphereShallowWaterDynamics | None = None  # built on use
-        self.reference_members = reference_members
         self.return_baseline = return_baseline
         self.additional_input_names = ["forcing_h", "forcing_u_phi", "forcing_u_theta"]
         self.energy_budget_names = list(ENERGY_BUDGET_NAMES)
@@ -579,66 +467,97 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         if return_periodic_forcing:
             shape = (self.n_frames, *output_shape, 1)
             self.row_layout.append(("periodic_forcing", shape))
-        if reference_members > 0:
-            shape = (reference_members, self.n_frames, *output_shape, 3)
-            self.row_layout.append(("reference_ensemble", shape))
         if return_baseline:
             shape = (self.n_frames, *output_shape, 3)
             self.row_layout.append(("baseline", shape))
 
-    def sampled_or_fixed(self, rows: TensorLike, name: str, value: float) -> TensorLike:
-        """Value of a scalar of ``SAMPLED_SCALARS`` for each simulation of a batch.
+    def sampled_or_fixed(
+        self, rows: TensorLike, name: str, value: float | None
+    ) -> TensorLike | None:
+        """Value of one settings field for each simulation of a batch.
 
-        The value is the column ``name`` of ``rows`` when ``name`` is a key of
-        ``parameters_range``, and ``value``, the constructor argument, otherwise.
+        The base class turns every key of ``parameters_range`` into a column of the
+        parameter rows, and ``sample_inputs`` draws those rows, so the autosim command
+        line samples these fields like the parameters of the family. A field of
+        ``settings.SAMPLED_FIELDS`` is such a column when its dotted name (for example
+        ``"skebs.energy_rate"``) is a key of ``parameters_range``. This method returns
+        that column, and otherwise the value of the settings dataclass for every
+        simulation, so the code that builds a batch reads one value per simulation in
+        both cases. ``skebs_forcing`` and ``damping_settings`` call it for every sampled
+        field; the planar ``ShallowWater2D`` makes the same choice inline for its
+        scalars.
 
         Args:
             rows: Parameter rows (B, n_parameters).
-            name: Name of the scalar.
-            value: Constructor argument of that scalar.
+            name: Dotted name of the field, ``"<argument>.<field>"``.
+            value: Value of the field in its settings dataclass; None (no drag, no
+                relaxation) stays None when the field is not sampled.
 
         Returns:
-            Values (B,), float64.
+            Values (B,), float64, or None.
         """
         if name in self.param_names:
             return rows[:, self.get_parameter_idx(name)].to(torch.float64)
+        if value is None:
+            return None
         return torch.full((rows.shape[0],), value, dtype=torch.float64)
 
-    def forcing_settings(self, rows: TensorLike) -> ForcingSettings | None:
-        """Settings of the stochastic forcing of one batch, None without forcing.
+    def skebs_forcing(
+        self,
+        rows: TensorLike,
+        dynamics: SphereShallowWaterDynamics,
+        generators: list[torch.Generator],
+        degree_max: int | None = None,
+    ) -> SkebsForcing | None:
+        """SKEBS forcing of one batch, with the values of its simulations in SI units.
 
-        Times are converted from hours to seconds.
+        The sampled fields of ``skebs`` and of the backscatter settings take one value
+        per simulation, and the decorrelation time is converted from hours to seconds.
+        The forcing draws its initial pattern from ``generators``.
 
         Args:
             rows: Parameter rows (B, n_parameters).
+            dynamics: Operators of the solver that the forcing acts on.
+            generators: One random generator per simulation.
+            degree_max: Highest forced degree; None is that of ``skebs``.
 
         Returns:
-            The settings, with one value per simulation for the sampled scalars.
+            The forcing, or None without SKEBS.
         """
-        if self.forcing_type == "none":
+        if self.skebs is None:
             return None
-        energy_rate = self.sampled_or_fixed(
-            rows, "forcing_energy_rate", self.forcing_energy_rate
-        )
         correlation_hours = self.sampled_or_fixed(
-            rows, "forcing_correlation_time", self.forcing_correlation_time
+            rows, "skebs.correlation_time", self.skebs.correlation_time
         )
-        spectral_slope = self.sampled_or_fixed(
-            rows, "forcing_spectral_slope", self.forcing_spectral_slope
-        )
-        backscatter_fraction = self.sampled_or_fixed(
-            rows, "forcing_backscatter_fraction", self.forcing_backscatter_fraction
-        )
-        return ForcingSettings(
-            forcing_type=self.forcing_type,
-            energy_rate=energy_rate,
+        global_fraction = local_fraction = None
+        if self.global_backscatter is not None:
+            global_fraction = self.sampled_or_fixed(
+                rows, "global_backscatter.fraction", self.global_backscatter.fraction
+            )
+        if self.local_backscatter is not None:
+            local_fraction = self.sampled_or_fixed(
+                rows, "local_backscatter.fraction", self.local_backscatter.fraction
+            )
+        return SkebsForcing(
+            dynamics,
+            generators,
+            energy_rate=self.sampled_or_fixed(
+                rows, "skebs.energy_rate", self.skebs.energy_rate
+            ),
             correlation_time=3600 * correlation_hours,
-            spectral_slope=spectral_slope,
-            degree_min=self.forcing_degree_min,
-            degree_max=self.forcing_degree_max,
-            backscatter_fraction=backscatter_fraction,
-            backscatter_mode=self.forcing_backscatter_mode,
-            backscatter_include_drag=self.backscatter_include_drag,
+            spectral_slope=self.sampled_or_fixed(
+                rows, "skebs.spectral_slope", self.skebs.spectral_slope
+            ),
+            degree_min=self.skebs.degree_min,
+            degree_max=self.skebs_degree_max if degree_max is None else degree_max,
+            global_fraction=global_fraction,
+            global_include_drag=bool(
+                self.global_backscatter and self.global_backscatter.include_drag
+            ),
+            local_fraction=local_fraction,
+            local_include_drag=bool(
+                self.local_backscatter and self.local_backscatter.include_drag
+            ),
         )
 
     def damping_settings(
@@ -652,7 +571,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         With ``relaxation_target="jet"`` the equilibrium free surface is the balanced
         geopotential of a zonal jet of speed ``relaxation_jet_speed`` at
         ``relaxation_jet_latitude``. With ``"era5_climatology"`` it is the climatology
-        of ``era5_climatology_store`` at the start time of each simulation, analysed
+        of the ERA5 climatology store at the start time of each simulation, analysed
         as the ERA5 fields. Both are returned minus the surface geopotential, as the
         geopotential of the fluid depth.
 
@@ -667,23 +586,24 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             of the equilibrium geopotential (B, L, L). Each is None when its process
             is absent.
         """
-        batch = rows.shape[0]
-        drag_time = None
-        if "drag_time" in self.param_names:
-            drag_time = 3600 * rows[:, self.get_parameter_idx("drag_time")]
-        elif self.drag_time is not None:
-            drag_time = torch.full((batch,), 3600 * self.drag_time)
+        if self.damping is None:
+            return None, None, None
+        drag_hours = self.sampled_or_fixed(
+            rows, "damping.drag_time", self.damping.drag_time
+        )
+        drag_time = None if drag_hours is None else 3600 * drag_hours
+        relaxation_hours = self.sampled_or_fixed(
+            rows, "damping.relaxation_time", self.damping.relaxation_time
+        )
+        relaxation_time = None if relaxation_hours is None else 3600 * relaxation_hours
 
-        relaxation_time = None
         equilibrium_geopotential = None
-        if "relaxation_time" in self.param_names:
-            relaxation_time = 3600 * rows[:, self.get_parameter_idx("relaxation_time")]
-        elif self.relaxation_time is not None:
-            relaxation_time = torch.full((batch,), 3600 * self.relaxation_time)
-        if relaxation_time is not None and self.relaxation_target == "era5_climatology":
+        if relaxation_time is not None and (
+            self.damping.relaxation_target == "era5_climatology"
+        ):
             hours = rows[:, self.get_parameter_idx("era5_time")]
             climatology = load_era5_climatology(
-                hours, self.era5_climatology_store, self.era5_level
+                hours, self.era5.climatology_store, self.era5.level
             )
             if self.era5_source is None:
                 msg = "the climatology target needs the ERA5 grid of the initial state"
@@ -698,10 +618,12 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 )
         elif relaxation_time is not None:
             jet_speed = self.sampled_or_fixed(
-                rows, "relaxation_jet_speed", self.relaxation_jet_speed
+                rows, "damping.relaxation_jet_speed", self.damping.relaxation_jet_speed
             )
             jet_latitude = torch.full(
-                (batch,), self.relaxation_jet_latitude, dtype=torch.float64
+                (rows.shape[0],),
+                self.damping.relaxation_jet_latitude,
+                dtype=torch.float64,
             )
             vorticity, divergence = zonal_jet(self.dynamics, jet_speed, jet_latitude)
             # Balanced free surface of the jet; the state holds the fluid depth
@@ -719,8 +641,8 @@ class SphericalShallowWater(SpatioTemporalSimulator):
     ) -> tuple[TensorLike, TensorLike | None, TensorLike]:
         """Initial state and orography of ``"era5"`` for one batch.
 
-        The fields of the sampled times are read from ``era5_store``. The transforms
-        on their grid are built at the first call and kept.
+        The fields of the sampled times are read from the store of ``era5``. The
+        transforms on their grid are built at the first call and kept.
 
         Args:
             rows: Parameter rows (B, n_parameters); ``era5_time`` is already rounded.
@@ -730,15 +652,15 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             the coefficients of the surface geopotential (B, L, L).
         """
         hours = rows[:, self.get_parameter_idx("era5_time")]
-        fields = load_era5_fields(hours, self.era5_store, self.era5_level)
+        fields = load_era5_fields(hours, self.era5.store, self.era5.level)
         if self.era5_source is None:
             self.era5_source = era5_source_dynamics(self.dynamics, fields)
         state, surface_geopotential = era5_initial_condition(
             self.dynamics,
             self.era5_source,
             fields,
-            self.era5_orography_exponent,
-            self.era5_orography_shift,
+            self.era5.orography_exponent,
+            self.era5.orography_shift,
         )
         return state, None, surface_geopotential
 
@@ -909,15 +831,16 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             drag_time, relaxation_time, equilibrium = self.damping_settings(
                 rows, coriolis, surface_geopotential
             )
-            forcing = self.forcing_settings(rows)
-            forcing_generators = sample_generators(
-                entropy, row_numbers, FORCING_STREAM, self.device
+            skebs = self.skebs_forcing(
+                rows,
+                self.dynamics,
+                sample_generators(entropy, row_numbers, SKEBS_STREAM, self.device),
             )
             sppt_generators = sample_generators(
                 entropy, row_numbers, SPPT_STREAM, self.device
             )
             n_saves = round(self.T / self.dt_save)
-            branch_time = 3600 * self.dt_save * self.skip_nt  # first saved frame [s]
+            first_frame_time = 3600 * self.dt_save * self.skip_nt  # [s]
             output = integrate_trajectories(
                 self.dynamics,
                 state,
@@ -929,8 +852,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 drag_time=drag_time,
                 relaxation_time=relaxation_time,
                 equilibrium_geopotential=equilibrium,
-                forcing=forcing,
-                forcing_generators=forcing_generators,
+                skebs=skebs,
                 sppt=self.sppt,
                 sppt_generators=sppt_generators,
                 periodic=self.periodic,
@@ -939,45 +861,6 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 return_forcing_state=self.return_forcing_state,
                 output_dynamics=self.output_dynamics,
             )
-
-            # Reference ensemble: N more members from the first saved frame, each
-            # with its own random streams. They continue the time stepping of the
-            # truth (same history), with patterns drawn from their stationary
-            # distribution, as the truth's are at that frame.
-            if self.reference_members > 0:
-                members = []
-                for member in range(self.reference_members):
-                    member_generators = sample_generators(
-                        entropy, row_numbers, REFERENCE_STREAM + member, self.device
-                    )
-                    member_sppt_generators = sample_generators(
-                        entropy,
-                        row_numbers,
-                        REFERENCE_SPPT_STREAM + member,
-                        self.device,
-                    )
-                    member_output = integrate_trajectories(
-                        self.dynamics,
-                        output["branch_state"],
-                        n_saves=n_saves - self.skip_nt,
-                        steps_per_save=self.steps_per_save,
-                        skip_nt=0,
-                        coriolis=coriolis,
-                        surface_geopotential=surface_geopotential,
-                        drag_time=drag_time,
-                        relaxation_time=relaxation_time,
-                        equilibrium_geopotential=equilibrium,
-                        forcing=forcing,
-                        forcing_generators=member_generators,
-                        sppt=self.sppt,
-                        sppt_generators=member_sppt_generators,
-                        periodic=self.periodic,
-                        start_time=branch_time,
-                        previous_tendencies=output["branch_tendencies"],
-                        output_dynamics=self.output_dynamics,
-                    )
-                    members.append(member_output["data"])
-                output["reference_ensemble"] = torch.stack(members, dim=1)
 
             # Baseline: the solver at the band limit of the saved fields, from the
             # truncated first saved frame
@@ -996,21 +879,22 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 if equilibrium is not None:
                     low_equilibrium = equilibrium[..., : low.lmax, : low.lmax]
                 # The forced degrees stop at the band limit of the baseline
-                low_forcing = None
-                if forcing is not None:
-                    low_degree_max = min(forcing.degree_max, low.lmax - 1)
-                    low_forcing = dataclasses.replace(
-                        forcing, degree_max=low_degree_max
+                low_skebs = None
+                if skebs is not None:
+                    low_skebs = self.skebs_forcing(
+                        rows,
+                        low,
+                        sample_generators(
+                            entropy, row_numbers, BASELINE_STREAM, self.device
+                        ),
+                        degree_max=min(skebs.degree_max, low.lmax - 1),
                     )
-                baseline_generators = sample_generators(
-                    entropy, row_numbers, BASELINE_STREAM, self.device
-                )
                 baseline_sppt_generators = sample_generators(
                     entropy, row_numbers, BASELINE_SPPT_STREAM, self.device
                 )
                 baseline_output = integrate_trajectories(
                     low,
-                    output["branch_state"][..., : low.lmax, : low.lmax],
+                    output["first_frame_state"][..., : low.lmax, : low.lmax],
                     n_saves=n_saves - self.skip_nt,
                     steps_per_save=self.output_steps_per_save,
                     skip_nt=0,
@@ -1019,12 +903,11 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                     drag_time=drag_time,
                     relaxation_time=relaxation_time,
                     equilibrium_geopotential=low_equilibrium,
-                    forcing=low_forcing,
-                    forcing_generators=baseline_generators,
+                    skebs=low_skebs,
                     sppt=self.sppt,
                     sppt_generators=baseline_sppt_generators,
                     periodic=self.periodic,
-                    start_time=branch_time,
+                    start_time=first_frame_time,
                 )
                 output["baseline"] = baseline_output["data"]
             if self.return_periodic_forcing:
@@ -1070,9 +953,9 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             n_parameters), "constant_fields": (n, *grid.shape, 2) or None}``, and
             when requested ``"additional_input_fields"`` (n, time, *grid.shape, 3),
             ``"energy_budget"`` (n, time, 9), ``"forcing_state"`` (n, time,
-            *grid.shape, 2), ``"reference_ensemble"`` (n, N, time, *grid.shape, 3)
-            and ``"baseline"`` (n, time, *grid.shape, 3). With ``output_lmax`` the
-            grid is that of the saved fields.
+            *grid.shape, 2), ``"periodic_forcing"`` (n, time, *grid.shape, 1) and
+            ``"baseline"`` (n, time, *grid.shape, 3). With ``output_lmax`` the grid
+            is that of the saved fields.
         """
         y, x = self._forward_batch_with_optional_retries(
             n=n, random_seed=random_seed, ensure_exact_n=ensure_exact_n

@@ -31,7 +31,8 @@ terms (hyperdiffusion, drag, relaxation) as an exact integrating factor. The for
 from the next step on and never enters the history of the Adams-Bashforth scheme
 (module ``integration``).
 
-**Forcing** (module ``forcing``). ``"vortical"`` is a streamfunction pattern
+**Forcing** (module ``forcing``, settings in module ``settings``). SKEBS is a
+streamfunction pattern
 :math:`\psi'` whose coefficients follow the AR(1) process of Berner et al. (2009),
 :math:`\psi'(t+\Delta t) = (1-\alpha)\,\psi'(t) + g_l\sqrt{\alpha}\,\epsilon(t)` with
 :math:`g_l = b\,l^p` and :math:`\alpha = \Delta t/\tau`, and
@@ -39,25 +40,23 @@ from the next step on and never enters the history of the Adams-Bashforth scheme
 from the energy rate :math:`\varepsilon` (kinetic energy per unit mass and time
 gained by a free random walk of the increments):
 :math:`b^2 = 8\pi a^2 \alpha\,\varepsilon\,\Delta t / \Gamma`,
-:math:`\Gamma = \sum_l l(l+1)(2l+1)\,l^{2p}`. A backscatter adds
-a fraction of the kinetic energy lost to the hyperdiffusion (and to the drag, with
-``backscatter_include_drag``) to :math:`\varepsilon`, as its global mean or as a
-field on the grid (Berner et al., eq. 13). SPPT multiplies the increment of the drag
-and the relaxation by a random pattern :math:`r` (ECMWF; Palmer et al. 2009,
-Leutbecher et al. 2017), and The Well's planetswe forcing adds a daily and yearly
-height source. The three forcings can be combined.
+:math:`\Gamma = \sum_l l(l+1)(2l+1)\,l^{2p}`. The global and the local backscatter
+add a fraction of the kinetic energy lost to the hyperdiffusion (and to the drag,
+with ``include_drag``) to :math:`\varepsilon`, as its global mean or as a field on
+the grid (Berner et al., eq. 13); the two can be combined. SPPT multiplies the
+increment of the drag and the relaxation by a random pattern :math:`r` (Buizza et al.
+1999; Palmer et al. 2009; Leutbecher et al. 2017), and The Well's PlanetSWE forcing
+adds a daily and yearly height source. The three forcings can be combined.
 
 **Latent forcing state.** The random patterns have memory that the saved fields do
-not show. At the first saved frame, where reference members branch, they are drawn
-anew from their stationary distribution, so the forecast distribution from that frame
-is :math:`p(x_{n+1} \mid x_n)`. ``return_forcing_state`` saves the kinetic pattern as
-an extra input.
+not show. ``return_forcing_state`` saves the SKEBS pattern as an extra input.
 
 **Decisions.**
 
-- *Layout.* One module per job (below), plain functions on tensors, and one class for
-  the autosim interface. Families and forcings are selected by strings, as in the
-  planar ``ShallowWater2D``, whose argument names are reused.
+- *Layout.* One module per job (below), plain functions on tensors, one class per
+  forcing, and one class for the autosim interface. Families are selected by strings,
+  as in the planar ``ShallowWater2D``; each physical process is one settings
+  dataclass, and a sampled field takes its dotted name (``"skebs.energy_rate"``).
 - *State with orography.* :math:`\Phi` is the geopotential of the fluid depth, so the
   mass equation is unchanged, and the saved ``h`` is the free surface above
   ``mean_depth``.
@@ -76,9 +75,10 @@ Modules:
 
 - ``dynamics``: operators, tendencies, time step, energy, conversion to and from
   saved fields;
-- ``initial_conditions``: one function per family (Galewsky jet, W92 case 5);
-- ``era5``: initial states from ERA5 at 500 hPa (W92 case 7), from WeatherBench2;
-- ``forcing``: kinetic-energy forcing and backscatter, SPPT, periodic forcing;
+- ``initial_conditions``: one function per family (Galewsky jet, W92 case 5, ERA5 at
+  500 hPa for W92 case 7, read from WeatherBench2 by ``autosim.era5``);
+- ``settings``: the settings dataclasses of the physical processes and of ERA5;
+- ``forcing``: SKEBS and backscatter, SPPT, periodic forcing, one class each;
 - ``integration``: the time loop of a batch and its energy budget;
 - ``diagnostics``: spectra, invariants, W92 error norms, non-zonal energy;
 - ``rotation``: rotation of states and saved frames by an element of SO(3);
@@ -86,9 +86,7 @@ Modules:
 
 References: Galewsky, Scott and Polvani (2004, Tellus A 56, 429-440); Williamson,
 Drake, Hack, Jakob and Swarztrauber (1992, J. Comput. Phys. 102, 211-224), "W92";
-Berner, Shutts, Leutbecher and Palmer (2009, J. Atmos. Sci. 66, 603-626), "B09". The
-file ``shallow_water_sphere.bib`` at the root of the repository lists every reference
-with the reason to cite it.
+Berner, Shutts, Leutbecher and Palmer (2009, J. Atmos. Sci. 66, 603-626), "B09".
 
 Requires the optional ``spherical`` extra (torch-harmonics with grid descriptors), and
 the ``era5`` extra for the ``"era5"`` family.
@@ -116,24 +114,11 @@ from .dynamics import (
     step_damping_factors,
     total_energy,
 )
-from .era5 import (
-    ERA5_CLIMATOLOGY_STORE,
-    ERA5_OROGRAPHY_EXPONENT,
-    ERA5_RANGES,
-    ERA5_STORE,
-    Era5Fields,
-    compress_orography,
-    era5_hours,
-    era5_initial_condition,
-    era5_source_dynamics,
-    era5_time_index,
-    load_era5_climatology,
-    load_era5_fields,
-)
 from .forcing import (
-    ForcingSettings,
-    PeriodicForcingSettings,
-    SpptSettings,
+    PeriodicForcing,
+    SkebsForcing,
+    SpptForcing,
+    StepState,
     advance_pattern,
     autoregressive_parameter,
     complex_noise,
@@ -151,10 +136,15 @@ from .forcing import (
     unit_rate_amplitudes,
 )
 from .initial_conditions import (
+    ERA5_OROGRAPHY_EXPONENT,
+    ERA5_RANGES,
     GALEWSKY_RANGES,
     MOUNTAIN_RANGES,
     balance_state,
     balanced_geopotential,
+    compress_orography,
+    era5_initial_condition,
+    era5_source_dynamics,
     galewsky_initial_condition,
     mountain_initial_condition,
     mountain_orography,
@@ -168,8 +158,18 @@ from .rotation import (
     rotate_point,
     wigner_d_matrix,
 )
+from .settings import (
+    RELAXATION_TARGETS,
+    SAMPLED_FIELDS,
+    DampingSettings,
+    Era5Settings,
+    GlobalBackscatterSettings,
+    LocalBackscatterSettings,
+    PeriodicForcingSettings,
+    SkebsSettings,
+    SpptSettings,
+)
 from .simulator import (
-    FORCING_TYPES,
     INITIAL_CONDITIONS,
     SAMPLED_SCALARS,
     SphericalShallowWater,
@@ -178,21 +178,27 @@ from .simulator import (
 
 __all__ = [
     "ENERGY_BUDGET_NAMES",
-    "ERA5_CLIMATOLOGY_STORE",
     "ERA5_OROGRAPHY_EXPONENT",
     "ERA5_RANGES",
-    "ERA5_STORE",
-    "FORCING_TYPES",
     "GALEWSKY_RANGES",
     "INITIAL_CONDITIONS",
     "MOUNTAIN_RANGES",
+    "RELAXATION_TARGETS",
+    "SAMPLED_FIELDS",
     "SAMPLED_SCALARS",
-    "Era5Fields",
-    "ForcingSettings",
+    "DampingSettings",
+    "Era5Settings",
+    "GlobalBackscatterSettings",
+    "LocalBackscatterSettings",
+    "PeriodicForcing",
     "PeriodicForcingSettings",
+    "SkebsForcing",
+    "SkebsSettings",
     "SphereShallowWaterDynamics",
     "SphericalShallowWater",
+    "SpptForcing",
     "SpptSettings",
+    "StepState",
     "adams_bashforth_step",
     "advance_pattern",
     "autoregressive_parameter",
@@ -203,10 +209,8 @@ __all__ = [
     "coriolis_parameter",
     "degree_power",
     "dissipation_taper",
-    "era5_hours",
     "era5_initial_condition",
     "era5_source_dynamics",
-    "era5_time_index",
     "fields_to_spectral",
     "galewsky_initial_condition",
     "global_dissipation_rate",
@@ -218,8 +222,6 @@ __all__ = [
     "invariants",
     "kinetic_energy_spectrum",
     "kinetic_forcing_increment",
-    "load_era5_climatology",
-    "load_era5_fields",
     "local_dissipation_rate",
     "make_grid",
     "mountain_initial_condition",

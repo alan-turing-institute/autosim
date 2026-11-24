@@ -13,7 +13,11 @@ if not hasattr(th, "as_grid"):
 
 from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E402
     ENERGY_BUDGET_NAMES,
-    ForcingSettings,
+    DampingSettings,
+    GlobalBackscatterSettings,
+    LocalBackscatterSettings,
+    SkebsForcing,
+    SkebsSettings,
     SphereShallowWaterDynamics,
     SphericalShallowWater,
     adams_bashforth_step,
@@ -80,22 +84,18 @@ def _rest_state(batch, lmax=LMAX):
     return state
 
 
-def _settings(batch, **changes):
-    """Forcing settings of a batch: vortical, 1e-5 m^2/s^3, white, all degrees."""
+def _skebs(dynamics, batch, **changes):
+    """SKEBS forcing of a batch: 1e-5 m^2/s^3, white, all degrees, no backscatter."""
     zeros = torch.zeros(batch, dtype=torch.float64)
     values = {
-        "forcing_type": "vortical",
         "energy_rate": zeros + 1e-5,
         "correlation_time": zeros,
         "spectral_slope": zeros - 1.27,
         "degree_min": 1,
         "degree_max": LMAX - 1,
-        "backscatter_fraction": zeros,
-        "backscatter_mode": "global",
-        "backscatter_include_drag": False,
     }
     values.update(changes)
-    return ForcingSettings(**values)
+    return SkebsForcing(dynamics, _generators(batch), **values)
 
 
 def _small_simulator(**overrides) -> SphericalShallowWater:
@@ -413,8 +413,7 @@ def test_relaxation_and_drag_through_the_simulator_conserve_the_mass():
     # A jet of 60 m/s without bump and noise: the mean height is zero, as for the
     # equilibrium (a jet of 80 m/s), and the relaxation acts on the difference
     sim = _small_simulator(
-        relaxation_time=48.0,
-        drag_time=96.0,
+        damping=DampingSettings(relaxation_time=48.0, drag_time=96.0),
         return_energy_budget=True,
         T=12.0,
         parameters_range={**AT_REST, "jet_speed": (60.0, 60.0)},
@@ -433,7 +432,9 @@ def test_relaxation_and_drag_through_the_simulator_conserve_the_mass():
 
 def test_jet_target_over_orography_is_the_depth_under_the_jet():
     """Over a mountain, the equilibrium is the free surface of the jet minus g h_s."""
-    sim = _small_simulator(initial_condition="mountain", relaxation_time=24.0)
+    sim = _small_simulator(
+        initial_condition="mountain", damping=DampingSettings(relaxation_time=24.0)
+    )
     rows = sim.sample_inputs(2, random_seed=0)
     _, coriolis, surface = sim.initial_problem(rows, [])
     assert surface is not None
@@ -453,16 +454,14 @@ def test_jet_target_over_orography_is_the_depth_under_the_jet():
 def test_zero_rate_forcing_is_the_unforced_run():
     unforced = _small_simulator().forward_samples_spatiotemporal(n=2, random_seed=1)
     forced = _small_simulator(
-        forcing_type="vortical", forcing_energy_rate=0.0
+        skebs=SkebsSettings(energy_rate=0.0)
     ).forward_samples_spatiotemporal(n=2, random_seed=1)
     torch.testing.assert_close(forced["data"], unforced["data"], rtol=0.0, atol=0.0)
 
 
 def test_seed_reproduces_the_forcing_and_another_seed_changes_it():
     sim = _small_simulator(
-        forcing_type="vortical",
-        forcing_energy_rate=1e-4,
-        forcing_correlation_time=1.0,
+        skebs=SkebsSettings(energy_rate=1e-4, correlation_time=1.0),
         parameters_range=FIXED_GALEWSKY,
         return_additional_input_fields=True,
     )
@@ -487,9 +486,7 @@ def test_seed_reproduces_the_forcing_and_another_seed_changes_it():
 
 def test_forcing_of_a_simulation_does_not_depend_on_the_batch_size():
     options = {
-        "forcing_type": "vortical",
-        "forcing_energy_rate": 1e-4,
-        "forcing_correlation_time": 1.0,
+        "skebs": SkebsSettings(energy_rate=1e-4, correlation_time=1.0),
         "return_additional_input_fields": True,
         "T": 3.0,
     }
@@ -510,8 +507,7 @@ def test_forcing_is_returned_as_transition_aligned_additional_input():
     sim = _small_simulator(
         parameters_range=AT_REST,
         noise_amplitude=0.0,
-        forcing_type="vortical",
-        forcing_energy_rate=1e-4,
+        skebs=SkebsSettings(energy_rate=1e-4),
         dt_save=0.05,
         T=0.15,
         return_additional_input_fields=True,
@@ -545,9 +541,7 @@ def test_unforced_additional_input_fields_are_zero():
 
 def test_forcing_state_is_returned_and_has_memory():
     sim = _small_simulator(
-        forcing_type="vortical",
-        forcing_energy_rate=1e-4,
-        forcing_correlation_time=12.0,
+        skebs=SkebsSettings(energy_rate=1e-4, correlation_time=12.0),
         return_forcing_state=True,
     )
     payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
@@ -566,11 +560,11 @@ def test_energy_budget_closes_in_double_precision():
     """Every term is an energy difference across one operation of the step."""
     dynamics = _dynamics()
     batch = 3
-    forcing = _settings(
+    skebs = _skebs(
+        dynamics,
         batch,
-        forcing_type="vortical",
         correlation_time=torch.full((batch,), 3600.0, dtype=torch.float64),
-        backscatter_fraction=torch.full((batch,), 0.5, dtype=torch.float64),
+        global_fraction=torch.full((batch,), 0.5, dtype=torch.float64),
     )
     equilibrium = _rest_state(batch)[:, 0]
     equilibrium[:, 2, 0] = 30.0 * GRAVITY
@@ -583,8 +577,7 @@ def test_energy_budget_closes_in_double_precision():
         drag_time=torch.full((batch,), 5 * 86400.0),
         relaxation_time=torch.full((batch,), 2 * 86400.0),
         equilibrium_geopotential=equilibrium,
-        forcing=forcing,
-        forcing_generators=_generators(batch),
+        skebs=skebs,
         return_energy_budget=True,
     )
     budget = output["energy_budget"]
@@ -604,8 +597,7 @@ def test_energy_budget_closes_in_double_precision():
 
 def test_energy_budget_through_the_simulator():
     options = {
-        "forcing_type": "vortical",
-        "forcing_energy_rate": 1e-4,
+        "skebs": SkebsSettings(energy_rate=1e-4),
         "T": 9.0,
         "parameters_range": FIXED_GALEWSKY,
     }
@@ -647,8 +639,7 @@ def test_unforced_energy_budget_has_no_forcing_term():
 
 
 BACKSCATTER_OPTIONS = {
-    "forcing_type": "vortical",
-    "forcing_energy_rate": 0.0,
+    "skebs": SkebsSettings(energy_rate=0.0),
     "return_energy_budget": True,
     "return_additional_input_fields": True,
     "T": 3.0,
@@ -656,10 +647,22 @@ BACKSCATTER_OPTIONS = {
 }
 
 
+BACKSCATTER_HALF = {
+    "global": {"global_backscatter": GlobalBackscatterSettings(fraction=0.5)},
+    "local": {"local_backscatter": LocalBackscatterSettings(fraction=0.5)},
+}
+
+
 def test_global_backscatter_drives_the_forcing_from_the_dissipation():
     """With a zero base rate the forcing is the backscatter of the dissipation."""
-    half = _small_simulator(forcing_backscatter_fraction=0.5, **BACKSCATTER_OPTIONS)
-    full = _small_simulator(forcing_backscatter_fraction=1.0, **BACKSCATTER_OPTIONS)
+    half = _small_simulator(
+        global_backscatter=GlobalBackscatterSettings(fraction=0.5),
+        **BACKSCATTER_OPTIONS,
+    )
+    full = _small_simulator(
+        global_backscatter=GlobalBackscatterSettings(fraction=1.0),
+        **BACKSCATTER_OPTIONS,
+    )
     budget_half = half.forward_samples_spatiotemporal(n=2, random_seed=0)[
         "energy_budget"
     ]
@@ -683,12 +686,8 @@ def test_local_backscatter_rate_is_at_least_the_global_one():
     at lmax = 86, with the filter of Berner et al. (degrees 10 to 30).
     """
     rates = {}
-    for mode in ("global", "local"):
-        sim = _small_simulator(
-            forcing_backscatter_fraction=0.5,
-            forcing_backscatter_mode=mode,
-            **BACKSCATTER_OPTIONS,
-        )
+    for mode, setting in BACKSCATTER_HALF.items():
+        sim = _small_simulator(**setting, **BACKSCATTER_OPTIONS)
         payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
         assert torch.isfinite(payload["data"]).all()
         assert payload["additional_input_fields"][:, 0].abs().max() > 0
@@ -697,13 +696,32 @@ def test_local_backscatter_rate_is_at_least_the_global_one():
     assert (rates["local"] < 4 * rates["global"]).all()
 
 
+def test_global_and_local_backscatter_add_up():
+    """Both backscatters at once: the rate is the sum of the two rates.
+
+    Up to the feedback of the forcing on the dissipation over the first 3 h, as in
+    ``test_global_backscatter_drives_the_forcing_from_the_dissipation``.
+    """
+    rates = {}
+    both = BACKSCATTER_HALF["global"] | BACKSCATTER_HALF["local"]
+    for name, setting in [*BACKSCATTER_HALF.items(), ("both", both)]:
+        sim = _small_simulator(**setting, **BACKSCATTER_OPTIONS)
+        payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
+        assert torch.isfinite(payload["data"]).all()
+        rates[name] = payload["energy_budget"][:, 0, RATE]
+    torch.testing.assert_close(
+        rates["both"], rates["global"] + rates["local"], rtol=0.15, atol=0.0
+    )
+
+
 def test_sampled_forcing_scalars_are_returned_in_constant_scalars():
     sim = _small_simulator(
-        forcing_type="vortical",
+        skebs=SkebsSettings(),
+        damping=DampingSettings(),
         parameters_range={
             **FIXED_GALEWSKY,
-            "forcing_energy_rate": (1e-5, 1e-4),
-            "drag_time": (48.0, 96.0),
+            "skebs.energy_rate": (1e-5, 1e-4),
+            "damping.drag_time": (48.0, 96.0),
         },
         return_energy_budget=True,
         T=3.0,
@@ -711,7 +729,7 @@ def test_sampled_forcing_scalars_are_returned_in_constant_scalars():
     payload = sim.forward_samples_spatiotemporal(n=4, random_seed=0)
     scalars = payload["constant_scalars"]
     assert scalars.shape == (4, 6)
-    rate = scalars[:, sim.get_parameter_idx("forcing_energy_rate")]
+    rate = scalars[:, sim.get_parameter_idx("skebs.energy_rate")]
     assert rate.min() >= 1e-5
     assert rate.max() <= 1e-4
     assert rate.unique().numel() == 4
@@ -727,35 +745,23 @@ def test_sampled_forcing_scalars_are_returned_in_constant_scalars():
 
 
 def test_invalid_forcing_settings_raise():
-    with pytest.raises(ValueError, match="forcing_type must be one of"):
-        _small_simulator(forcing_type="unknown")
-    with pytest.raises(ValueError, match="forcing_backscatter_mode must be one of"):
-        _small_simulator(forcing_type="vortical", forcing_backscatter_mode="unknown")
     with pytest.raises(ValueError, match="non-negative"):
-        _small_simulator(forcing_type="vortical", forcing_backscatter_fraction=-0.1)
-    with pytest.raises(ValueError, match="backscatter requires"):
-        _small_simulator(forcing_type="none", forcing_backscatter_fraction=0.5)
+        GlobalBackscatterSettings(fraction=-0.1)
+    with pytest.raises(ValueError, match="require skebs"):
+        _small_simulator(local_backscatter=LocalBackscatterSettings(fraction=0.5))
     with pytest.raises(ValueError, match="return_forcing_state requires"):
-        _small_simulator(forcing_type="none", return_forcing_state=True)
+        _small_simulator(return_forcing_state=True)
     with pytest.raises(ValueError, match="must be >= 0"):
-        _small_simulator(forcing_type="vortical", forcing_energy_rate=-1.0)
-    with pytest.raises(ValueError, match="forcing degrees"):
-        _small_simulator(forcing_type="vortical", forcing_degree_max=LMAX)
+        SkebsSettings(energy_rate=-1.0)
+    with pytest.raises(ValueError, match="skebs degrees"):
+        _small_simulator(skebs=SkebsSettings(degree_max=LMAX))
+    with pytest.raises(ValueError, match="relaxation_target must be one of"):
+        DampingSettings(relaxation_target="unknown")
     with pytest.raises(ValueError, match="unknown keys"):
         _small_simulator(parameters_range={**FIXED_GALEWSKY, "viscosity": (0.0, 1.0)})
-
-
-def test_integrate_trajectories_rejects_an_unknown_forcing_type():
-    """The time loop checks the type as the simulator does: no silently unforced run."""
-    with pytest.raises(ValueError, match="forcing_type must be one of"):
-        integrate_trajectories(
-            _dynamics(),
-            _rest_state(2),
-            1,
-            1,
-            0,
-            forcing=_settings(2, forcing_type="mass_pulses"),
-            forcing_generators=_generators(2),
+    with pytest.raises(ValueError, match="which requires damping"):
+        _small_simulator(
+            parameters_range={**FIXED_GALEWSKY, "damping.drag_time": (48.0, 96.0)}
         )
 
 

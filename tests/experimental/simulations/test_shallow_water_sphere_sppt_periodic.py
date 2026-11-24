@@ -13,6 +13,7 @@ if not hasattr(th, "as_grid"):
 
 from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E402
     ENERGY_BUDGET_NAMES,
+    DampingSettings,
     PeriodicForcingSettings,
     SphereShallowWaterDynamics,
     SphericalShallowWater,
@@ -43,29 +44,25 @@ CHANGES = slice(1, RATE)
 SPPT_COLUMN = ENERGY_BUDGET_NAMES.index("sppt_energy_change")
 PERIODIC_COLUMN = ENERGY_BUDGET_NAMES.index("periodic_energy_change")
 
-# The three scales of ECMWF's SPPT (Leutbecher et al. 2017, Table 1)
-ECMWF_SPPT = {
-    "sppt_amplitudes": [0.52, 0.18, 0.06],
-    "sppt_length_scales": [500.0e3, 1000.0e3, 2000.0e3],
-    "sppt_correlation_times": [6.0, 72.0, 720.0],
-}
-# The same as settings in SI units, and one field of 500 km and 6 h
+# The three scales of ECMWF's SPPT (Leutbecher et al. 2017, Table 1), times in hours
 ECMWF_SETTINGS = SpptSettings(
     (0.52, 0.18, 0.06),
     (500.0e3, 1000.0e3, 2000.0e3),
-    (6 * HOUR, 3 * 86400.0, 30 * 86400.0),
+    (6.0, 72.0, 720.0),
 )
-ONE_FIELD = SpptSettings((0.52,), (500.0e3,), (6 * HOUR,))
+ECMWF_SPPT = {"sppt": ECMWF_SETTINGS}
+# One field of 500 km and 6 h
+ONE_FIELD = SpptSettings((0.52,), (500.0e3,), (6.0,))
 # Relative sampling error of the grid-point standard deviation of eight patterns
 # (measured: 0.6 and 1.8 per cent, see the test)
 SPPT_STD_TOLERANCE = 0.05
-# The forcing of The Well (gen_SWE_from_ic_file.py at commit aac88c0), in SI units
+# The forcing of The Well (gen_SWE_from_ic_file.py at commit aac88c0): m/hour, hours
 THE_WELL = PeriodicForcingSettings(
-    amplitude=2.0 / HOUR,
+    amplitude=2.0,
     width=2 * math.pi / 3,
     declination=0.4,
-    day=24 * HOUR,
-    year=1008 * HOUR,
+    day=24.0,
+    year=1008.0,
 )
 FIXED_GALEWSKY = {
     "jet_speed": (80.0, 80.0),
@@ -74,9 +71,9 @@ FIXED_GALEWSKY = {
     "perturbation_lat": (math.pi / 4, math.pi / 4),
 }
 RELAXED_CLIMATE = {
-    "relaxation_time": 24.0,
-    "relaxation_jet_speed": 80.0,
-    "drag_time": 2400.0,
+    "damping": DampingSettings(
+        relaxation_time=24.0, relaxation_jet_speed=80.0, drag_time=2400.0
+    ),
 }
 
 
@@ -128,7 +125,7 @@ def _small_simulator(**overrides) -> SphericalShallowWater:
 
 def _sppt_patterns(dynamics, sppt, batch, first_seed=0):
     """Stationary SPPT fields of a batch, with their amplitudes and AR(1) parameter."""
-    times = torch.tensor(sppt.correlation_times, dtype=torch.float64)
+    times = HOUR * torch.tensor(sppt.correlation_times, dtype=torch.float64)
     alpha = (dynamics.dt / times).to(DEVICE)
     n_fields = len(sppt.amplitudes)
     amplitudes = sppt_noise_amplitudes(dynamics, sppt, alpha)
@@ -169,7 +166,7 @@ def test_sppt_pattern_has_the_grid_point_variance_of_its_scales():
 def test_sppt_pattern_follows_its_ar1_process():
     """The lag-one correlation of a field is 1 - alpha, the AR(1) step of B09 eq. 2."""
     dynamics = _dynamics(43, 64, 128, dt=600.0)
-    sppt = SpptSettings((0.5,), (500.0e3,), (6 * HOUR,))
+    sppt = SpptSettings((0.5,), (500.0e3,), (6.0,))
     pattern, amplitudes, alpha, generators = _sppt_patterns(dynamics, sppt, batch=8)
     before = dynamics.to_grid(pattern.sum(dim=1))
     noise = complex_noise(generators, 1, dynamics.lmax)
@@ -182,7 +179,7 @@ def test_sppt_pattern_follows_its_ar1_process():
 
 def test_sppt_pattern_is_clipped():
     dynamics = _dynamics()
-    sppt = SpptSettings((5.0,), (500.0e3,), (6 * HOUR,), clip=1.0)
+    sppt = SpptSettings((5.0,), (500.0e3,), (6.0,), clip=1.0)
     pattern, _, _, _ = _sppt_patterns(dynamics, sppt, batch=2)
     grid = sppt_pattern_on_grid(dynamics, pattern, sppt.clip)
     assert grid.abs().max() == 1.0
@@ -246,7 +243,7 @@ def test_sppt_requires_drag_or_relaxation():
             sppt=ONE_FIELD,
             sppt_generators=_generators(1),
         )
-    with pytest.raises(ValueError, match="relaxation_time or drag_time"):
+    with pytest.raises(ValueError, match="relaxation_time or a drag_time"):
         _small_simulator(**ECMWF_SPPT)
 
 
@@ -296,22 +293,6 @@ def test_sppt_through_the_simulator_is_reproducible_and_seeded():
     assert (first["data"] - plain["data"]).abs().max() > 0
 
 
-def test_reference_members_with_sppt_spread_from_the_branch():
-    options = {"T": 12.0, "skip_nt": 1, "reference_members": 3}
-    sim = _small_simulator(**options, **RELAXED_CLIMATE, **ECMWF_SPPT)
-    payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
-    ensemble = payload["reference_ensemble"]
-    torch.testing.assert_close(
-        ensemble[:, :, 0],
-        payload["data"][:, None, 0].expand_as(ensemble[:, :, 0]),
-        rtol=0.0,
-        atol=0.0,
-    )
-    spread = ensemble.std(dim=1).mean(dim=(0, 2, 3, 4))
-    assert spread[0] == 0.0
-    assert spread[-1] > 0.0
-
-
 # ---------------------------------------------------------------------------
 # The Well's periodic forcing
 # ---------------------------------------------------------------------------
@@ -336,7 +317,7 @@ def test_periodic_forcing_is_the_forcing_of_the_well(time):
     forcing = periodic_height_forcing(dynamics, THE_WELL, time)
     expected = _the_well_forcing(dynamics.longitude, dynamics.latitude, time)
     # absolute tolerance: the two evaluations differ by round-off where the cosine is 0
-    atol = 1e-12 * THE_WELL.amplitude
+    atol = 1e-12 * THE_WELL.amplitude / HOUR
     torch.testing.assert_close(forcing, expected, rtol=1e-12, atol=atol)
 
 
@@ -353,29 +334,17 @@ def test_periodic_forcing_moves_eastward_once_a_day_and_adds_no_mass():
 
 
 def test_periodic_forcing_through_the_simulator():
-    """The height gains the forcing between frames; reference members branch in phase.
-
-    Without random forcing the members are copies of the truth, which they are only
-    if their forcing starts at the time of the first saved frame.
-    """
+    """The height gains the forcing between frames, and the energy accounts for it."""
     payload = _small_simulator(
         T=9.0,
         skip_nt=1,
-        periodic_forcing_amplitude=2.0,
-        reference_members=2,
+        periodic=PeriodicForcingSettings(),
         return_additional_input_fields=True,
         return_energy_budget=True,
     ).forward_samples_spatiotemporal(n=2, random_seed=0)
     added = payload["additional_input_fields"]
     assert added[:, :-1, ..., 0].abs().max() > 1.0  # metres per 3 h
     assert payload["energy_budget"][:, :-1, PERIODIC_COLUMN].abs().min() > 0
-    for member in range(2):
-        torch.testing.assert_close(
-            payload["reference_ensemble"][:, member],
-            payload["data"],
-            rtol=1e-6,
-            atol=1e-6,
-        )
 
 
 def test_periodic_forcing_is_returned_at_the_frame_times():
@@ -383,7 +352,7 @@ def test_periodic_forcing_is_returned_at_the_frame_times():
     sim = _small_simulator(
         T=9.0,
         skip_nt=1,
-        periodic_forcing_amplitude=2.0,
+        periodic=PeriodicForcingSettings(),
         return_periodic_forcing=True,
     )
     payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
@@ -406,19 +375,9 @@ def test_periodic_forcing_is_returned_at_the_frame_times():
 
 
 def test_invalid_periodic_and_sppt_settings_raise():
-    with pytest.raises(ValueError, match="periodic_forcing_amplitude"):
-        _small_simulator(periodic_forcing_amplitude=-1.0)
+    with pytest.raises(ValueError, match="amplitude"):
+        PeriodicForcingSettings(amplitude=-1.0)
     with pytest.raises(ValueError, match="same length"):
-        _small_simulator(
-            sppt_amplitudes=[0.5, 0.2],
-            sppt_length_scales=[500.0e3],
-            sppt_correlation_times=[6.0],
-            **RELAXED_CLIMATE,
-        )
+        SpptSettings([0.5, 0.2], [500.0e3], [6.0])
     with pytest.raises(ValueError, match="positive"):
-        _small_simulator(
-            sppt_amplitudes=[0.5],
-            sppt_length_scales=[0.0],
-            sppt_correlation_times=[6.0],
-            **RELAXED_CLIMATE,
-        )
+        SpptSettings([0.5], [0.0], [6.0])

@@ -7,21 +7,20 @@ import math
 import pytest
 import torch
 
+from autosim.era5 import Era5Fields, era5_hours, load_era5_fields
+
 th = pytest.importorskip("torch_harmonics")
 if not hasattr(th, "as_grid"):
     pytest.skip("torch-harmonics without grid descriptors", allow_module_level=True)
 
 from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E402
     ERA5_RANGES,
-    Era5Fields,
+    DampingSettings,
     SphereShallowWaterDynamics,
     SphericalShallowWater,
     compress_orography,
-    era5_hours,
     era5_initial_condition,
     era5_source_dynamics,
-    era5_time_index,
-    load_era5_fields,
     shallow_water_tendencies,
 )
 from autosim.experimental.simulations.shallow_water_sphere import (  # noqa: E402
@@ -80,11 +79,7 @@ def _synthetic_fields(tilt=0.7, batch=2, mountain=0.0):
 # ---------------------------------------------------------------------------
 
 
-def test_era5_hours_and_time_index():
-    assert era5_hours("1959-01-01T00") == 0.0
-    assert era5_hours("1978-12-21T00") == 175056.0  # W92 case 7
-    index = era5_time_index(torch.tensor([-50.0, 2.9, 3.1, 175056.0, 1e9]))
-    assert index.tolist() == [0, 0, 1, 29176, 93543]
+def test_era5_time_range_covers_the_store():
     assert ERA5_RANGES["era5_time"] == (0.0, 6.0 * 93543)
 
 
@@ -216,9 +211,11 @@ def test_climatology_is_the_relaxation_target(monkeypatch):
         monkeypatch,
         1500.0,
         1,
-        relaxation_time=24.0,
-        relaxation_target="era5_climatology",
-        drag_time=2400.0,
+        damping=DampingSettings(
+            relaxation_time=24.0,
+            relaxation_target="era5_climatology",
+            drag_time=2400.0,
+        ),
     )
     rows = sim.sample_inputs(1, random_seed=0)
     state, coriolis, surface = sim.initial_problem(rows, [])
@@ -248,8 +245,9 @@ def test_climatology_target_needs_the_era5_family():
             skip_nt=0,
             device=DEVICE,
             log_level="warning",
-            relaxation_time=24.0,
-            relaxation_target="era5_climatology",
+            damping=DampingSettings(
+                relaxation_time=24.0, relaxation_target="era5_climatology"
+            ),
         )
 
 

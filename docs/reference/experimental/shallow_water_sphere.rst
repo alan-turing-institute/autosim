@@ -3,9 +3,7 @@ autosim.experimental.simulations.shallow_water_sphere
 
 Shallow water equations on the rotating sphere, solved with spherical harmonics
 (torch-harmonics, the ``spherical`` extra). The package is the data generator of a
-benchmark for probabilistic emulators on the sphere. The file
-``shallow_water_sphere.bib`` at the root of the repository lists the references below,
-each with the reason to cite it.
+benchmark for probabilistic emulators on the sphere.
 
 Initial conditions
 ------------------
@@ -30,7 +28,7 @@ contains no gravity waves (Shamir and Paldor 2016).
 ``mountain`` replaces the cone of W92, whose truncated series rings, by a smooth
 mountain. ``era5`` gives real atmospheric states. Its orography can be compressed as
 in The Well's PlanetSWE, :math:`\operatorname{sign}(h_s)|h_s|^{15/16}` shifted to a
-minimum of 0 (``era5_orography_exponent``, ``era5_orography_shift``).
+minimum of 0 (``era5=Era5Settings(orography_exponent=15/16, orography_shift=True)``).
 
 Physics and forcing
 -------------------
@@ -39,43 +37,47 @@ The Coriolis parameter is a grid field for a rotation axis of any direction
 (``rotation_axis``). An orography enters through the free surface. With
 ``return_constant_fields=True`` both are returned in ``constant_fields``.
 
-The processes below can be used alone or together:
+Each process is one argument of the simulator, a dataclass of the module ``settings``
+in user units (hours, m/hour); ``None`` leaves it out. The processes can be used alone
+or together:
 
-- ``relaxation_time`` relaxes the height towards an equilibrium and ``drag_time``
-  damps the wind. With ``relaxation_target="jet"`` the equilibrium is the balanced
-  height of a zonal jet, and the flow reaches a statistically steady state with a jet
-  and eddies. With ``"era5_climatology"`` it is the ERA5 1990-2019 climatology of the
-  start date's day and hour.
-- ``forcing_type`` ``"vortical"``: the kinetic-energy forcing of
+- ``damping=DampingSettings(...)``: ``relaxation_time`` relaxes the height towards an
+  equilibrium and ``drag_time`` damps the wind. With ``relaxation_target="jet"`` the
+  equilibrium is the balanced height of a zonal jet, and the flow reaches a
+  statistically steady state with a jet and eddies (Scott and Polvani 2007). With
+  ``"era5_climatology"`` it is the ERA5 1990-2019 climatology of the start date's day
+  and hour.
+- ``skebs=SkebsSettings(...)``: the stochastic kinetic-energy backscatter (SKEBS) of
   Berner et al. (2009), a pattern in spherical harmonics whose coefficients are AR(1)
-  processes, with ``forcing_energy_rate`` the kinetic energy injected per unit mass
-  and time. ``forcing_degree_min`` and ``forcing_degree_max`` restrict the pattern
-  to a band of degrees.
-  ``forcing_backscatter_fraction`` adds a fraction of the diagnosed dissipation to
-  that rate, as its global mean or, with ``forcing_backscatter_mode="local"``, as a
-  field (B09 eq. 13): the noise then depends on the flow.
-- ``sppt_amplitudes``: stochastically perturbed physics tendencies (ECMWF's SPPT,
-  Palmer et al. 2009). The increment of the drag and the relaxation is multiplied by
-  ``1 + r``, with ``r`` a sum of AR(1) Gaussian fields, clipped. The kinetic forcing
-  is additive and acts on the wind; SPPT is multiplicative and acts mostly on the
-  height. The two are complementary (Arnold et al. 2013; Christensen 2020).
-- ``periodic_forcing_amplitude``: the daily and yearly height source of The Well's
-  planetswe (Ohana et al. 2024), as in its generation code: the run is no longer
-  autonomous. ``return_periodic_forcing=True`` returns the forcing at each saved frame,
-  a known input of the emulator.
+  processes, with ``energy_rate`` the kinetic energy injected per unit mass and time.
+  ``degree_min`` and ``degree_max`` restrict the pattern to a band of degrees.
+- ``global_backscatter=GlobalBackscatterSettings(fraction)`` and
+  ``local_backscatter=LocalBackscatterSettings(fraction)`` add a fraction of the
+  diagnosed dissipation to the SKEBS rate, as its global mean or as a field (B09 eq.
+  13); the noise then depends on the flow. The two can be combined.
+- ``sppt=SpptSettings(...)``: stochastically perturbed physics tendencies (Buizza et
+  al. 1999; Palmer et al. 2009; Leutbecher et al. 2017). The increment of the drag and
+  the relaxation is multiplied by ``1 + r``, with ``r`` a sum of AR(1) Gaussian fields,
+  clipped. SKEBS is additive and acts on the wind; SPPT is multiplicative and acts
+  mostly on the height. The two are complementary (Arnold et al. 2013; Christensen
+  2020).
+- ``periodic=PeriodicForcingSettings()``: the daily and yearly height source of The
+  Well's PlanetSWE (Ohana et al. 2024), as in its generation code: the run is no
+  longer autonomous. ``return_periodic_forcing=True`` returns the forcing at each saved
+  frame, a known input of the emulator.
 
-The random patterns have memory. At the first saved frame they are drawn anew, so the
-forecast from that frame depends on the saved fields alone. ``return_forcing_state``
-returns the kinetic pattern as an extra input, and ``return_additional_input_fields``
+The fields of ``settings.SAMPLED_FIELDS`` can be sampled per simulation: their dotted
+name, such as ``"skebs.energy_rate"`` or ``"damping.drag_time"``, is then a key of
+``parameters_range``. The random patterns have memory: ``return_forcing_state``
+returns the SKEBS pattern as an extra input, and ``return_additional_input_fields``
 the increments added by all the forcings between frames.
 
-Ensembles and coarse-graining
------------------------------
+Coarse-graining
+---------------
 
-``reference_members`` branches members from the first saved frame of every generated
-simulation, each with its own random streams. ``output_lmax`` saves the run truncated
-to a lower band limit, and ``return_baseline=True`` adds the run of the solver at that
-band limit.
+``output_lmax`` saves the run truncated to a lower band limit, and
+``return_baseline=True`` adds the run of the solver at that band limit from the
+truncated first saved frame.
 
 Datasets
 --------
@@ -98,10 +100,6 @@ Config                     Family and forcing                                  L
 ``ds6_era5_climate``       ERA5, The Well's periodic forcing                   3 years, 1 h
 =========================  ==================================================  =================
 
-.. code-block:: console
-
-   uv run autosim --config-name generate_data_swe_sphere simulator=experimental/shallow_water_sphere_ds1_galewsky
-
 Dataset 6 follows PlanetSWE, with 40 trajectories (``dataset.n_train=32
 dataset.n_valid=4 dataset.n_test=4``).
 
@@ -123,7 +121,7 @@ runs every family and forcing at a small size.
 .. automodule:: autosim.experimental.simulations.shallow_water_sphere.initial_conditions
    :members:
 
-.. automodule:: autosim.experimental.simulations.shallow_water_sphere.era5
+.. automodule:: autosim.experimental.simulations.shallow_water_sphere.settings
    :members:
 
 .. automodule:: autosim.experimental.simulations.shallow_water_sphere.forcing
