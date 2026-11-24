@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import torch
 
 from autosim.types import TensorLike
@@ -89,13 +91,14 @@ class SphereShallowWaterDynamics:
             exact_degree = 0
         self.exact_products = 2 * exact_degree >= 3 * lmax - 2
 
-        # Transforms between the grid and spherical-harmonic coefficients
-        self.sht = th.RealSHT(
+        # Transforms between the grid and spherical-harmonic coefficients: sht takes
+        # grid values (B, *grid.shape) to coefficients (B, L, L), isht the reverse
+        self.sht: Callable[[TensorLike], TensorLike] = th.RealSHT(
             grid, lmax=lmax, mmax=lmax, csphase=False, iter=sht_iterations
         ).to(device)
-        self.isht = th.InverseRealSHT(grid, lmax=lmax, mmax=lmax, csphase=False).to(
-            device
-        )
+        self.isht: Callable[[TensorLike], TensorLike] = th.InverseRealSHT(
+            grid, lmax=lmax, mmax=lmax, csphase=False
+        ).to(device)
         self.vsht = th.RealVectorSHT(
             grid, lmax=lmax, mmax=lmax, csphase=False, iter=sht_iterations
         ).to(device)
@@ -135,14 +138,6 @@ class SphereShallowWaterDynamics:
         self.step_damping = torch.stack(
             [no_damping, self.hyperdiffusion, self.hyperdiffusion]
         )
-
-    def to_grid(self, coefficients: TensorLike) -> TensorLike:
-        """Scalar fields: coefficients (B, L, L) -> grid values (B, *grid.shape)."""
-        return self.isht(coefficients)
-
-    def to_coefficients(self, field: TensorLike) -> TensorLike:
-        """Scalar fields: grid values (B, *grid.shape) -> coefficients (B, L, L)."""
-        return self.sht(field)
 
     def wind(self, vorticity: TensorLike, divergence: TensorLike) -> TensorLike:
         """Vorticity and divergence coefficients -> wind (B, 2, *grid.shape).
@@ -232,8 +227,8 @@ def shallow_water_tendencies(
     divergence = state[:, 2]
 
     # 1. Fields on the grid
-    geopotential_grid = dynamics.to_grid(geopotential)
-    vorticity_grid = dynamics.to_grid(vorticity)
+    geopotential_grid = dynamics.isht(geopotential)
+    vorticity_grid = dynamics.isht(vorticity)
     wind = dynamics.wind(vorticity, divergence)
 
     # 2. Products on the grid
@@ -246,7 +241,7 @@ def shallow_water_tendencies(
     # 3. Back to coefficients
     flux_curl, flux_divergence = dynamics.vorticity_divergence(vorticity_flux)
     _, geopotential_flux_divergence = dynamics.vorticity_divergence(geopotential_flux)
-    bernoulli_coefficients = dynamics.to_coefficients(bernoulli)
+    bernoulli_coefficients = dynamics.sht(bernoulli)
     if surface_geopotential is not None:
         bernoulli_coefficients = bernoulli_coefficients + surface_geopotential
 
@@ -369,12 +364,12 @@ def total_energy(
     Returns:
         Energy [m^3/s^2], shape (B,).
     """
-    depth = dynamics.to_grid(state[:, 0]) / dynamics.gravity
+    depth = dynamics.isht(state[:, 0]) / dynamics.gravity
     wind = dynamics.wind(state[:, 1], state[:, 2])
     speed_squared = wind[:, 0] ** 2 + wind[:, 1] ** 2
     free_surface = depth
     if surface_geopotential is not None:
-        free_surface = depth + dynamics.to_grid(surface_geopotential) / dynamics.gravity
+        free_surface = depth + dynamics.isht(surface_geopotential) / dynamics.gravity
     displacement = free_surface - dynamics.mean_depth
     energy = 0.5 * depth * speed_squared + 0.5 * dynamics.gravity * displacement**2
 
@@ -416,7 +411,7 @@ def spectral_to_fields(
     geopotential = state[:, 0]
     if surface_geopotential is not None:
         geopotential = geopotential + surface_geopotential
-    geopotential_grid = dynamics.to_grid(geopotential)
+    geopotential_grid = dynamics.isht(geopotential)
     wind = dynamics.wind(state[:, 1], state[:, 2])
     h = geopotential_grid / dynamics.gravity - dynamics.mean_depth
     return torch.stack([h, wind[:, 0], -wind[:, 1]], dim=-1)
@@ -437,7 +432,7 @@ def increment_to_fields(
     Returns:
         Increments of the fields, (B, *grid.shape, 3).
     """
-    height = dynamics.to_grid(increment[:, 0]) / dynamics.gravity
+    height = dynamics.isht(increment[:, 0]) / dynamics.gravity
     wind = dynamics.wind(increment[:, 1], increment[:, 2])
     return torch.stack([height, wind[:, 0], -wind[:, 1]], dim=-1)
 
@@ -467,7 +462,7 @@ def fields_to_spectral(
     northward = -fields[..., 2]
 
     geopotential_grid = dynamics.gravity * (h + dynamics.mean_depth)
-    geopotential = dynamics.to_coefficients(geopotential_grid)
+    geopotential = dynamics.sht(geopotential_grid)
     if surface_geopotential is not None:
         geopotential = geopotential - surface_geopotential
     wind = torch.stack([eastward, northward], dim=1)

@@ -73,9 +73,7 @@ def _solid_body_state(dynamics, tilt):
     vorticity, divergence = dynamics.vorticity_divergence(
         torch.stack([eastward, northward], dim=1)
     )
-    state = torch.stack(
-        [dynamics.to_coefficients(geopotential), vorticity, divergence], dim=1
-    )
+    state = torch.stack([dynamics.sht(geopotential), vorticity, divergence], dim=1)
     return torch.tril(state)
 
 
@@ -176,13 +174,13 @@ def test_rotation_of_a_scalar_field_matches_point_evaluation():
     dynamics, _ = _dynamics(32, 48, 96, 1.0e4)
     alpha, beta, gamma = ANGLES
     x, y, z = _grid_points(dynamics)
-    coefficients = dynamics.to_coefficients(_test_function(x, y, z).unsqueeze(0))
+    coefficients = dynamics.sht(_test_function(x, y, z).unsqueeze(0))
 
     points = torch.stack([x, y, z], dim=-1).cpu()  # (nlat, nlon, 3)
     rotation = _rotation_matrix(alpha, beta, gamma)
     back = points @ rotation  # rows are R^T x = R^-1 x
     rotated_field = _test_function(back[..., 0], back[..., 1], back[..., 2])
-    expected = dynamics.to_coefficients(rotated_field.unsqueeze(0).to(DEVICE))
+    expected = dynamics.sht(rotated_field.unsqueeze(0).to(DEVICE))
 
     rotated = rotate_coefficients(coefficients, alpha, beta, gamma)
     assert (rotated - expected).abs().max() < 1e-12 * expected.abs().max()
@@ -191,9 +189,9 @@ def test_rotation_of_a_scalar_field_matches_point_evaluation():
 def test_rotation_about_the_z_axis_shifts_the_longitude():
     dynamics, _ = _dynamics(32, 48, 96, 1.0e4)
     shift = 2 * math.pi * 5 / 96  # five grid columns
-    field = dynamics.to_grid(_random_state(32, 12).to(DEVICE)[:, 0])
-    rotated = rotate_coefficients(dynamics.to_coefficients(field), shift, 0.0, 0.0)
-    rotated_field = dynamics.to_grid(rotated)
+    field = dynamics.isht(_random_state(32, 12).to(DEVICE)[:, 0])
+    rotated = rotate_coefficients(dynamics.sht(field), shift, 0.0, 0.0)
+    rotated_field = dynamics.isht(rotated)
     expected = torch.roll(field, shifts=5, dims=-1)
     assert (rotated_field - expected).abs().max() < 1e-12 * field.abs().max()
 
@@ -271,8 +269,8 @@ def test_wind_components_do_not_rotate_as_scalars():
     frames = spectral_to_fields(dynamics, state)
     expected_frames = spectral_to_fields(dynamics, expected)
 
-    eastward = dynamics.to_coefficients(frames[..., 1])
-    as_scalar = dynamics.to_grid(rotate_coefficients(eastward, 0.0, -tilt, 0.0))
+    eastward = dynamics.sht(frames[..., 1])
+    as_scalar = dynamics.isht(rotate_coefficients(eastward, 0.0, -tilt, 0.0))
     error = (as_scalar - expected_frames[..., 1]).abs().max()
     assert error > 0.1 * W2_FLOW_SPEED
 

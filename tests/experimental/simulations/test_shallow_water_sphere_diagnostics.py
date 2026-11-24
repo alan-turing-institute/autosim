@@ -73,7 +73,7 @@ def _galewsky_state(dynamics):
 def test_degree_power_sums_to_the_integral_of_the_square():
     dynamics, _ = _dynamics()
     state = _random_state(32)
-    field = dynamics.to_grid(state[:, 0])
+    field = dynamics.isht(state[:, 0])
     integral = global_integral(field**2, dynamics.quad_weights)
     torch.testing.assert_close(degree_power(state[:, 0]).sum(dim=-1), integral)
 
@@ -81,7 +81,7 @@ def test_degree_power_sums_to_the_integral_of_the_square():
 def test_height_power_spectrum_sums_to_the_mean_square_depth():
     dynamics, _ = _dynamics()
     state = _random_state(32)
-    depth = dynamics.to_grid(state[:, 0]) / GRAVITY
+    depth = dynamics.isht(state[:, 0]) / GRAVITY
     mean_square = global_integral(depth**2, dynamics.quad_weights) / (4 * math.pi)
     spectrum = height_power_spectrum(state, GRAVITY)
     assert spectrum.shape == (2, 32)
@@ -122,7 +122,7 @@ def test_non_zonal_energy_is_the_linearised_energy_of_the_non_zonal_part():
     non_zonal = state.clone()
     non_zonal[:, :, :, 0] = 0.0
     wind = dynamics.wind(non_zonal[:, 1], non_zonal[:, 2])
-    height = dynamics.to_grid(non_zonal[:, 0]) / GRAVITY
+    height = dynamics.isht(non_zonal[:, 0]) / GRAVITY
     energy = (
         0.5 * (wind[:, 0] ** 2 + wind[:, 1] ** 2)
         + 0.5 * (GRAVITY / MEAN_DEPTH) * height**2
@@ -135,7 +135,7 @@ def test_non_zonal_energy_is_the_linearised_energy_of_the_non_zonal_part():
 
 def test_height_error_norms_of_a_scaled_field():
     dynamics, _ = _dynamics()
-    height_true = dynamics.to_grid(_random_state(32)[:, 0]) / GRAVITY
+    height_true = dynamics.isht(_random_state(32)[:, 0]) / GRAVITY
     height = 1.001 * height_true
     norms = height_error_norms(height, height_true, dynamics.quad_weights)
     for norm in norms:

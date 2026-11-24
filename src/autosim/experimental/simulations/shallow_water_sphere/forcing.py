@@ -303,7 +303,7 @@ def local_dissipation_rate(
     speed_squared_before = wind_before[:, 0] ** 2 + wind_before[:, 1] ** 2
     speed_squared_after = wind_after[:, 0] ** 2 + wind_after[:, 1] ** 2
     dissipation = (speed_squared_before - speed_squared_after) / (2 * dynamics.dt)
-    smoothed = dynamics.to_grid(taper * dynamics.to_coefficients(dissipation))
+    smoothed = dynamics.isht(taper * dynamics.sht(dissipation))
     return smoothed.clamp(min=0.0)
 
 
@@ -333,9 +333,9 @@ def kinetic_forcing_increment(
     if energy_rate.ndim == 1:
         scaled = torch.sqrt(energy_rate).reshape(batch, 1, 1, 1) * pattern
     else:
-        pattern_grid = dynamics.to_grid(pattern)  # (B, P, *grid.shape)
+        pattern_grid = dynamics.isht(pattern)  # (B, P, *grid.shape)
         scaled_grid = torch.sqrt(energy_rate).unsqueeze(1) * pattern_grid
-        scaled = dynamics.to_coefficients(scaled_grid)
+        scaled = dynamics.sht(scaled_grid)
 
     increment = torch.zeros(
         batch,
@@ -413,7 +413,7 @@ def sppt_pattern_on_grid(
     Returns:
         r on the grid, (B, *grid.shape).
     """
-    return dynamics.to_grid(pattern.sum(dim=1)).clamp(-clip, clip)
+    return dynamics.isht(pattern.sum(dim=1)).clamp(-clip, clip)
 
 
 def physics_increment(
@@ -458,9 +458,9 @@ def sppt_increment(
     Returns:
         Increment of the spectral state, (B, 3, L, L).
     """
-    height = dynamics.to_grid(physics[:, 0])
+    height = dynamics.isht(physics[:, 0])
     wind = dynamics.wind(physics[:, 1], physics[:, 2])
-    geopotential = dynamics.to_coefficients(pattern_grid * height)
+    geopotential = dynamics.sht(pattern_grid * height)
     geopotential[:, 0, 0] = 0.0  # global fix: no change of the mass
     vorticity, divergence = dynamics.vorticity_divergence(
         pattern_grid.unsqueeze(1) * wind
@@ -531,7 +531,7 @@ def periodic_forcing_increment(
         Increment of the spectral state, (B, 3, L, L); only the geopotential changes.
     """
     forcing = periodic_height_forcing(dynamics, periodic, time + dynamics.dt / 2)
-    coefficients = dynamics.to_coefficients(forcing.unsqueeze(0))
+    coefficients = dynamics.sht(forcing.unsqueeze(0))
     increment = torch.zeros(
         batch,
         3,

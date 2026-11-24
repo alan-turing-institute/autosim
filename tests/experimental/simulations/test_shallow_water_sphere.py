@@ -126,13 +126,13 @@ def test_williamson_case_2_is_steady():
     wind = torch.stack([u0 * torch.cos(latitude), torch.zeros_like(latitude)], dim=1)
     vorticity, divergence = dynamics.vorticity_divergence(wind)
     state = torch.stack(
-        [dynamics.to_coefficients(geopotential_exact), vorticity, divergence], dim=1
+        [dynamics.sht(geopotential_exact), vorticity, divergence], dim=1
     )
     state = torch.tril(state)
     previous = []
     for _ in range(288):  # 1 day
         state, previous = adams_bashforth_step(dynamics, state, previous)
-    geopotential = dynamics.to_grid(state[:, 0])
+    geopotential = dynamics.isht(state[:, 0])
     error = (
         geopotential - geopotential_exact
     ).abs().max() / geopotential_exact.abs().max()

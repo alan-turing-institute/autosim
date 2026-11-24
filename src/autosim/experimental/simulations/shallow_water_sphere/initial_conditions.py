@@ -97,12 +97,10 @@ def balanced_geopotential(
     if coriolis is None:
         coriolis = dynamics.coriolis
     wind = dynamics.wind(vorticity, divergence)
-    absolute_vorticity = dynamics.to_grid(vorticity) + coriolis
+    absolute_vorticity = dynamics.isht(vorticity) + coriolis
     flux_curl, _ = dynamics.vorticity_divergence(wind * absolute_vorticity.unsqueeze(1))
     kinetic_energy = 0.5 * (wind[:, 0] ** 2 + wind[:, 1] ** 2)
-    geopotential = dynamics.inverse_laplacian * flux_curl - dynamics.to_coefficients(
-        kinetic_energy
-    )
+    geopotential = dynamics.inverse_laplacian * flux_curl - dynamics.sht(kinetic_energy)
     geopotential[:, 0, 0] = (
         math.sqrt(4 * math.pi) * dynamics.gravity * dynamics.mean_depth
     )
@@ -244,7 +242,7 @@ def galewsky_initial_condition(
         * torch.exp(-((delta_lon / alpha) ** 2))
         * torch.exp(-(((perturbation_lat - latitude) / beta) ** 2))
     )
-    geopotential = geopotential + gravity * dynamics.to_coefficients(bump)
+    geopotential = geopotential + gravity * dynamics.sht(bump)
 
     # 4. Height noise below degree noise_lmax, one generator per simulation
     k = min(noise_lmax, lmax)
@@ -300,7 +298,7 @@ def solid_body_zonal_flow(
     )
     wind = torch.stack([eastward, torch.zeros_like(eastward)], dim=1)
     vorticity, divergence = dynamics.vorticity_divergence(wind)
-    geopotential = dynamics.to_coefficients(geopotential_grid)
+    geopotential = dynamics.sht(geopotential_grid)
     state = torch.stack([geopotential, vorticity, divergence], dim=1)
     return torch.tril(state)  # keep m <= l
 
@@ -347,7 +345,7 @@ def mountain_orography(
     distance = torch.acos(cosine.clamp(-1.0, 1.0))
     surface_height = height * torch.exp(-((distance / width) ** 2))
 
-    surface_geopotential = dynamics.gravity * dynamics.to_coefficients(surface_height)
+    surface_geopotential = dynamics.gravity * dynamics.sht(surface_height)
     return torch.tril(surface_geopotential)  # keep m <= l
 
 
@@ -526,8 +524,8 @@ def era5_initial_condition(
         dim=1,
     )
 
-    free_surface = source.to_coefficients(geopotential)
-    surface_geopotential = source.to_coefficients(surface.expand(batch, *surface.shape))
+    free_surface = source.sht(geopotential)
+    surface_geopotential = source.sht(surface.expand(batch, *surface.shape))
     surface_geopotential = torch.tril(surface_geopotential)
     vorticity, divergence = source.vorticity_divergence(wind)
     state = torch.stack(

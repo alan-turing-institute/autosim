@@ -621,7 +621,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
             if self.era5_source is None:
                 msg = "the climatology target needs the ERA5 grid of the initial state"
                 raise ValueError(msg)
-            free_surface = self.era5_source.to_coefficients(
+            free_surface = self.era5_source.sht(
                 climatology.to(self.device, torch.float64)
             )
             equilibrium_geopotential = torch.tril(free_surface)
@@ -748,8 +748,8 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         if coriolis is None:
             coriolis = self.dynamics.coriolis.expand(batch, *self.grid.shape)
         if self.output_dynamics is not self.dynamics:
-            coefficients = self.dynamics.to_coefficients(coriolis)
-            coriolis = self.output_dynamics.to_grid(
+            coefficients = self.dynamics.sht(coriolis)
+            coriolis = self.output_dynamics.isht(
                 coefficients[..., :output_lmax, :output_lmax]
             )
         if surface_geopotential is None:
@@ -757,7 +757,7 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         else:
             truncated = surface_geopotential[..., :output_lmax, :output_lmax]
             surface_height = (
-                self.output_dynamics.to_grid(truncated) / self.dynamics.gravity
+                self.output_dynamics.isht(truncated) / self.dynamics.gravity
             )
         return torch.stack([coriolis, surface_height], dim=-1)
 
@@ -781,9 +781,9 @@ class SphericalShallowWater(SpatioTemporalSimulator):
         for frame in range(self.n_frames):
             time = 3600 * self.dt_save * (self.skip_nt + frame)
             forcing = periodic_height_forcing(self.dynamics, self.periodic, time)
-            coefficients = torch.tril(self.dynamics.to_coefficients(forcing[None]))
+            coefficients = torch.tril(self.dynamics.sht(forcing[None]))
             truncated = coefficients[..., :output_lmax, :output_lmax]
-            field = 3600 * self.output_dynamics.to_grid(truncated)[0]
+            field = 3600 * self.output_dynamics.isht(truncated)[0]
             frames.append(field.float().cpu())
         fields = torch.stack(frames).unsqueeze(-1)  # (n_frames, *grid, 1)
         # The same forcing for every simulation: a broadcast view, not B copies
@@ -882,10 +882,8 @@ class SphericalShallowWater(SpatioTemporalSimulator):
                 low = self.output_dynamics
                 low_coriolis = None
                 if coriolis is not None:
-                    coefficients = self.dynamics.to_coefficients(coriolis)
-                    low_coriolis = low.to_grid(
-                        coefficients[..., : low.lmax, : low.lmax]
-                    )
+                    coefficients = self.dynamics.sht(coriolis)
+                    low_coriolis = low.isht(coefficients[..., : low.lmax, : low.lmax])
                 low_surface = None
                 if surface_geopotential is not None:
                     low_surface = surface_geopotential[..., : low.lmax, : low.lmax]

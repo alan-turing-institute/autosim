@@ -797,8 +797,8 @@ def _case4_state(dynamics, background, time, flow_speed):
     psi = psi0 * torch.exp(-sigma * (1 - cosine) / (1 + cosine))
 
     moving = torch.zeros_like(background)
-    moving[0, 0] = dynamics.to_coefficients((dynamics.coriolis * psi).unsqueeze(0))[0]
-    moving[0, 1] = dynamics.laplacian * dynamics.to_coefficients(psi.unsqueeze(0))[0]
+    moving[0, 0] = dynamics.sht((dynamics.coriolis * psi).unsqueeze(0))[0]
+    moving[0, 1] = dynamics.laplacian * dynamics.sht(psi.unsqueeze(0))[0]
     moving = torch.tril(moving)
     return background + moving, moving
 
@@ -847,7 +847,7 @@ def test_williamson_case_4_through_the_forcing_splitting():
         wind = torch.stack([eastward, torch.zeros_like(eastward)]).unsqueeze(0)
         vorticity, divergence = dynamics.vorticity_divergence(wind)
         geopotential = balanced_geopotential(dynamics, vorticity, divergence)
-        south = dynamics.to_grid(geopotential)[0, -1, 0]
+        south = dynamics.isht(geopotential)[0, -1, 0]
         geopotential[0, 0, 0] += math.sqrt(4 * math.pi) * (1.0e5 - south)
         background = torch.tril(torch.stack([geopotential, vorticity, divergence], 1))
 

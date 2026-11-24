@@ -122,13 +122,13 @@ def test_balance_removes_the_divergence_and_keeps_the_mean_free_surface():
 
     # the global mean of the free surface is that of the fields
     free_surface = state[:, 0, 0, 0] + surface[:, 0, 0]
-    expected = source.to_coefficients(fields.geopotential.to(DEVICE))[:, 0, 0]
+    expected = source.sht(fields.geopotential.to(DEVICE))[:, 0, 0]
     torch.testing.assert_close(free_surface, expected, rtol=1e-12, atol=0.0)
 
     # balance: the divergence tendency vanishes, unlike with the supplied height
     tendency = shallow_water_tendencies(dynamics, state, None, surface)
     unbalanced = state.clone()
-    supplied = source.to_coefficients(fields.geopotential.to(DEVICE))
+    supplied = source.sht(fields.geopotential.to(DEVICE))
     unbalanced[:, 0] = supplied[:, : dynamics.lmax, : dynamics.lmax] - surface
     unbalanced_tendency = shallow_water_tendencies(dynamics, unbalanced, None, surface)
     assert tendency[:, 2].abs().max() < 1e-10 * unbalanced_tendency[:, 2].abs().max()
@@ -159,7 +159,7 @@ def test_initial_condition_uses_the_compressed_orography():
     compressed = compress_orography(
         fields.surface_geopotential.to(DEVICE, torch.float64), GRAVITY, 15 / 16, True
     )
-    expected = torch.tril(source.to_coefficients(compressed.expand(2, -1, -1)))
+    expected = torch.tril(source.sht(compressed.expand(2, -1, -1)))
     torch.testing.assert_close(surface, expected, rtol=1e-12, atol=1e-9)
 
 
@@ -224,7 +224,7 @@ def test_climatology_is_the_relaxation_target(monkeypatch):
     assert equilibrium is not None
     assert surface is not None
     assert sim.era5_source is not None
-    expected_free = sim.era5_source.to_coefficients(
+    expected_free = sim.era5_source.sht(
         fake_climatology(torch.zeros(1), "", 500).to(DEVICE)
     )
     torch.testing.assert_close(

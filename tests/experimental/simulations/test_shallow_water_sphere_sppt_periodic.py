@@ -157,7 +157,7 @@ def test_sppt_pattern_has_the_grid_point_variance_of_its_scales():
     dynamics = _dynamics(86, 128, 256)
     for sppt in (ONE_FIELD, ECMWF_SETTINGS):
         pattern, _, _, _ = _sppt_patterns(dynamics, sppt, batch=8)
-        field = dynamics.to_grid(pattern.sum(dim=1))
+        field = dynamics.isht(pattern.sum(dim=1))
         std = _grid_variance(dynamics, field).mean().sqrt()
         target = math.sqrt(sum(value**2 for value in sppt.amplitudes))
         assert std.item() == pytest.approx(target, rel=SPPT_STD_TOLERANCE)
@@ -168,10 +168,10 @@ def test_sppt_pattern_follows_its_ar1_process():
     dynamics = _dynamics(43, 64, 128, dt=600.0)
     sppt = SpptSettings((0.5,), (500.0e3,), (6.0,))
     pattern, amplitudes, alpha, generators = _sppt_patterns(dynamics, sppt, batch=8)
-    before = dynamics.to_grid(pattern.sum(dim=1))
+    before = dynamics.isht(pattern.sum(dim=1))
     noise = complex_noise(generators, 1, dynamics.lmax)
     advanced = advance_pattern(pattern, noise, amplitudes, alpha)
-    after = dynamics.to_grid(advanced.sum(dim=1))
+    after = dynamics.isht(advanced.sum(dim=1))
     weights = dynamics.quad_weights
     correlation = (before * after * weights).sum() / (before**2 * weights).sum()
     assert correlation.item() == pytest.approx(1 - 600.0 / (6 * HOUR), abs=0.01)
@@ -360,9 +360,7 @@ def test_periodic_forcing_is_returned_at_the_frame_times():
     assert forcing.shape == (2, 3, 32, 64, 1)
     for frame, hours in enumerate((3.0, 6.0, 9.0)):
         field = periodic_height_forcing(sim.dynamics, THE_WELL, hours * HOUR)
-        projected = sim.dynamics.to_grid(
-            torch.tril(sim.dynamics.to_coefficients(field[None]))
-        )[0]
+        projected = sim.dynamics.isht(torch.tril(sim.dynamics.sht(field[None])))[0]
         torch.testing.assert_close(
             forcing[0, frame, ..., 0],
             (HOUR * projected).float().cpu(),

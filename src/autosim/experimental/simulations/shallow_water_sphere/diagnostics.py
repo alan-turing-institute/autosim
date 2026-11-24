@@ -267,15 +267,15 @@ def invariants(
     if coriolis is None:
         coriolis = dynamics.coriolis
 
-    depth = dynamics.to_grid(state[:, 0]) / gravity
-    vorticity = dynamics.to_grid(state[:, 1])
+    depth = dynamics.isht(state[:, 0]) / gravity
+    vorticity = dynamics.isht(state[:, 1])
     wind = dynamics.wind(state[:, 1], state[:, 2])
     speed_squared = wind[:, 0] ** 2 + wind[:, 1] ** 2
 
     if surface_geopotential is None:
         surface_height = torch.zeros_like(depth)
     else:
-        surface_height = dynamics.to_grid(surface_geopotential) / gravity
+        surface_height = dynamics.isht(surface_geopotential) / gravity
     free_surface = depth + surface_height
 
     mass = depth
