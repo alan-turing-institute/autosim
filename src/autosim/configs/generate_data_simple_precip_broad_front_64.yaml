@@ -1,0 +1,14 @@
+defaults:
+  - generate_data_simple_precip_variable_64
+  - _self_
+
+simulator:
+  # One broad front moves northwest, perpendicular to its long axis.
+  shared_advection_heading_deg: 148.0
+  broad_front: true
+  front_cell_aspect_ratio: 6.0
+  parameters_range:
+    L_env: [18.0, 22.0]
+
+dataset:
+  output_dir: outputs/${now:%Y-%m-%d}/simple_precip_${simulator.temporal_model}_broad_front_64_train1000_${shortuuid:7}

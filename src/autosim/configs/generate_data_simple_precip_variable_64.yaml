@@ -1,0 +1,17 @@
+defaults:
+  - generate_data_simple_precip_ou_64
+  - _self_
+
+simulator:
+  # Draw one speed and heading per trajectory for both field and envelope.
+  shared_advection_speed_range: [1.0, '${..parameters_range.cx.1}']
+  parameters_range:
+    # Signed component bounds in the saved parameter row.
+    cx: [-1.8, 1.8]
+    cy: ${.cx}
+    cex: ${.cx}
+    cey: ${.cx}
+    L_env: [16.0, 24.0]
+
+dataset:
+  output_dir: outputs/${now:%Y-%m-%d}/simple_precip_${simulator.temporal_model}_variable_64_train1000_${shortuuid:7}

@@ -1,0 +1,13 @@
+defaults:
+  - generate_data_simple_precip_64
+  - _self_
+
+simulator:
+  temporal_model: ou
+  # Save phi for conditional redraws using the trajectory's parameters and time.
+  output_indices: [0, 1, 2, 3]
+
+dataset:
+  # At 1000/100/100, .pt fields use 23.5 GiB on disk. Normalization holds
+  # about 82 GiB of tensors in RAM, plus process overhead.
+  output_dir: outputs/${now:%Y-%m-%d}/simple_precip_ou_64_train1000_${shortuuid:7}

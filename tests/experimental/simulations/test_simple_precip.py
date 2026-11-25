@@ -14,9 +14,16 @@ from autosim.experimental.simulations.simple_precip import (
 def test_fractional_grid_advection_preserves_latent_variance():
     # Use a short correlation length to put appreciable power at Nyquist.
     params = dict(DEFAULT_PARAMETERS, ell=0.1, tau_g=0.4, cx=0.5, cy=-0.5)
-    grid = {"Nx": 4, "Ny": 6, "Lx": 4, "Ly": 6, "T": 1024, "dt_out": 1, "dt_sub": 1}
     _, _, phi, _ = simulate_simple_precipitation(
-        params, np.random.default_rng(17), **grid
+        params,
+        np.random.default_rng(17),
+        Nx=4,
+        Ny=6,
+        Lx=4,
+        Ly=6,
+        T=1024,
+        dt_out=1,
+        dt_sub=1,
     )
     for offset in (0, 1):  # half-cell and whole-cell shifts
         assert np.mean(phi[offset::2] ** 2) == pytest.approx(params["s"] ** 2, rel=0.04)
@@ -72,8 +79,51 @@ def test_invalid_output_selection(indices):
         SimplePrecipitation(output_indices=indices)
 
 
+def test_ou_preserves_positional_output_indices():
+    sim = SimplePrecipitation(
+        None, None, True, "warning", 8, 6, 8, 6, 5, 5, 3, None, [1], temporal_model="ou"
+    )
+    assert sim.output_names == ["rain"]
+
+
+@pytest.mark.parametrize("temporal_model", ["gp", "ou"])
+def test_broad_front_is_elongated_across_its_motion(temporal_model):
+    nx, ny = 48, 40
+    params = dict(DEFAULT_PARAMETERS, x0=nx - 2, y0=ny - 2, L_env=8, tau_g=0.25)
+    _, _, phi, envelope = simulate_simple_precipitation(
+        params,
+        np.random.default_rng(17),
+        Nx=nx,
+        Ny=ny,
+        Lx=nx,
+        Ly=ny,
+        T=16,
+        dt_out=1,
+        dt_sub=1,
+        broad_front=True,
+        front_cell_aspect_ratio=6,
+        temporal_model=temporal_model,
+    )
+    # From the last cell in x and y, offsets (1, 1) and (-3, 3) lie on one contour.
+    assert envelope[0, 0, 0] == pytest.approx(envelope[0, -4, 2])
+    # The nearest elliptical image of (19, 19) is (19, -21) across the y seam.
+    distance2 = 3 * (19 - 21) ** 2 / 2 + (19 + 21) ** 2 / 6
+    assert envelope[0, 18, 18] == pytest.approx(np.exp(-distance2 / (2 * 8**2)))
+    across = np.mean((phi - np.roll(phi, (1, 1), axis=(1, 2))) ** 2)
+    along = np.mean((phi - np.roll(phi, (-6, 6), axis=(1, 2))) ** 2)
+    assert along == pytest.approx(across, rel=0.15)
+
+
 @pytest.mark.parametrize(
-    "settings", [{"dt_out": 0}, {"dt_sub": -1}, {"Nx": 0}, {"m": None}]
+    "settings",
+    [
+        {"dt_out": 0},
+        {"dt_sub": -1},
+        {"Nx": 0},
+        {"m": None},
+        {"front_cell_aspect_ratio": 0.5, "broad_front": True},
+        {"front_cell_aspect_ratio": np.inf, "broad_front": True},
+    ],
 )
 def test_invalid_generation_settings(settings):
     name = next(iter(settings))
