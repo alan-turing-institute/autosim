@@ -65,8 +65,8 @@ class SimplePrecipitation(SpatioTemporalSimulator):
                 centre of the envelope), ``L_env`` (width of the envelope),
                 ``theta0`` (threshold outside the envelope) and ``dtheta`` (drop in
                 threshold at its centre).
-            output_names: Names of the two output channels.
-                Defaults to ``["accumulation", "rain"]``.
+            output_names: Names of the four output channels.
+                Defaults to ``["accumulation", "rain", "phi", "envelope"]``.
             return_timeseries: Whether to return every output time or only the last.
                 Defaults to True.
             log_level: Logging level for the simulator, as for other simulators.
@@ -90,9 +90,9 @@ class SimplePrecipitation(SpatioTemporalSimulator):
             )
             raise ValueError(msg)
         if output_names is None:
-            output_names = ["accumulation", "rain"]
-        if len(output_names) != 2:
-            raise ValueError("output_names must name exactly two channels.")
+            output_names = ["accumulation", "rain", "phi", "envelope"]
+        if len(output_names) != 4:
+            raise ValueError("output_names must name exactly four channels.")
         n_out = round(T / dt_out)
         if n_out < 1 or not math.isclose(n_out * dt_out, T):
             raise ValueError(f"T ({T}) must be a whole multiple of dt_out ({dt_out}).")
@@ -120,7 +120,7 @@ class SimplePrecipitation(SpatioTemporalSimulator):
         grid_spacing = max(self.Lx / self.Nx, self.Ly / self.Ny)
 
         rng = np.random.default_rng(np.random.randint(0, 2**31 - 1))
-        accumulation, rain = simulate_simple_precipitation(
+        fields = simulate_simple_precipitation(
             params,
             rng,
             self.Lx,
@@ -133,9 +133,10 @@ class SimplePrecipitation(SpatioTemporalSimulator):
             self.dt_sub,
         )
         if not self.return_timeseries:
-            accumulation, rain = accumulation[-1:], rain[-1:]
+            fields = [f[-1:] for f in fields]
 
-        concat_array = np.concatenate([accumulation.ravel(), rain.ravel()])
+        concat_array = np.concatenate([f.ravel() for f in fields])
+
         return torch.tensor(concat_array, dtype=torch.float32).reshape(1, -1)
 
     def forward_samples_spatiotemporal(
@@ -158,8 +159,7 @@ class SimplePrecipitation(SpatioTemporalSimulator):
 
         Returns:
             A dictionary whose ``data`` entry has shape
-            ``(n, n_times, Nx, Ny, 2)``, with accumulation and rain as the two
-            variables, together with the constant scalars and constant fields.
+            ``(n, n_times, Nx, Ny, 4)``, with the channels, in order, as: accumulation, rain, phi, envelope, together with the constant scalars and constant fields.
         """
         y, x = self._forward_batch_with_optional_retries(
             n=n,
@@ -168,7 +168,8 @@ class SimplePrecipitation(SpatioTemporalSimulator):
             num_workers=num_workers,
         )
         n_times = self.n_out if self.return_timeseries else 1
-        data = y.reshape(y.shape[0], 2, n_times, self.Nx, self.Ny).permute(
+        n_channels = len(self.output_names)
+        data = y.reshape(y.shape[0], n_channels, n_times, self.Nx, self.Ny).permute(
             0, 2, 3, 4, 1
         )
         return {
@@ -212,7 +213,7 @@ def simulate_simple_precipitation(
     dt_out: float = 5.0,
     m: float = 3.0,
     dt_sub: float | None = None,
-) -> tuple[NumpyLike, NumpyLike]:
+) -> tuple[NumpyLike, ...]:
     """Simulate one realisation of the precipitation model.
 
     Args:
@@ -228,7 +229,7 @@ def simulate_simple_precipitation(
         dt_sub: Optional sub-step overriding the one derived from ``m``.
 
     Returns:
-        Tuple of ``(accumulation, rain)``, each of shape ``(T / dt_out, Nx, Ny)``.
+        Tuple of ``(accumulation, rain, phi, envelope)``, each of shape ``(T / dt_out, Nx, Ny)``.
         ``accumulation[n]`` is the rain integrated over the interval ending at
         ``(n + 1) * dt_out`` and ``rain[n]`` is the instantaneous rate at that time.
     """
@@ -270,9 +271,10 @@ def simulate_simple_precipitation(
 
     trapezoids = 0.5 * h * (rain[:-1] + rain[1:])
     accumulation = trapezoids.reshape(n_out, n_sub, Ny, Nx).sum(axis=1)
-    rain_end = rain[n_sub::n_sub]
+    ends = slice(n_sub, None, n_sub)
+    fields = (accumulation, rain[ends], phi[ends], envelope[ends])
 
-    return accumulation.transpose(0, 2, 1), rain_end.transpose(0, 2, 1)
+    return tuple(f.transpose(0, 2, 1) for f in fields)
 
 
 def _periodic(d: NumpyLike, L: float) -> NumpyLike:
