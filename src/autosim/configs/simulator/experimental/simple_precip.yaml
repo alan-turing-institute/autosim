@@ -1,0 +1,29 @@
+_target_: autosim.experimental.simulations.SimplePrecipitation
+return_timeseries: true
+output_indices: [0, 1]
+output_names: null
+log_level: warning
+Lx: 100.0
+Ly: 100.0
+Nx: 64
+Ny: 64
+# 321 complete accumulation intervals, with rates saved at t=5 through t=1605.
+T: 1605.0
+dt_out: 5.0
+m: 3.0
+dt_sub: null
+
+# Sample the envelope's starting point across the periodic domain.
+parameters_range:
+  s: [1.0, 1.0]
+  ell: [4.0, 4.0]
+  tau_g: [9.0, 9.0]
+  cx: [1.0, 1.0]
+  cy: [1.0, 1.0]
+  cex: [1.0, 1.0]
+  cey: [1.0, 1.0]
+  x0: [0.0, '${...Lx}']
+  y0: [0.0, '${...Ly}']
+  L_env: [20.0, 20.0]
+  theta0: [4.0, 4.0]
+  dtheta: [4.0, 4.0]

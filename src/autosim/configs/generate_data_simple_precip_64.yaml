@@ -1,0 +1,11 @@
+defaults:
+  - generate_data_swe_crps_64
+  - override simulator: experimental/simple_precip
+  - _self_
+
+# Match the SWE64 train1000 expanded-holdout view in aiphys issue 242.
+dataset:
+  output_dir: outputs/${now:%Y-%m-%d}/simple_precip_64_train1000_${shortuuid:7}
+  n_train: 1000
+  n_valid: 100
+  n_test: 100

@@ -4,6 +4,7 @@ import math
 
 import numpy as np
 import torch
+from scipy.fft import ifft, ifft2
 
 from autosim.simulations.base import SpatioTemporalSimulator
 from autosim.types import NumpyLike, TensorLike
@@ -35,7 +36,8 @@ class SimplePrecipitation(SpatioTemporalSimulator):
 
     Outputs at :math:`t_n = n\,\Delta t_{out}` are the accumulation over
     :math:`(t_{n-1}, t_n]` and the instantaneous rain at :math:`t_n`. The
-    accumulation uses the trapezoidal rule on a sub-step of approximately :math:`T_{eff}/m`.
+    accumulation uses the trapezoidal rule on a sub-step of approximately
+    :math:`T_{eff}/m`.
     """
 
     def __init__(
@@ -52,6 +54,7 @@ class SimplePrecipitation(SpatioTemporalSimulator):
         dt_out: float = 5.0,
         m: float = 3.0,
         dt_sub: float | None = None,
+        output_indices: list[int] | None = None,
     ):
         """Initialise the SimplePrecipitation simulator.
 
@@ -65,8 +68,8 @@ class SimplePrecipitation(SpatioTemporalSimulator):
                 centre of the envelope), ``L_env`` (width of the envelope),
                 ``theta0`` (threshold outside the envelope) and ``dtheta`` (drop in
                 threshold at its centre).
-            output_names: Names of the four output channels.
-                Defaults to ``["accumulation", "rain", "phi", "envelope"]``.
+            output_names: Optional labels for the selected fields. When supplied
+                alone, label the first matching number of fields in canonical order.
             return_timeseries: Whether to return every output time or only the last.
                 Defaults to True.
             log_level: Logging level for the simulator, as for other simulators.
@@ -80,22 +83,43 @@ class SimplePrecipitation(SpatioTemporalSimulator):
             dt_sub: Sub-step to use instead of the one derived from ``m``. It is
                 rounded down so that a whole number of sub-steps fits in
                 ``dt_out``.
+            output_indices: Select one or more fields in the requested order
+                from [accumulation, rain, phi, envelope]. For rain alone use [1].
+                Defaults to all four fields when no labels are supplied.
         """
         if parameters_range is None:
             parameters_range = {k: (v, v) for k, v in DEFAULT_PARAMETERS.items()}
-        if set(parameters_range) != set(DEFAULT_PARAMETERS):
-            msg = (
-                f"parameters_range must contain exactly {list(DEFAULT_PARAMETERS)}, "
-                f"got {list(parameters_range)}."
+        for name, (low, high) in parameters_range.items():
+            if not -math.inf < low <= high < math.inf:
+                raise ValueError(f"Invalid bounds for {name}: ({low}, {high}).")
+        field_names = ("accumulation", "rain", "phi", "envelope")
+        if output_indices is None:
+            count = len(field_names) if output_names is None else len(output_names)
+            output_indices = list(range(count))
+        if (
+            not output_indices
+            or any(
+                isinstance(i, bool)
+                or not isinstance(i, int | np.integer)
+                or i not in range(4)
+                for i in output_indices
             )
+            or len(set(output_indices)) != len(output_indices)
+        ):
+            msg = "output_indices must contain distinct channel indices from 0 to 3."
             raise ValueError(msg)
+        self.output_indices = tuple(output_indices)
         if output_names is None:
-            output_names = ["accumulation", "rain", "phi", "envelope"]
-        if len(output_names) != 4:
-            raise ValueError("output_names must name exactly four channels.")
-        n_out = round(T / dt_out)
-        if n_out < 1 or not math.isclose(n_out * dt_out, T):
-            raise ValueError(f"T ({T}) must be a whole multiple of dt_out ({dt_out}).")
+            output_names = [field_names[i] for i in output_indices]
+        if len(output_names) != len(output_indices) or len(set(output_names)) != len(
+            output_names
+        ):
+            msg = "Provide one distinct output name per selected channel."
+            raise ValueError(msg)
+        lower = {name: low for name, (low, _) in parameters_range.items()}
+        n_out = _validate_setup(
+            lower, (Nx, Ny), T, dt_out, Lx=Lx, Ly=Ly, m=m, dt_sub=dt_sub
+        )
 
         super().__init__(parameters_range, output_names, log_level)
         self.return_timeseries = return_timeseries
@@ -117,8 +141,6 @@ class SimplePrecipitation(SpatioTemporalSimulator):
             zip(self.param_names, x.cpu().numpy()[0].astype(float), strict=True)
         )
 
-        grid_spacing = max(self.Lx / self.Nx, self.Ly / self.Ny)
-
         rng = np.random.default_rng(np.random.randint(0, 2**31 - 1))
         fields = simulate_simple_precipitation(
             params,
@@ -132,8 +154,9 @@ class SimplePrecipitation(SpatioTemporalSimulator):
             self.m,
             self.dt_sub,
         )
+        fields = tuple(fields[i] for i in self.output_indices)
         if not self.return_timeseries:
-            fields = [f[-1:] for f in fields]
+            fields = tuple(f[-1:] for f in fields)
 
         concat_array = np.concatenate([f.ravel() for f in fields])
 
@@ -159,7 +182,8 @@ class SimplePrecipitation(SpatioTemporalSimulator):
 
         Returns:
             A dictionary whose ``data`` entry has shape
-            ``(n, n_times, Nx, Ny, 4)``, with the channels, in order, as: accumulation, rain, phi, envelope, together with the constant scalars and constant fields.
+            ``(n, n_times, Nx, Ny, len(output_names))``, together with
+            constant scalars and constant fields.
         """
         y, x = self._forward_batch_with_optional_retries(
             n=n,
@@ -168,8 +192,7 @@ class SimplePrecipitation(SpatioTemporalSimulator):
             num_workers=num_workers,
         )
         n_times = self.n_out if self.return_timeseries else 1
-        n_channels = len(self.output_names)
-        data = y.reshape(y.shape[0], n_channels, n_times, self.Nx, self.Ny).permute(
+        data = y.reshape(y.shape[0], self.out_dim, n_times, self.Nx, self.Ny).permute(
             0, 2, 3, 4, 1
         )
         return {
@@ -177,6 +200,38 @@ class SimplePrecipitation(SpatioTemporalSimulator):
             "constant_scalars": x,
             "constant_fields": None,
         }
+
+
+def _validate_setup(
+    params: dict[str, float],
+    shape: tuple[int, int],
+    T: float,
+    dt_out: float,
+    **scales: float | None,
+) -> int:
+    """Check the simulation inputs and return the number of output intervals."""
+    if params.keys() != DEFAULT_PARAMETERS.keys():
+        raise ValueError(
+            f"Expected parameters {list(DEFAULT_PARAMETERS)}, got {list(params)}."
+        )
+    if not all(map(math.isfinite, params.values())) or params["s"] < 0:
+        msg = "Model parameters must be finite and s must be non-negative."
+        raise ValueError(msg)
+    for name, size in zip(("Nx", "Ny"), shape, strict=True):
+        if isinstance(size, bool) or not isinstance(size, int | np.integer) or size < 1:
+            raise ValueError(f"{name} must be a positive integer.")
+    scales.update(T=T, dt_out=dt_out)
+    for name in ("ell", "tau_g", "L_env"):
+        scales[name] = params[name]
+    for name, value in scales.items():
+        if name == "dt_sub" and value is None:
+            continue
+        if value is None or not 0 < value < math.inf:
+            raise ValueError(f"{name} must be finite and positive.")
+    n_out = round(T / dt_out)
+    if n_out < 1 or not math.isclose(n_out * dt_out, T):
+        raise ValueError(f"T ({T}) must be a whole multiple of dt_out ({dt_out}).")
+    return n_out
 
 
 def substep(params: dict[str, float], dt_out: float, m: float, dt_sub: float | None):
@@ -229,12 +284,13 @@ def simulate_simple_precipitation(
         dt_sub: Optional sub-step overriding the one derived from ``m``.
 
     Returns:
-        Tuple of ``(accumulation, rain, phi, envelope)``, each of shape ``(T / dt_out, Nx, Ny)``.
+        Tuple of ``(accumulation, rain, phi, envelope)``, each of shape
+        ``(T / dt_out, Nx, Ny)``.
         ``accumulation[n]`` is the rain integrated over the interval ending at
         ``(n + 1) * dt_out`` and ``rain[n]`` is the instantaneous rate at that time.
     """
     p = params
-    n_out = round(T / dt_out)
+    n_out = _validate_setup(p, (Nx, Ny), T, dt_out, Lx=Lx, Ly=Ly, m=m, dt_sub=dt_sub)
     n_sub, h = substep(p, dt_out, m, dt_sub)
     Nt = n_out * n_sub + 1  # includes t = 0 and t = T
     t = np.arange(Nt) * h
@@ -243,24 +299,26 @@ def simulate_simple_precipitation(
 
     w = 2 * np.pi * np.fft.fftfreq(Nt_pad, h)
     ky = 2 * np.pi * np.fft.fftfreq(Ny, Ly / Ny)
-    kx = 2 * np.pi * np.fft.rfftfreq(Nx, Lx / Nx)
-    kx_full = 2 * np.pi * np.fft.fftfreq(Nx, Lx / Nx)
-    KY, KX = np.meshgrid(ky, kx, indexing="ij")
-    KYf, KXf = np.meshgrid(ky, kx_full, indexing="ij")
-
-    def spatial_spectrum(kx_, ky_):
-        return np.exp(-(kx_**2 + ky_**2) * p["ell"] ** 2 / 2)
-
+    kx = 2 * np.pi * np.fft.fftfreq(Nx, Lx / Nx)
+    spatial_power = np.exp(-(kx**2 + ky[:, None] ** 2) * p["ell"] ** 2 / 2)
     F = np.exp(-((w * p["tau_g"]) ** 2) / 2)
-    norm = p["s"] / np.sqrt(spatial_spectrum(KXf, KYf).mean() * F.mean())
+    norm = p["s"] / np.sqrt(spatial_power.mean() * F.mean())
 
-    spec = np.fft.rfftn(rng.standard_normal((Nt_pad, Ny, Nx)))
+    # A fractional shift rotates both quadratures, including at Nyquist.
+    # Unit-variance real and imaginary draws preserve s² after taking the real part.
+    spec = np.empty((Nt_pad, Ny, Nx), dtype=np.complex128)
+    spec.real = rng.standard_normal(spec.shape)
+    spec.imag = rng.standard_normal(spec.shape)
     spec *= np.sqrt(F)[:, None, None]
-    spec *= norm * np.sqrt(spatial_spectrum(KX, KY))[None]
-    # moving frame with padding removed
-    spec = np.fft.ifft(spec, axis=0)[pad : pad + Nt]
-    spec *= np.exp(-1j * (KX * p["cx"] + KY * p["cy"])[None] * t[:, None, None])
-    phi = np.fft.irfft2(spec, s=(Ny, Nx))  # (Nt, Ny, Nx)
+    spec *= norm * np.sqrt(spatial_power)
+    spec = ifft(spec, axis=0, norm="ortho", overwrite_x=True)[pad : pad + Nt]
+    phase_x = np.exp(-1j * p["cx"] * t[:, None] * kx)
+    phase_y = np.exp(-1j * p["cy"] * t[:, None] * ky)
+    spec *= phase_x[:, None, :]
+    spec *= phase_y[:, :, None]
+    phi = np.asarray(
+        ifft2(spec, norm="ortho", overwrite_x=True), dtype=np.complex128
+    ).real
 
     x = np.arange(Nx) * Lx / Nx
     y = np.arange(Ny) * Ly / Ny

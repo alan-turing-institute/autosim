@@ -21,7 +21,7 @@ from .ornstein_uhlenbeck import OrnsteinUhlenbeck
 from .shallow_water import ShallowWater2D
 from .shallow_water_1d import ShallowWater1D, simulate_shallow_water_1d
 from .shallow_water_stepper import advance_swe_2d
-from .simple_precip import SimplePrecipitation
+from .simple_precip import SimplePrecipitation, simulate_simple_precipitation
 
 ALL_SIMULATORS = [
     Burgers1D,
@@ -66,6 +66,7 @@ __all__ = [
     "simulate_burgers_1d",
     "simulate_kuramoto_sivashinsky_1d",
     "simulate_shallow_water_1d",
+    "simulate_simple_precipitation",
 ]
 
 SIMULATOR_REGISTRY = {simulator.__name__: simulator for simulator in ALL_SIMULATORS}
