@@ -21,6 +21,7 @@ from .ornstein_uhlenbeck import OrnsteinUhlenbeck
 from .shallow_water import ShallowWater2D
 from .shallow_water_1d import ShallowWater1D, simulate_shallow_water_1d
 from .shallow_water_stepper import advance_swe_2d
+from .simple_precip import SimplePrecipitation
 
 ALL_SIMULATORS = [
     Burgers1D,
@@ -39,6 +40,7 @@ ALL_SIMULATORS = [
     CorrelatedDiffusion2D,
     MultivariateOULens,
     GrayScottStochastic,
+    SimplePrecipitation,
 ]
 
 __all__ = [
@@ -58,6 +60,7 @@ __all__ = [
     "OrnsteinUhlenbeck",
     "ShallowWater1D",
     "ShallowWater2D",
+    "SimplePrecipitation",
     "advance_swe_2d",
     "estimate_ks_lyapunov",
     "simulate_burgers_1d",
