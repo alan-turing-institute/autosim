@@ -1,0 +1,44 @@
+# Dataset 6: the protocol of PlanetSWE (The Well, Ohana et al. 2024) with this solver:
+# ERA5 states at 500 hPa over the Earth's orography, forced by The Well's daily and
+# yearly height source, with the hyperdiffusion as the only other process. The forcing
+# F(t) is a known input of the emulator, saved as periodic_forcing.
+# 40 trajectories as PlanetSWE: generate with dataset.n_train=32 dataset.n_valid=4
+# dataset.n_test=4.
+# Requires the "spherical" and "era5" extras, network access and a GPU; leave
+# dataset.num_workers unset.
+_target_: autosim.experimental.simulations.SphericalShallowWater
+log_level: progress_bar
+initial_condition: era5
+grid: legendre-gauss
+lmax: 256
+nlat: 384
+nlon: 768
+# Time in hours: a warm-up of half a model year (504 h), then three model years of
+# 1008 h saved every hour, 3024 frames.
+T: 3527.0
+dt_save: 1.0
+skip_nt: 504
+courant: 0.4
+mean_depth: 6000.0
+batch_size: 8
+device: cuda
+return_constant_fields: true
+# Orography compressed as in The Well's PlanetSWE (gen_ics.ipynb at aac88c0):
+# sign(h_s)|h_s|^(15/16), shifted so that its minimum is 0.
+era5:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.Era5Settings
+  orography_exponent: 0.9375
+  orography_shift: true
+# The forcing of gen_SWE_from_ic_file.py in PolymathicAI/the_well at commit aac88c0,
+# which generated the released PlanetSWE files: 2 m per hour, width 2 pi / 3, maximum
+# declination 0.4 rad, a day of 24 h and a year of 1008 h, the centre moving eastward.
+periodic:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.PeriodicForcingSettings
+  amplitude: 2.0
+  width: 2.0943951023931953
+  declination: 0.4
+  day: 24.0
+  year: 1008.0
+return_periodic_forcing: true
+parameters_range:
+  era5_time: [0.0, 561258.0]

@@ -1,0 +1,55 @@
+# Dataset 5: ERA5 states at 500 hPa over the orography of the Earth (W92
+# case 7, from the WeatherBench2 copy of ERA5), relaxed towards the ERA5 climatology
+# and forced by the vortical forcing (SKEBS) and SPPT: weather with uncertain physics.
+# A single layer has no baroclinic instability or moisture, so the runs are not ERA5
+# forecasts and are never compared with ERA5 at later times.
+# Requires the "spherical" and "era5" extras, network access and a GPU; leave
+# dataset.num_workers unset.
+_target_: autosim.experimental.simulations.SphericalShallowWater
+log_level: progress_bar
+initial_condition: era5
+grid: legendre-gauss
+lmax: 256
+nlat: 384
+nlon: 768
+# Time in hours: 10 days, saved every 6 h, the step of ERA5.
+T: 240.0
+dt_save: 6.0
+skip_nt: 0
+courant: 0.4
+# Level from which the saved h is measured, and depth of the time-step estimate, close
+# to the largest balanced fluid depth.
+mean_depth: 6000.0
+batch_size: 8
+device: cuda
+# The orography and the Coriolis parameter are returned in constant_fields.
+return_constant_fields: true
+# Orography compressed as in The Well's PlanetSWE (gen_ics.ipynb at aac88c0):
+# sign(h_s)|h_s|^(15/16), shifted so that its minimum is 0.
+era5:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.Era5Settings
+  orography_exponent: 0.9375
+  orography_shift: true
+# Relaxation of the height in 1 day towards the 1990-2019 ERA5 climatology of the
+# 500 hPa height at the day of year and hour of the start date, and a drag of 100 days.
+damping:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.DampingSettings
+  relaxation_time: 24.0
+  relaxation_target: era5_climatology
+  drag_time: 2400.0
+# Vortical forcing (SKEBS) and SPPT as in ds1.
+skebs:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.SkebsSettings
+  energy_rate: 1.0e-5
+  correlation_time: 6.0
+  spectral_slope: -1.27
+sppt:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.SpptSettings
+  amplitudes: [0.52, 0.18, 0.06]
+  length_scales: [500.0e3, 1000.0e3, 2000.0e3]
+  correlation_times: [6.0, 72.0, 720.0]
+  clip: 1.0
+# Hours since 1959-01-01T00, rounded to the 6-hourly times of the store: its whole
+# range, 1959-01-01T00 to 2023-01-10T18. W92 case 7 is 1978-12-21T00 = 175056 h.
+parameters_range:
+  era5_time: [0.0, 561258.0]

@@ -16,6 +16,7 @@ chapters:
         sections:
           - file: reference/core/cli
           - file: reference/core/device
+          - file: reference/core/era5
           - file: reference/core/logging
           - file: reference/core/types
           - file: reference/core/utils
@@ -45,3 +46,4 @@ chapters:
           - file: reference/experimental/lattice_boltzmann
           - file: reference/experimental/shallow_water
           - file: reference/experimental/shallow_water_1d
+          - file: reference/experimental/shallow_water_sphere

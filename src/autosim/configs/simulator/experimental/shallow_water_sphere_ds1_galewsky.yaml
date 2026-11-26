@@ -1,0 +1,55 @@
+# Dataset 1: barotropically unstable jet of Galewsky et al. (2004), relaxed back
+# towards the jet, with the vortical forcing (SKEBS) and SPPT. The relaxation rebuilds
+# the jet as fast as the instability breaks it, so both stochastic forcings act.
+# Requires the "spherical" extra and a GPU; leave dataset.num_workers unset.
+_target_: autosim.experimental.simulations.SphericalShallowWater
+log_level: progress_bar
+initial_condition: galewsky
+grid: legendre-gauss
+lmax: 256
+nlat: 384
+nlon: 768
+# Time in hours: 10 days from the initial state, saved every hour, so that the data
+# contain the gravity waves of the adjustment to the bump, the roll-up of the jet and
+# the jet rebuilt by the relaxation.
+T: 240.0
+dt_save: 1.0
+skip_nt: 0
+courant: 0.4
+mean_depth: 10000.0
+# Height noise below degree 120 that makes two simulations with the same parameters
+# differ.
+noise_amplitude: 10.0
+noise_lmax: 120
+batch_size: 8
+device: cuda
+return_constant_fields: true
+# Relaxation of the height in 1 day towards the balanced height of an 80 m/s jet at
+# 45 degrees north, and a drag of 100 days on the wind.
+damping:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.DampingSettings
+  relaxation_time: 24.0
+  relaxation_jet_speed: 80.0
+  relaxation_jet_latitude: 0.7853981633974483
+  drag_time: 2400.0
+# Vortical forcing (SKEBS): energy rate [m^2/s^3], decorrelation time [h] and slope p
+# of Berner et al. (2009).
+skebs:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.SkebsSettings
+  energy_rate: 1.0e-5
+  correlation_time: 6.0
+  spectral_slope: -1.27
+# SPPT: the three scales of ECMWF's operational scheme (Leutbecher et al. 2017,
+# Table 1): standard deviation, correlation length [m] and decorrelation time [h].
+sppt:
+  _target_: autosim.experimental.simulations.shallow_water_sphere.SpptSettings
+  amplitudes: [0.52, 0.18, 0.06]
+  length_scales: [500.0e3, 1000.0e3, 2000.0e3]
+  correlation_times: [6.0, 72.0, 720.0]
+  clip: 1.0
+# Ranges around the published case (80 m/s, 120 m, longitude free, latitude pi/4).
+parameters_range:
+  jet_speed: [60.0, 100.0]
+  height_perturbation_m: [60.0, 180.0]
+  perturbation_lon: [0.0, 6.283185307179586]
+  perturbation_lat: [0.6283185307179586, 1.0471975511965976]
