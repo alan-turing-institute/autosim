@@ -64,6 +64,7 @@ def test_output_shape_parameters_and_finiteness():
     assert payload["data"].shape == (3, 3, 48, 96, 3)
     assert payload["constant_scalars"].shape == (3, 4)
     assert payload["constant_fields"] is None
+    assert payload["grid_type"] == "legendre-gauss"
     assert torch.isfinite(payload["data"]).all()
 
 

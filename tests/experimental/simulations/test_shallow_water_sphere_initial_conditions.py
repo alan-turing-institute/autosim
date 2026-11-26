@@ -317,4 +317,5 @@ def test_family_runs_on_every_grid(family, grid_name):
     payload = sim.forward_samples_spatiotemporal(n=2, random_seed=0)
     assert payload["data"].shape == (2, 3, *sim.grid.shape, 3)
     assert payload["constant_fields"].shape == (2, *sim.grid.shape, 2)
+    assert payload["grid_type"] == GRIDS[grid_name]["grid"]
     assert torch.isfinite(payload["data"]).all()

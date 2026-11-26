@@ -108,7 +108,9 @@ class SphericalShallowWater(SpatioTemporalSimulator):
 
     Outputs ``[h, u_phi, u_theta]`` on the simulation grid, with data of shape
     ``(n, time, *grid.shape, 3)``: ``(nlat, nlon)`` on regular grids and ``(npix,)``
-    on HEALPix. ``h`` is the height of the free surface above ``mean_depth``.
+    on HEALPix. ``h`` is the height of the free surface above ``mean_depth``. The
+    payload names its grid in ``grid_type``, the torch-harmonics name of the grid
+    (for example ``"legendre-gauss"``).
     Simulations run ``batch_size`` at a time in parallel on ``device``.
 
     **Initial conditions.** ``initial_condition`` selects a family, each with its own
@@ -962,17 +964,24 @@ class SphericalShallowWater(SpatioTemporalSimulator):
 
         Returns:
             ``{"data": (n, time, *grid.shape, 3), "constant_scalars": (n,
-            n_parameters), "constant_fields": (n, *grid.shape, 2) or None}``, and
-            when requested ``"additional_input_fields"`` (n, time, *grid.shape, 3),
-            ``"energy_budget"`` (n, time, 9), ``"forcing_state"`` (n, time,
-            *grid.shape, 2), ``"periodic_forcing"`` (n, time, *grid.shape, 1) and
-            ``"baseline"`` (n, time, *grid.shape, 3). With ``output_lmax`` the grid
-            is that of the saved fields.
+            n_parameters), "constant_fields": (n, *grid.shape, 2) or None,
+            "grid_type": str}``, and when requested ``"additional_input_fields"``
+            (n, time, *grid.shape, 3), ``"energy_budget"`` (n, time, 9),
+            ``"forcing_state"`` (n, time, *grid.shape, 2), ``"periodic_forcing"``
+            (n, time, *grid.shape, 1) and ``"baseline"`` (n, time, *grid.shape, 3).
+            With ``output_lmax`` the grid is that of the saved fields.
+            ``grid_type`` is the torch-harmonics name of that grid
+            (``self.output_grid.grid_type``), a plain string, so
+            ``torch.load(weights_only=True)`` reads it back.
         """
         y, x = self._forward_batch_with_optional_retries(
             n=n, random_seed=random_seed, ensure_exact_n=ensure_exact_n
         )
-        payload: dict = {"constant_scalars": x, "constant_fields": None}
+        payload: dict = {
+            "constant_scalars": x,
+            "constant_fields": None,
+            "grid_type": self.output_grid.grid_type,
+        }
         offset = 0
         for key, shape in self.row_layout:
             size = math.prod(shape)

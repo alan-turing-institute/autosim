@@ -643,6 +643,55 @@ def test_combine_stratified_splits_preserves_strata_order() -> None:
     assert torch.all(combined["train"]["data"][2:] == 2.0)
 
 
+def _strata_on_grids(grid_types: list[str]) -> list[dict[str, dict]]:
+    return [
+        {
+            split: {
+                "data": torch.full((1, 1, 1, 1, 1), float(index)),
+                "constant_scalars": None,
+                "constant_fields": None,
+                "grid_type": grid_type,
+            }
+            for split in ("train", "valid", "test")
+        }
+        for index, grid_type in enumerate(grid_types)
+    ]
+
+
+def test_combine_stratified_splits_keeps_one_grid_type() -> None:
+    combined = combine_stratified_splits(_strata_on_grids(["legendre-gauss"] * 2))
+
+    for split in ("train", "valid", "test"):
+        assert combined[split]["grid_type"] == "legendre-gauss"
+        assert combined[split]["data"].shape[0] == 2
+
+
+def test_combine_stratified_splits_rejects_different_grid_types() -> None:
+    strata = _strata_on_grids(["legendre-gauss", "equiangular"])
+
+    with pytest.raises(ValueError, match="grid_type"):
+        combine_stratified_splits(strata)
+
+
+def test_saved_grid_type_loads_as_a_string_with_weights_only(tmp_path: Path) -> None:
+    payload = {
+        "data": torch.zeros((1, 1, 1, 1, 1)),
+        "constant_scalars": None,
+        "constant_fields": None,
+        "grid_type": "legendre-gauss",
+    }
+    output_dir = tmp_path / "dataset"
+    save_dataset_splits(
+        splits=dict.fromkeys(("train", "valid", "test"), payload),
+        output_dir=output_dir,
+    )
+
+    loaded = torch.load(output_dir / "train" / "data.pt", weights_only=True)
+
+    assert type(loaded["grid_type"]) is str
+    assert loaded["grid_type"] == "legendre-gauss"
+
+
 @pytest.fixture
 def dummy_splits() -> dict:
     return {

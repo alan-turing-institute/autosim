@@ -620,7 +620,11 @@ def get_per_strata_counts(
 def combine_stratified_splits(
     ordered_strata_splits: list[dict[str, dict[str, Any]]],
 ) -> dict[str, dict[str, Any]]:
-    """Combine per-strata splits preserving strata order in batch dimension."""
+    """Combine per-strata splits preserving strata order in batch dimension.
+
+    Tensors are concatenated along the batch dimension. A ``grid_type`` string
+    must be the same in every stratum and is kept once.
+    """
     if not ordered_strata_splits:
         msg = "No strata outputs to combine."
         raise ValueError(msg)
@@ -641,6 +645,11 @@ def combine_stratified_splits(
                 isinstance(value, dict) for value in values
             ):
                 merged_payload[key] = values
+            elif key == "grid_type" and all(isinstance(value, str) for value in values):
+                if len(set(values)) > 1:
+                    msg = f"Strata disagree on grid_type: {sorted(set(values))}."
+                    raise ValueError(msg)
+                merged_payload[key] = values[0]
             else:
                 msg = (
                     f"Cannot combine non-tensor field '{key}' across strata. "

@@ -71,6 +71,7 @@ def test_dataset_config_runs_at_a_small_size(name):
     assert payload["data"].shape == (2, 3, *sim.output_grid.shape, 3)
     assert torch.isfinite(payload["data"]).all()
     assert payload["constant_fields"].shape == (2, *sim.output_grid.shape, 2)
+    assert payload["grid_type"] == config.grid
     if config.get("output_lmax") is not None:
         assert payload["baseline"].shape == payload["data"].shape
     if config.get("return_periodic_forcing", False):

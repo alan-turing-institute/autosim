@@ -76,6 +76,7 @@ def test_baseline_starts_from_the_truncated_state():
     baseline = payload["baseline"]
     assert baseline.shape == data.shape == (2, 15, 16, 32, 3)
     assert payload["constant_fields"].shape == (2, 16, 32, 2)
+    assert payload["grid_type"] == "legendre-gauss"  # the solver's grid type
     torch.testing.assert_close(baseline[:, 0], data[:, 0], rtol=1e-5, atol=1e-4)
     # the low-resolution solver departs from the coarse-grained truth with time. The
     # Galewsky jet is sharp at lmax = 11, so the baseline departs within the first 3 h.
